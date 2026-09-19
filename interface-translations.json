@@ -169,7 +169,7 @@
     "Keep the next conversation on your radar.": "다음 연락 일정을 놓치지 마세요.",
     "+ Schedule follow-up": "+ 후속 연락 예약",
     "Schedule follow-up": "후속 연락 예약",
-    "Search player or reminder…": "플레이어 또는 알림 검색…",
+    "Search player, server, alliance or reminder…": "플레이어 또는 알림 검색…",
     "Search follow-ups": "후속 연락 검색",
     "All leads": "모든 팀장",
     "Lead": "팀장",
@@ -268,7 +268,9 @@
     "server time": "서버 시간",
     "Season day": "시즌 일차",
     "Reached": "도달함",
-    "LWSERVERS SNAPSHOT · DEMO WORKFLOW": "LWServers 스냅샷 · 데모"
+    "LWSERVERS SNAPSHOT · DEMO WORKFLOW": "LWServers 스냅샷 · 데모",
+    "My inbox": "내 받은편지함",
+    "My Inbox": "내 받은편지함"
   },
   "vi": {
     "Language": "Ngôn ngữ",
@@ -440,7 +442,7 @@
     "Keep the next conversation on your radar.": "Đừng bỏ lỡ cuộc trò chuyện tiếp theo.",
     "+ Schedule follow-up": "+ Lên lịch theo dõi",
     "Schedule follow-up": "Lên lịch theo dõi",
-    "Search player or reminder…": "Tìm người chơi hoặc lời nhắc…",
+    "Search player, server, alliance or reminder…": "Tìm người chơi hoặc lời nhắc…",
     "Search follow-ups": "Tìm lịch theo dõi",
     "All leads": "Tất cả trưởng nhóm",
     "Lead": "Trưởng nhóm",
@@ -539,7 +541,9 @@
     "server time": "giờ máy chủ",
     "Season day": "Ngày mùa",
     "Reached": "Đã đến",
-    "LWSERVERS SNAPSHOT · DEMO WORKFLOW": "ẢNH CHỤP LWSERVERS · DEMO"
+    "LWSERVERS SNAPSHOT · DEMO WORKFLOW": "ẢNH CHỤP LWSERVERS · DEMO",
+    "My inbox": "Hộp thư của tôi",
+    "My Inbox": "Hộp thư của tôi"
   },
   "de": {
     "Language": "Sprache",
@@ -711,7 +715,7 @@
     "Keep the next conversation on your radar.": "Das nächste Gespräch im Blick behalten.",
     "+ Schedule follow-up": "+ Nachfassen planen",
     "Schedule follow-up": "Nachfassen planen",
-    "Search player or reminder…": "Spieler oder Erinnerung suchen…",
+    "Search player, server, alliance or reminder…": "Spieler oder Erinnerung suchen…",
     "Search follow-ups": "Nachfassaktionen suchen",
     "All leads": "Alle Teamleitungen",
     "Lead": "Teamleitung",
@@ -810,7 +814,9 @@
     "server time": "Serverzeit",
     "Season day": "Saisontag",
     "Reached": "Erreicht",
-    "LWSERVERS SNAPSHOT · DEMO WORKFLOW": "LWSERVERS-SNAPSHOT · DEMO"
+    "LWSERVERS SNAPSHOT · DEMO WORKFLOW": "LWSERVERS-SNAPSHOT · DEMO",
+    "My inbox": "Mein Posteingang",
+    "My Inbox": "Mein Posteingang"
   },
   "fr": {
     "Language": "Langue",
@@ -982,7 +988,7 @@
     "Keep the next conversation on your radar.": "Gardez le prochain échange en vue.",
     "+ Schedule follow-up": "+ Planifier une relance",
     "Schedule follow-up": "Planifier une relance",
-    "Search player or reminder…": "Rechercher un joueur ou un rappel…",
+    "Search player, server, alliance or reminder…": "Rechercher un joueur ou un rappel…",
     "Search follow-ups": "Rechercher des relances",
     "All leads": "Tous les responsables",
     "Lead": "Responsable",
@@ -1081,7 +1087,9 @@
     "server time": "heure serveur",
     "Season day": "Jour de saison",
     "Reached": "Atteint",
-    "LWSERVERS SNAPSHOT · DEMO WORKFLOW": "INSTANTANÉ LWSERVERS · DÉMO"
+    "LWSERVERS SNAPSHOT · DEMO WORKFLOW": "INSTANTANÉ LWSERVERS · DÉMO",
+    "My inbox": "Ma boîte de réception",
+    "My Inbox": "Ma boîte de réception"
   },
   "pt": {
     "Language": "Idioma",
@@ -1253,7 +1261,7 @@
     "Keep the next conversation on your radar.": "Não perca a próxima conversa.",
     "+ Schedule follow-up": "+ Agendar acompanhamento",
     "Schedule follow-up": "Agendar acompanhamento",
-    "Search player or reminder…": "Buscar jogador ou lembrete…",
+    "Search player, server, alliance or reminder…": "Buscar jogador ou lembrete…",
     "Search follow-ups": "Buscar acompanhamentos",
     "All leads": "Todos os líderes",
     "Lead": "Líder",
@@ -1352,7 +1360,9 @@
     "server time": "hora do servidor",
     "Season day": "Dia da temporada",
     "Reached": "Atingido",
-    "LWSERVERS SNAPSHOT · DEMO WORKFLOW": "SNAPSHOT LWSERVERS · DEMO"
+    "LWSERVERS SNAPSHOT · DEMO WORKFLOW": "SNAPSHOT LWSERVERS · DEMO",
+    "My inbox": "Minha caixa de entrada",
+    "My Inbox": "Minha caixa de entrada"
   },
   "es": {
     "Language": "Idioma",
@@ -1524,7 +1534,7 @@
     "Keep the next conversation on your radar.": "No pierdas de vista la próxima conversación.",
     "+ Schedule follow-up": "+ Programar seguimiento",
     "Schedule follow-up": "Programar seguimiento",
-    "Search player or reminder…": "Buscar jugador o recordatorio…",
+    "Search player, server, alliance or reminder…": "Buscar jugador o recordatorio…",
     "Search follow-ups": "Buscar seguimientos",
     "All leads": "Todos los líderes",
     "Lead": "Líder",
@@ -1623,6 +1633,8 @@
     "server time": "hora del servidor",
     "Season day": "Día de temporada",
     "Reached": "Alcanzado",
-    "LWSERVERS SNAPSHOT · DEMO WORKFLOW": "INSTANTÁNEA LWSERVERS · DEMO"
+    "LWSERVERS SNAPSHOT · DEMO WORKFLOW": "INSTANTÁNEA LWSERVERS · DEMO",
+    "My inbox": "Mi bandeja de entrada",
+    "My Inbox": "Mi bandeja de entrada"
   }
 }
