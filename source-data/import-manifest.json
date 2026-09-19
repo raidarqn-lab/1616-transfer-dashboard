@@ -1,0 +1,231 @@
+{
+  "retrievedAt": "2026-09-19T05:28:45.652038+00:00",
+  "records": 11057,
+  "sources": [
+    {
+      "server": 1605,
+      "url": "https://lwservers.com/data/snapshots/1573-1700/players/1605.json",
+      "retrievedAt": "2026-09-19T05:28:45.652038+00:00",
+      "sha256": "f8e903715ec6a9f04ccd209dfe1764cc9e6691540b1ddd28287419684b8d64bd",
+      "records": 373
+    },
+    {
+      "server": 1606,
+      "url": "https://lwservers.com/data/snapshots/1573-1700/players/1606.json",
+      "retrievedAt": "2026-09-19T05:28:45.652038+00:00",
+      "sha256": "26f2dab56286b17484f96d8c25556f6dc5ae988aa2c9fc84de0907d895dc6b19",
+      "records": 341
+    },
+    {
+      "server": 1607,
+      "url": "https://lwservers.com/data/snapshots/1573-1700/players/1607.json",
+      "retrievedAt": "2026-09-19T05:28:45.652038+00:00",
+      "sha256": "09eeb1f4e04a7b9762b6d928923a31e88c78b3a020a83358c414c6e05b91a249",
+      "records": 462
+    },
+    {
+      "server": 1608,
+      "url": "https://lwservers.com/data/snapshots/1573-1700/players/1608.json",
+      "retrievedAt": "2026-09-19T05:28:45.652038+00:00",
+      "sha256": "2c2807b90004372a150535707c3fa7187a6906304adb4f1e7dace85a0aadb32b",
+      "records": 329
+    },
+    {
+      "server": 1609,
+      "url": "https://lwservers.com/data/snapshots/1573-1700/players/1609.json",
+      "retrievedAt": "2026-09-19T05:28:45.652038+00:00",
+      "sha256": "0bed52b2c6693870b7f78704b074bd4bb36eafc41dcd8e4925a78924c97528a0",
+      "records": 332
+    },
+    {
+      "server": 1610,
+      "url": "https://lwservers.com/data/snapshots/1573-1700/players/1610.json",
+      "retrievedAt": "2026-09-19T05:28:45.652038+00:00",
+      "sha256": "a0be9ea879d553e302c23047ad6f1be060e84fd1d9ca87fd30e62e022f86ffed",
+      "records": 348
+    },
+    {
+      "server": 1611,
+      "url": "https://lwservers.com/data/snapshots/1573-1700/players/1611.json",
+      "retrievedAt": "2026-09-19T05:28:45.652038+00:00",
+      "sha256": "93c9a5cdf2392a452dad8ff5bddfeccdd9433bcda0084269bcb36009d3671071",
+      "records": 331
+    },
+    {
+      "server": 1612,
+      "url": "https://lwservers.com/data/snapshots/1573-1700/players/1612.json",
+      "retrievedAt": "2026-09-19T05:28:45.652038+00:00",
+      "sha256": "a75a8ced9f0faa7cb02f6860bd359ebb7f447b0354f43e488b67ba2f3792056f",
+      "records": 322
+    },
+    {
+      "server": 1613,
+      "url": "https://lwservers.com/data/snapshots/1573-1700/players/1613.json",
+      "retrievedAt": "2026-09-19T05:28:45.652038+00:00",
+      "sha256": "b39a2565693564b914c9feff85f5c19454f4e8dbdf98ba7d888b943c9d590d07",
+      "records": 343
+    },
+    {
+      "server": 1614,
+      "url": "https://lwservers.com/data/snapshots/1573-1700/players/1614.json",
+      "retrievedAt": "2026-09-19T05:28:45.652038+00:00",
+      "sha256": "0f46fdf4a9500e870751eb91a0f802a5bb005bb6411589aa12b21c9b8e8ce7e5",
+      "records": 281
+    },
+    {
+      "server": 1615,
+      "url": "https://lwservers.com/data/snapshots/1573-1700/players/1615.json",
+      "retrievedAt": "2026-09-19T05:28:45.652038+00:00",
+      "sha256": "0935198688c1c80d702f2bab660bb1ca74a04c8b06b8a965f7aeac8814f0d5fb",
+      "records": 345
+    },
+    {
+      "server": 1616,
+      "url": "https://lwservers.com/data/snapshots/1573-1700/players/1616.json",
+      "retrievedAt": "2026-09-19T05:28:45.652038+00:00",
+      "sha256": "12dceed11eaba98daf9beff4c94b9ae70aeb358d453b8ae6eca2fce667722adc",
+      "records": 357
+    },
+    {
+      "server": 1617,
+      "url": "https://lwservers.com/data/snapshots/1573-1700/players/1617.json",
+      "retrievedAt": "2026-09-19T05:28:45.652038+00:00",
+      "sha256": "a8eb358b8a8dda0cdb84803b282b781ad00986bd73b7998476b2e5862df490d3",
+      "records": 357
+    },
+    {
+      "server": 1618,
+      "url": "https://lwservers.com/data/snapshots/1573-1700/players/1618.json",
+      "retrievedAt": "2026-09-19T05:28:45.652038+00:00",
+      "sha256": "14e84d27a609617bec82e55477225675f06853d1a279408cc0f7acb099b3a4cb",
+      "records": 315
+    },
+    {
+      "server": 1619,
+      "url": "https://lwservers.com/data/snapshots/1573-1700/players/1619.json",
+      "retrievedAt": "2026-09-19T05:28:45.652038+00:00",
+      "sha256": "b86d85ea9aaee911e2047095648339eac1880db7114705d6178dd338117ba9f8",
+      "records": 309
+    },
+    {
+      "server": 1620,
+      "url": "https://lwservers.com/data/snapshots/1573-1700/players/1620.json",
+      "retrievedAt": "2026-09-19T05:28:45.652038+00:00",
+      "sha256": "fbb7e6e6c46718a9a3e2b8694d8bb0823c1e3c89fe3fdb9952ca1ee2b0ffbe53",
+      "records": 342
+    },
+    {
+      "server": 1621,
+      "url": "https://lwservers.com/data/snapshots/1573-1700/players/1621.json",
+      "retrievedAt": "2026-09-19T05:28:45.652038+00:00",
+      "sha256": "263bbbe06ec7a0e73b8de68458eb6e7d413be1a782657a53c0072ea38379c051",
+      "records": 345
+    },
+    {
+      "server": 1622,
+      "url": "https://lwservers.com/data/snapshots/1573-1700/players/1622.json",
+      "retrievedAt": "2026-09-19T05:28:45.652038+00:00",
+      "sha256": "d83397b8f5006e9268c040fe32a73a6d5ede776f1df510464b3bb82f12583828",
+      "records": 307
+    },
+    {
+      "server": 1623,
+      "url": "https://lwservers.com/data/snapshots/1573-1700/players/1623.json",
+      "retrievedAt": "2026-09-19T05:28:45.652038+00:00",
+      "sha256": "91e9422287c5b88c3cedf914a0d14afae925a97ffb05a4267f75b612fe239181",
+      "records": 367
+    },
+    {
+      "server": 1624,
+      "url": "https://lwservers.com/data/snapshots/1573-1700/players/1624.json",
+      "retrievedAt": "2026-09-19T05:28:45.652038+00:00",
+      "sha256": "f73fae5d1ef713c5e4fb28830363341d1ecb853864fd39e3fca5206e762388c1",
+      "records": 337
+    },
+    {
+      "server": 1625,
+      "url": "https://lwservers.com/data/snapshots/1573-1700/players/1625.json",
+      "retrievedAt": "2026-09-19T05:28:45.652038+00:00",
+      "sha256": "9622845233f74b83eee6d6581f9f7c3cf08fd921b17cef2b012619960157ca61",
+      "records": 354
+    },
+    {
+      "server": 1626,
+      "url": "https://lwservers.com/data/snapshots/1573-1700/players/1626.json",
+      "retrievedAt": "2026-09-19T05:28:45.652038+00:00",
+      "sha256": "73b68e0a0d388e3dccaa8c44aaa71baea5fa3c9892a5848e27a49ee905b70bc0",
+      "records": 348
+    },
+    {
+      "server": 1627,
+      "url": "https://lwservers.com/data/snapshots/1573-1700/players/1627.json",
+      "retrievedAt": "2026-09-19T05:28:45.652038+00:00",
+      "sha256": "711be886cef0d30198bd7ed89055b2ad0ccc7edf3625013dc8173d55828d2ebd",
+      "records": 406
+    },
+    {
+      "server": 1628,
+      "url": "https://lwservers.com/data/snapshots/1573-1700/players/1628.json",
+      "retrievedAt": "2026-09-19T05:28:45.652038+00:00",
+      "sha256": "68b32d0027c1e15370dac72a1835059424a2364634ada3dbc869b794eb11f9b0",
+      "records": 455
+    },
+    {
+      "server": 1629,
+      "url": "https://lwservers.com/data/snapshots/1573-1700/players/1629.json",
+      "retrievedAt": "2026-09-19T05:28:45.652038+00:00",
+      "sha256": "42126c6b087e8270977b5de5b5b8ab64cb4b7dcd0b6a7503cdc5e0791e9142f3",
+      "records": 338
+    },
+    {
+      "server": 1630,
+      "url": "https://lwservers.com/data/snapshots/1573-1700/players/1630.json",
+      "retrievedAt": "2026-09-19T05:28:45.652038+00:00",
+      "sha256": "4dcd10a7ac54eebfd93d44f74befe9373d42d7ce779323984bc94cb5e1987457",
+      "records": 328
+    },
+    {
+      "server": 1631,
+      "url": "https://lwservers.com/data/snapshots/1573-1700/players/1631.json",
+      "retrievedAt": "2026-09-19T05:28:45.652038+00:00",
+      "sha256": "d863d84a265261fef3059a8639f35688aae6433690765cec6a0dfb823e184059",
+      "records": 330
+    },
+    {
+      "server": 1632,
+      "url": "https://lwservers.com/data/snapshots/1573-1700/players/1632.json",
+      "retrievedAt": "2026-09-19T05:28:45.652038+00:00",
+      "sha256": "80281e3b2b440f57b780417bc562bc1ecaa590f9cfbe7570072e18910f6a79fd",
+      "records": 302
+    },
+    {
+      "server": 1633,
+      "url": "https://lwservers.com/data/snapshots/1573-1700/players/1633.json",
+      "retrievedAt": "2026-09-19T05:28:45.652038+00:00",
+      "sha256": "31f478cb4757d8906c9c3edd82ae6427bad0e93f9ba68b90f8d5b4a8033342b7",
+      "records": 322
+    },
+    {
+      "server": 1634,
+      "url": "https://lwservers.com/data/snapshots/1573-1700/players/1634.json",
+      "retrievedAt": "2026-09-19T05:28:45.652038+00:00",
+      "sha256": "dd04458d4090bc56863ee194b52b1aa1ceeeebe589c48039fbf859bbdbc5f200",
+      "records": 289
+    },
+    {
+      "server": 1635,
+      "url": "https://lwservers.com/data/snapshots/1573-1700/players/1635.json",
+      "retrievedAt": "2026-09-19T05:28:45.652038+00:00",
+      "sha256": "0f60d475a5c1278bb1850ffbe591f34b78f84dac089afc53a0a6b7cbf3ef5646",
+      "records": 364
+    },
+    {
+      "server": 1636,
+      "url": "https://lwservers.com/data/snapshots/1573-1700/players/1636.json",
+      "retrievedAt": "2026-09-19T05:28:45.652038+00:00",
+      "sha256": "2084a785a04f4bf403693c8cba53f61c1eec8a21331aed434382468b44a47574",
+      "records": 378
+    }
+  ],
+  "note": "All available public snapshot rows, not guaranteed complete/current game population."
+}
