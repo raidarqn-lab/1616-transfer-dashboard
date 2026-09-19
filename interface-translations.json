@@ -257,7 +257,18 @@
     "selected": "개 선택됨",
     "Imported LWServers players · Servers 1605–1636 · Not verified applicants": "LWServers에서 가져온 플레이어 · 서버 1605–1636 · 확인된 신청자 아님",
     "Interface language": "화면 언어",
-    "Priority": "우선순위"
+    "Priority": "우선순위",
+    "Transfer applications": "이전 신청",
+    "Players": "플레이어",
+    "Contacts": "연락 대상",
+    "Transfer surge begins": "이전 서지 시작",
+    "First day to apply": "신청 첫날",
+    "Final day to apply": "신청 마지막 날",
+    "Surge ends": "이전 서지 종료",
+    "server time": "서버 시간",
+    "Season day": "시즌 일차",
+    "Reached": "도달함",
+    "LWSERVERS SNAPSHOT · DEMO WORKFLOW": "LWServers 스냅샷 · 데모"
   },
   "vi": {
     "Language": "Ngôn ngữ",
@@ -517,7 +528,18 @@
     "selected": "đã chọn",
     "Imported LWServers players · Servers 1605–1636 · Not verified applicants": "Người chơi nhập từ LWServers · Máy chủ 1605–1636 · Không phải người đăng ký đã xác minh",
     "Interface language": "Ngôn ngữ giao diện",
-    "Priority": "Ưu tiên"
+    "Priority": "Ưu tiên",
+    "Transfer applications": "Đơn chuyển máy chủ",
+    "Players": "Người chơi",
+    "Contacts": "Liên hệ",
+    "Transfer surge begins": "Bắt đầu đợt chuyển máy chủ",
+    "First day to apply": "Ngày đầu đăng ký",
+    "Final day to apply": "Ngày cuối đăng ký",
+    "Surge ends": "Kết thúc đợt chuyển",
+    "server time": "giờ máy chủ",
+    "Season day": "Ngày mùa",
+    "Reached": "Đã đến",
+    "LWSERVERS SNAPSHOT · DEMO WORKFLOW": "ẢNH CHỤP LWSERVERS · DEMO"
   },
   "de": {
     "Language": "Sprache",
@@ -777,7 +799,18 @@
     "selected": "ausgewählt",
     "Imported LWServers players · Servers 1605–1636 · Not verified applicants": "Importierte LWServers-Spieler · Server 1605–1636 · Keine bestätigten Bewerber",
     "Interface language": "Oberflächensprache",
-    "Priority": "Priorität"
+    "Priority": "Priorität",
+    "Transfer applications": "Transferbewerbungen",
+    "Players": "Spieler",
+    "Contacts": "Kontakte",
+    "Transfer surge begins": "Transferphase beginnt",
+    "First day to apply": "Erster Bewerbungstag",
+    "Final day to apply": "Letzter Bewerbungstag",
+    "Surge ends": "Transferphase endet",
+    "server time": "Serverzeit",
+    "Season day": "Saisontag",
+    "Reached": "Erreicht",
+    "LWSERVERS SNAPSHOT · DEMO WORKFLOW": "LWSERVERS-SNAPSHOT · DEMO"
   },
   "fr": {
     "Language": "Langue",
@@ -1037,7 +1070,18 @@
     "selected": "sélectionnés",
     "Imported LWServers players · Servers 1605–1636 · Not verified applicants": "Joueurs importés de LWServers · Serveurs 1605–1636 · Candidatures non vérifiées",
     "Interface language": "Langue de l’interface",
-    "Priority": "Priorité"
+    "Priority": "Priorité",
+    "Transfer applications": "Candidatures au transfert",
+    "Players": "Joueurs",
+    "Contacts": "Contacts",
+    "Transfer surge begins": "Début de la phase de transfert",
+    "First day to apply": "Premier jour de candidature",
+    "Final day to apply": "Dernier jour de candidature",
+    "Surge ends": "Fin de la phase de transfert",
+    "server time": "heure serveur",
+    "Season day": "Jour de saison",
+    "Reached": "Atteint",
+    "LWSERVERS SNAPSHOT · DEMO WORKFLOW": "INSTANTANÉ LWSERVERS · DÉMO"
   },
   "pt": {
     "Language": "Idioma",
@@ -1297,7 +1341,18 @@
     "selected": "selecionados",
     "Imported LWServers players · Servers 1605–1636 · Not verified applicants": "Jogadores importados do LWServers · Servidores 1605–1636 · Não são candidatos verificados",
     "Interface language": "Idioma da interface",
-    "Priority": "Prioridade"
+    "Priority": "Prioridade",
+    "Transfer applications": "Candidaturas de transferência",
+    "Players": "Jogadores",
+    "Contacts": "Contatos",
+    "Transfer surge begins": "Início da fase de transferência",
+    "First day to apply": "Primeiro dia de inscrição",
+    "Final day to apply": "Último dia de inscrição",
+    "Surge ends": "Fim da fase de transferência",
+    "server time": "hora do servidor",
+    "Season day": "Dia da temporada",
+    "Reached": "Atingido",
+    "LWSERVERS SNAPSHOT · DEMO WORKFLOW": "SNAPSHOT LWSERVERS · DEMO"
   },
   "es": {
     "Language": "Idioma",
@@ -1557,6 +1612,17 @@
     "selected": "seleccionados",
     "Imported LWServers players · Servers 1605–1636 · Not verified applicants": "Jugadores importados de LWServers · Servidores 1605–1636 · No son solicitantes verificados",
     "Interface language": "Idioma de la interfaz",
-    "Priority": "Prioridad"
+    "Priority": "Prioridad",
+    "Transfer applications": "Solicitudes de transferencia",
+    "Players": "Jugadores",
+    "Contacts": "Contactos",
+    "Transfer surge begins": "Comienza la fase de transferencia",
+    "First day to apply": "Primer día para solicitar",
+    "Final day to apply": "Último día para solicitar",
+    "Surge ends": "Termina la fase de transferencia",
+    "server time": "hora del servidor",
+    "Season day": "Día de temporada",
+    "Reached": "Alcanzado",
+    "LWSERVERS SNAPSHOT · DEMO WORKFLOW": "INSTANTÁNEA LWSERVERS · DEMO"
   }
 }
