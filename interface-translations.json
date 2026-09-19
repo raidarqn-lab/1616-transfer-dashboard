@@ -256,7 +256,8 @@
     "sample records": "개의 샘플 기록",
     "selected": "개 선택됨",
     "Imported LWServers players · Servers 1605–1636 · Not verified applicants": "LWServers에서 가져온 플레이어 · 서버 1605–1636 · 확인된 신청자 아님",
-    "Interface language": "화면 언어"
+    "Interface language": "화면 언어",
+    "Priority": "우선순위"
   },
   "vi": {
     "Language": "Ngôn ngữ",
@@ -515,7 +516,8 @@
     "sample records": "bản ghi mẫu",
     "selected": "đã chọn",
     "Imported LWServers players · Servers 1605–1636 · Not verified applicants": "Người chơi nhập từ LWServers · Máy chủ 1605–1636 · Không phải người đăng ký đã xác minh",
-    "Interface language": "Ngôn ngữ giao diện"
+    "Interface language": "Ngôn ngữ giao diện",
+    "Priority": "Ưu tiên"
   },
   "de": {
     "Language": "Sprache",
@@ -774,7 +776,8 @@
     "sample records": "Beispieldatensätze",
     "selected": "ausgewählt",
     "Imported LWServers players · Servers 1605–1636 · Not verified applicants": "Importierte LWServers-Spieler · Server 1605–1636 · Keine bestätigten Bewerber",
-    "Interface language": "Oberflächensprache"
+    "Interface language": "Oberflächensprache",
+    "Priority": "Priorität"
   },
   "fr": {
     "Language": "Langue",
@@ -1033,7 +1036,8 @@
     "sample records": "fiches exemples",
     "selected": "sélectionnés",
     "Imported LWServers players · Servers 1605–1636 · Not verified applicants": "Joueurs importés de LWServers · Serveurs 1605–1636 · Candidatures non vérifiées",
-    "Interface language": "Langue de l’interface"
+    "Interface language": "Langue de l’interface",
+    "Priority": "Priorité"
   },
   "pt": {
     "Language": "Idioma",
@@ -1292,7 +1296,8 @@
     "sample records": "registros de exemplo",
     "selected": "selecionados",
     "Imported LWServers players · Servers 1605–1636 · Not verified applicants": "Jogadores importados do LWServers · Servidores 1605–1636 · Não são candidatos verificados",
-    "Interface language": "Idioma da interface"
+    "Interface language": "Idioma da interface",
+    "Priority": "Prioridade"
   },
   "es": {
     "Language": "Idioma",
@@ -1551,6 +1556,7 @@
     "sample records": "registros de ejemplo",
     "selected": "seleccionados",
     "Imported LWServers players · Servers 1605–1636 · Not verified applicants": "Jugadores importados de LWServers · Servidores 1605–1636 · No son solicitantes verificados",
-    "Interface language": "Idioma de la interfaz"
+    "Interface language": "Idioma de la interfaz",
+    "Priority": "Prioridad"
   }
 }
