@@ -1165,4 +1165,23 @@ setInterval(()=>{if(!document.hidden&&!prospectLookup.open&&!liveResetDialog.ope
 #transfer-mock .welcome-check-in-kicker{display:block;margin-bottom:5px;font:500 11px/1.5 Arial,sans-serif;letter-spacing:1px;}
 @media(max-width:750px){#transfer-mock .welcome-greeting{order:3;flex-basis:100%;justify-content:flex-start;margin:12px 0;gap:20px;padding-bottom:8px;}#transfer-mock .welcome-check-in{margin-left:8px;}}
 </style>
+
+<style id="transfer-question-layout-fix">
+#transfer-mock .inbox-layout:has(>.inbox-list[aria-label="Transfer questions"]){grid-template-columns:minmax(260px,340px) minmax(0,1fr);align-items:stretch;min-height:360px;}
+#transfer-mock .inbox-list[aria-label="Transfer questions"]{min-width:0;max-height:600px;}
+#transfer-mock .inbox-list .inbox-item[data-question]{display:block;grid-template-columns:none;min-width:0;width:100%;height:auto;padding:16px 18px;border:0;border-bottom:1px solid #e9ddd0;border-radius:0;text-align:left;background:transparent;box-shadow:none;}
+#transfer-mock .inbox-item[data-question] .inbox-item-content{display:block;width:100%;min-width:0;white-space:normal;overflow:visible;margin:0;}
+#transfer-mock .inbox-item[data-question] .inbox-sender{display:flex;align-items:baseline;justify-content:space-between;flex-wrap:wrap;gap:4px 10px;width:100%;white-space:normal;overflow:visible;margin:0 0 7px;}
+#transfer-mock .inbox-item[data-question] .inbox-sender strong{flex:1 1 130px;min-width:0;overflow-wrap:anywhere;margin:0;color:#493d35;}
+#transfer-mock .inbox-item[data-question] .inbox-sender time{flex:0 0 auto;font-size:11px;color:#827365;}
+#transfer-mock .inbox-item[data-question] .inbox-item-content>strong{white-space:normal;overflow-wrap:anywhere;color:#8f3240;margin:0 0 5px;font-size:13px;}
+#transfer-mock .inbox-item[data-question] .inbox-preview{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;white-space:normal;overflow:hidden;text-overflow:ellipsis;margin:0;line-height:1.5;font-size:13px;color:#6f6257;}
+#transfer-mock .inbox-item[data-question] small{white-space:normal;overflow-wrap:anywhere;margin-top:8px;font-size:11px;}
+#transfer-mock .inbox-item[data-question]:hover{background:#f7eee4;}
+#transfer-mock .inbox-item[data-question][aria-pressed="true"]{background:#f2e1d9;box-shadow:inset 3px 0 #a82332;}
+#transfer-mock .inbox-item[data-question]:focus-visible{outline:2px solid #a82332;outline-offset:-3px;}
+#transfer-mock .inbox-reading[aria-label="Transfer question"]{padding:24px;box-shadow:none;max-height:600px;overflow-wrap:anywhere;}
+#transfer-mock .inbox-reading[aria-label="Transfer question"] .inbox-empty{padding:48px 16px;}
+@media(max-width:760px){#transfer-mock .inbox-layout:has(>.inbox-list[aria-label="Transfer questions"]){grid-template-columns:minmax(0,1fr);min-height:0;}#transfer-mock .inbox-list[aria-label="Transfer questions"]{max-height:340px;border-right:0;border-bottom:1px solid #e9ddd0;}#transfer-mock .inbox-reading[aria-label="Transfer question"]{max-height:none;padding:20px;}}
+</style>
 </body></html>
