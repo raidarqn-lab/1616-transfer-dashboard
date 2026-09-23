@@ -1104,6 +1104,7 @@ setInterval(()=>{if(!document.hidden&&!prospectLookup.open&&!liveResetDialog.ope
 </style>
 
 <style id="profile-dropdown-cues">
+#transfer-mock .profile-popup .editing-page .binder-field.field-active:has(select) [data-binder-display]{display:none;}
 #transfer-mock .profile-popup .binder-field:has(select) [data-binder-display]{position:relative;display:block;padding:9px 42px 9px 11px;min-height:40px;border:1px solid #cbb5a1;border-radius:8px;background:#fffaf2;color:#493d35;cursor:pointer;}
 #transfer-mock .profile-popup .binder-field:has(select) [data-binder-display]::after{content:"";position:absolute;right:14px;top:50%;width:8px;height:8px;border-right:2px solid #a82332;border-bottom:2px solid #a82332;transform:translateY(-70%) rotate(45deg);pointer-events:none;}
 #transfer-mock .profile-popup .binder-field:has(select) [data-binder-display]:hover{border-color:#a82332;background:#f7eee4;}
