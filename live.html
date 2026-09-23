@@ -1361,7 +1361,7 @@ row=function(p){
   :'<button type="button" class="application-link-pill" data-review-link="'+p.id+'" '+(allowed?'':'disabled')+' data-tooltip="'+(allowed?'Compare and link this application.':'Admin or lead access required.')+'" title="'+(allowed?'Compare and link this application.':'Admin or lead access required.')+'">Review &amp; link</button>';
  const edit=marker.replace('>Edit<',' data-tooltip="Open and edit this applicant." title="Open and edit this applicant.">Edit<');
  const actions='<div class="applicant-row-actions">'+pill+edit+'</div>';
- return html.replace('</div></td>','</div>'+actions+'</td>').replace('<td>'+marker+'</td>','<td class="applicant-empty-action"></td>');
+ return html.replace('<td>'+marker+'</td>','<td class="applicant-action-cell">'+actions+'</td>');
 };
 const applicantMatchingRender=render;
 render=function(){
@@ -1386,7 +1386,7 @@ const applicantMatchingWidthFix=document.createElement('style');
 applicantMatchingWidthFix.textContent='#transfer-mock .roster-table{width:max-content!important;min-width:100%!important;max-width:none!important;table-layout:auto!important}#transfer-mock .roster-table td:last-child,#transfer-mock .roster-table th:last-child{width:178px!important;min-width:178px!important;max-width:178px!important}';
 root.append(applicantMatchingWidthFix);
 const applicantMatchingPlacementFix=document.createElement('style');
-applicantMatchingPlacementFix.textContent='#transfer-mock .roster-table{width:100%!important;max-width:100%!important;table-layout:fixed!important}#transfer-mock .roster-table td:first-child,#transfer-mock .roster-table th:first-child{width:210px!important;min-width:210px!important;overflow:visible!important}#transfer-mock .roster-table td:last-child,#transfer-mock .roster-table th:last-child{display:none!important}#transfer-mock .player-name-cell{align-items:flex-start;flex-wrap:wrap}#transfer-mock .player-name-cell>.applicant-row-actions{flex-basis:100%;justify-content:flex-start;width:auto;margin-top:6px;gap:6px}';
+applicantMatchingPlacementFix.textContent='#transfer-mock .roster-table{width:100%!important;max-width:100%!important;table-layout:fixed!important}#transfer-mock .roster-table td:first-child,#transfer-mock .roster-table th:first-child{width:170px!important;min-width:170px!important}#transfer-mock .roster-table td:last-child,#transfer-mock .roster-table th:last-child{display:table-cell!important;width:178px!important;min-width:178px!important;max-width:178px!important}#transfer-mock .applicant-action-cell{padding-left:8px!important;padding-right:8px!important}#transfer-mock .applicant-action-cell .applicant-row-actions{justify-content:flex-end;width:100%;gap:8px}';
 root.append(applicantMatchingPlacementFix);
 const applicantNativeTooltipFix=document.createElement('style');
 applicantNativeTooltipFix.textContent='#transfer-mock .applicant-row-actions [data-tooltip]::before,#transfer-mock .applicant-row-actions [data-tooltip]::after{display:none!important;content:none!important}';
