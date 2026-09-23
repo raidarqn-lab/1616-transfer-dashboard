@@ -1102,4 +1102,21 @@ setInterval(()=>{if(!document.hidden&&!prospectLookup.open&&!liveResetDialog.ope
 #transfer-mock .binder-profile .player-workspace-body{min-width:0}
 @media(max-width:650px){#transfer-mock .binder-profile .player-workspace-body{padding:16px!important}#transfer-mock .binder-profile .player-workspace-nav button{font-size:12px!important;padding:9px 5px!important}}
 </style>
+
+<style id="profile-dropdown-cues">
+/* Keep native keyboard/mobile selection while making editable dropdowns clear. */
+#transfer-mock .profile-popup select:not([multiple]):not([size]) {
+  appearance:none; -webkit-appearance:none; color-scheme:light;
+  background-color:#fffaf2;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16'%3E%3Cpath d='m4 6 4 4 4-4' fill='none' stroke='%23a82332' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"),linear-gradient(to left,#f1e2d7 0,#f1e2d7 36px,transparent 36px);
+  background-repeat:no-repeat; background-position:right 10px center,right center; background-size:16px 16px,100% 100%;
+  border:1px solid #cbb5a1; border-radius:8px; color:#493d35;
+  padding:9px 44px 9px 11px; min-height:40px; cursor:pointer;
+}
+#transfer-mock .profile-popup select:not([multiple]):not([size]):hover:not(:disabled){border-color:#a82332;}
+#transfer-mock .profile-popup select:focus-visible{outline:2px solid #a82332;outline-offset:2px;}
+#transfer-mock .profile-popup select:disabled{opacity:.55;cursor:not-allowed;}
+#transfer-mock .profile-popup select option,#transfer-mock .profile-popup select optgroup{background:#fffaf2;color:#493d35;}
+@media(forced-colors:active){#transfer-mock .profile-popup select:not([multiple]):not([size]){appearance:auto;background-image:none;padding-right:11px;}}
+</style>
 </body></html>
