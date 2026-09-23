@@ -1388,6 +1388,9 @@ root.append(applicantMatchingWidthFix);
 const applicantMatchingPlacementFix=document.createElement('style');
 applicantMatchingPlacementFix.textContent='#transfer-mock .roster-table{width:100%!important;max-width:100%!important;table-layout:fixed!important}#transfer-mock .roster-table td:first-child,#transfer-mock .roster-table th:first-child{width:210px!important;min-width:210px!important;overflow:visible!important}#transfer-mock .roster-table td:last-child,#transfer-mock .roster-table th:last-child{display:none!important}#transfer-mock .player-name-cell{align-items:flex-start;flex-wrap:wrap}#transfer-mock .player-name-cell>.applicant-row-actions{flex-basis:100%;justify-content:flex-start;width:auto;margin-top:6px;gap:6px}';
 root.append(applicantMatchingPlacementFix);
+const applicantNativeTooltipFix=document.createElement('style');
+applicantNativeTooltipFix.textContent='#transfer-mock .applicant-row-actions [data-tooltip]::before,#transfer-mock .applicant-row-actions [data-tooltip]::after{display:none!important;content:none!important}';
+root.append(applicantNativeTooltipFix);
 
 applyLiveSnapshot(BOOT);liveReady=true;document.getElementById('live-loading').remove();document.body.classList.add('live-ready');
 setInterval(()=>{if(!document.hidden&&memberSettingsShade.hidden&&ownerShade.hidden&&!prospectLookup.open&&!liveResetDialog.open&&!liveSaving&&!liveFailed&&profile.hidden&&q('.confirm-shade').hidden&&pingLayer.hidden&&!['INPUT','TEXTAREA','SELECT'].includes(document.activeElement?.tagName))liveRefresh();},180000);
