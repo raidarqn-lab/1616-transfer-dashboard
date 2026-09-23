@@ -1340,6 +1340,47 @@ renderProfileCategories=function(){transferCategoryOriginal();const p=current(),
 // Reuse the table's category filter: Transfer is a fourth value alongside the existing three.
 
 for(const [key,values] of Object.entries({"Transfer": ["Traslado", "Transferência", "Transfert", "Transfer", "이전", "Chuyển máy chủ"], "Transfers": ["Traslados", "Transferências", "Transferts", "Transfers", "이전", "Chuyển máy chủ"], "Inbound Transfer": ["Traslado entrante", "Transferência de entrada", "Transfert entrant", "Eingehender Transfer", "전입", "Chuyển đến"], "Outbound Transfer": ["Traslado saliente", "Transferência de saída", "Transfert sortant", "Ausgehender Transfer", "전출", "Chuyển đi"], "Departure date": ["Fecha de salida", "Data de saída", "Date de départ", "Abreisedatum", "출발 날짜", "Ngày rời đi"], "Application approved": ["Solicitud aprobada", "Inscrição aprovada", "Candidature approuvée", "Bewerbung genehmigt", "신청 승인", "Đơn được duyệt"], "Not recorded": ["No registrado", "Não registrado", "Non renseigné", "Nicht erfasst", "기록 없음", "Chưa ghi nhận"], "Departed": ["Salió", "Saiu", "Parti", "Abgereist", "떠남", "Đã rời đi"], "Record transfer": ["Registrar traslado", "Registrar transferência", "Enregistrer le transfert", "Transfer erfassen", "이전 기록", "Ghi nhận chuyển máy chủ"], "Transfer direction": ["Dirección del traslado", "Direção da transferência", "Sens du transfert", "Transferrichtung", "이전 방향", "Hướng chuyển"], "Save group": ["Guardar grupo", "Salvar grupo", "Enregistrer le groupe", "Gruppe speichern", "그룹 저장", "Lưu nhóm"]}))["es","pt","fr","de","ko","vi"].forEach((lang,i)=>(interfaceTranslations[lang]??={})[key]=values[i]);
+
+function applicationLinkState(p){
+ const hasApplication=!!(p.applicationId||(p.applicationIds||[]).length||p.rawApplication);
+ return {hasApplication,linked:hasApplication&&!!(p.applicationMatchReview||p.sourceUid)};
+}
+function reviewApplicationFromApplicant(p){
+ if(previewRole==='support'||BOOT.role==='support'||!p||p.deleted)return;
+ const candidates=findIntakeMatches({name:p.name,server:p.server,alliance:p.alliance}).filter(x=>x.p.id!==p.id&&x.p.sourceUid).slice(0,5);
+ openApplicationMatchReview(p,candidates);
+}
+const applicantMatchingRow=row;
+row=function(p){
+ const html=applicantMatchingRow(p),state=applicationLinkState(p);
+ if(playerCategory(p)!=='Applicant'||!state.hasApplication)return html;
+ const marker='<button class="roster-edit" data-edit-player="'+p.id+'" aria-label="Edit '+esc(p.name)+'">Edit</button>';
+ const allowed=previewRole!=='support'&&BOOT.role!=='support';
+ const pill=state.linked
+  ?'<button type="button" class="application-link-pill is-linked" disabled data-tooltip="Application linkage is complete." title="Application linkage is complete.">Linked</button>'
+  :'<button type="button" class="application-link-pill" data-review-link="'+p.id+'" '+(allowed?'':'disabled')+' data-tooltip="'+(allowed?'Compare and link this application.':'Admin or lead access required.')+'" title="'+(allowed?'Compare and link this application.':'Admin or lead access required.')+'">Review &amp; link</button>';
+ return html.replace(marker,'<div class="applicant-row-actions">'+pill+marker.replace('>Edit<',' data-tooltip="Open and edit this applicant." title="Open and edit this applicant.">Edit<')+'</div>');
+};
+const applicantMatchingRender=render;
+render=function(){
+ if(view==='intake')view='board';
+ applicantMatchingRender();
+ intakePanel.hidden=true;
+ root.querySelectorAll('[data-review-link]').forEach(button=>button.onclick=()=>reviewApplicationFromApplicant(players.find(p=>String(p.id)===button.dataset.reviewLink)));
+};
+q('[data-view="intake"]')?.remove();
+for(const [lang,values] of Object.entries({
+ es:{'Review & link':'Revisar y vincular','Linked':'Vinculado','Application linkage is complete.':'La vinculación está completa.','Compare and link this application.':'Comparar y vincular esta solicitud.','Open and edit this applicant.':'Abrir y editar este solicitante.','Admin or lead access required.':'Requiere acceso de administrador o líder.'},
+ pt:{'Review & link':'Revisar e vincular','Linked':'Vinculado','Application linkage is complete.':'O vínculo está concluído.','Compare and link this application.':'Comparar e vincular esta inscrição.','Open and edit this applicant.':'Abrir e editar este candidato.','Admin or lead access required.':'Requer acesso de administrador ou líder.'},
+ fr:{'Review & link':'Vérifier et lier','Linked':'Lié','Application linkage is complete.':'La liaison est terminée.','Compare and link this application.':'Comparer et lier cette candidature.','Open and edit this applicant.':'Ouvrir et modifier ce candidat.','Admin or lead access required.':'Accès administrateur ou responsable requis.'},
+ de:{'Review & link':'Prüfen und verknüpfen','Linked':'Verknüpft','Application linkage is complete.':'Die Verknüpfung ist abgeschlossen.','Compare and link this application.':'Bewerbung vergleichen und verknüpfen.','Open and edit this applicant.':'Bewerber öffnen und bearbeiten.','Admin or lead access required.':'Administrator- oder Lead-Zugriff erforderlich.'},
+ ko:{'Review & link':'검토 및 연결','Linked':'연결됨','Application linkage is complete.':'신청 연결이 완료되었습니다.','Compare and link this application.':'신청서를 비교하고 연결합니다.','Open and edit this applicant.':'신청자를 열고 편집합니다.','Admin or lead access required.':'관리자 또는 리드 권한이 필요합니다.'},
+ vi:{'Review & link':'Xem và liên kết','Linked':'Đã liên kết','Application linkage is complete.':'Đã hoàn tất liên kết đơn.','Compare and link this application.':'So sánh và liên kết đơn này.','Open and edit this applicant.':'Mở và chỉnh sửa người đăng ký.','Admin or lead access required.':'Cần quyền quản trị viên hoặc trưởng nhóm.'}
+}))Object.assign(interfaceTranslations[lang]??={},values);
+const applicantMatchingStyle=document.createElement('style');
+applicantMatchingStyle.textContent='#transfer-mock .roster-table td:last-child,#transfer-mock .roster-table th:last-child{width:190px;min-width:190px}#transfer-mock .applicant-row-actions{display:flex;align-items:center;justify-content:flex-end;gap:7px;white-space:nowrap}#transfer-mock .application-link-pill{position:relative;width:auto;min-width:0;padding:5px 10px;border:1px solid #bd6e7e;border-radius:999px;background:#fff8f1;color:#9f1e3d;font:600 11px/1.2 Inter,Arial,sans-serif;cursor:pointer;box-shadow:none}#transfer-mock .application-link-pill:hover:not(:disabled){background:#f7e0df;border-color:#a82332}#transfer-mock .application-link-pill.is-linked,#transfer-mock .application-link-pill:disabled{background:#eeeae4;border-color:#d6cfc6;color:#8a8178;cursor:default}#transfer-mock .applicant-row-actions .roster-edit{position:relative}#transfer-mock .applicant-row-actions [data-tooltip]:hover:after,#transfer-mock .applicant-row-actions [data-tooltip]:focus-visible:after{content:attr(data-tooltip);position:absolute;right:0;bottom:calc(100% + 7px);z-index:40;width:max-content;max-width:190px;padding:6px 8px;border-radius:7px;background:#2d2927;color:#fffaf2;font:500 10px/1.35 Inter,Arial,sans-serif;white-space:normal;box-shadow:0 5px 18px #241a1833;pointer-events:none}#transfer-mock .applicant-row-actions [data-tooltip]:hover:before,#transfer-mock .applicant-row-actions [data-tooltip]:focus-visible:before{content:"";position:absolute;right:12px;bottom:calc(100% + 2px);border:5px solid transparent;border-top-color:#2d2927;z-index:41}#transfer-mock .applicant-row-actions .roster-edit{padding:5px 3px}';
+root.append(applicantMatchingStyle);
+
 applyLiveSnapshot(BOOT);liveReady=true;document.getElementById('live-loading').remove();document.body.classList.add('live-ready');
 setInterval(()=>{if(!document.hidden&&memberSettingsShade.hidden&&ownerShade.hidden&&!prospectLookup.open&&!liveResetDialog.open&&!liveSaving&&!liveFailed&&profile.hidden&&q('.confirm-shade').hidden&&pingLayer.hidden&&!['INPUT','TEXTAREA','SELECT'].includes(document.activeElement?.tagName))liveRefresh();},180000);
 
