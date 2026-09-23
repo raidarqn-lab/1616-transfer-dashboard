@@ -1,5 +1,5 @@
 import { firebaseConfig } from './firebase-config.js';
-import { callPortal } from './sheets-client.js';
+import { createPortalTransport } from './supabase-transport.mjs';
 const button = document.getElementById('sign-in');
 const signOutButton = document.getElementById('sign-out');
 const status = document.getElementById('status');
@@ -52,10 +52,11 @@ if (!['http:', 'https:'].includes(location.protocol)) {
     };
     document.getElementById('check-sheet').onclick = async event => {
       event.target.disabled = true;
-      report('Checking your workspace access and Google Sheet…');
+      report('Checking your workspace access…');
       try {
-        const data = await callPortal(auth.currentUser, 'connection.check');
-        report('Google Sheet connected · ' + data.role + ' · ' + data.applications + ' application records. No records were changed.');
+        const api = createPortalTransport({getIdToken:async()=>{if(!auth.currentUser)throw Error('Please sign in first.');return auth.currentUser.getIdToken();}});
+        const data = await api('connection.check');
+        report('Workspace connected · ' + data.role + '. No records were changed.');
       } catch(error) { report(error.message, true); }
       finally { event.target.disabled = false; }
     };
