@@ -1136,7 +1136,7 @@ accountButton.classList.add('profile-settings-button');accountButton.setAttribut
 const memberLanguage=document.createElement('label');memberLanguage.className='member-settings-language';memberLanguage.innerHTML='<span>Interface language</span><select aria-label="Interface language" translate="no">'+languageControl.querySelector('select').innerHTML+'</select>';memberSettingsPanel.querySelector('.member-account').after(memberLanguage);
 memberLanguage.querySelector('select').onchange=e=>{languageControl.querySelector('select').value=e.target.value;languageControl.querySelector('select').onchange(e);};
 function closeMemberSettings(){memberSettingsShade.hidden=true;memberSettingsPanel.hidden=true;accountButton.focus();}
-accountButton.onclick=()=>{pendingPhoto='';photoChanged=false;q('#member-photo-input').value='';renderMember();memberLanguage.querySelector('select').value=uiLanguage;memberSettingsShade.hidden=false;memberSettingsPanel.hidden=false;localizeInterface();memberSettingsClose.focus();};
+accountButton.onclick=()=>{pendingPhoto='';photoChanged=false;q('#member-photo-input').value='';renderMember();memberSettingsPanel.querySelector('.member-account > div').innerHTML=esc(member.email||'')+' · <span>'+(previewRole==='admin'?'Administrator':roleName(previewRole))+'</span>';memberLanguage.querySelector('select').value=uiLanguage;memberSettingsShade.hidden=false;memberSettingsPanel.hidden=false;localizeInterface();memberSettingsClose.focus();};
 memberSettingsClose.onclick=closeMemberSettings;memberSettingsShade.onclick=e=>{if(e.target===memberSettingsShade)closeMemberSettings();};
 memberSettingsShade.addEventListener('keydown',e=>{if(!q('.confirm-shade').hidden)return;if(e.key==='Escape'){e.preventDefault();e.stopPropagation();closeMemberSettings();}if(e.key==='Tab'){const items=[...memberSettingsPanel.querySelectorAll('button,input,select,summary,[tabindex="0"]')].filter(el=>!el.disabled&&el.getClientRects().length),first=items[0],last=items.at(-1);if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus();}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus();}}});
 q('[data-view="profile"]').hidden=true;if(view==='profile')view='overview';
@@ -1252,4 +1252,4 @@ setInterval(()=>{if(!document.hidden&&memberSettingsShade.hidden&&!prospectLooku
 @media(max-width:650px){#transfer-mock [data-team-panel]{padding:16px}#transfer-mock .recent-activity-heading{align-items:flex-start;flex-direction:column;gap:8px}}
 </style>
 
-</body></html>
+<style id="header-icon-tooltips">#transfer-mock .header-controls button[data-tooltip]:hover::after,#transfer-mock .header-controls button[data-tooltip]:focus-visible::after{content:attr(data-tooltip);position:absolute;top:calc(100% + 9px);right:0;padding:7px 10px;border-radius:7px;background:#3b302b;color:#fffaf2;font:12px Inter,sans-serif;white-space:nowrap;z-index:100;box-shadow:0 3px 10px #0002}</style></body></html>
