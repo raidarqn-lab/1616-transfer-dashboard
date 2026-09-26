@@ -1,6 +1,6 @@
 import {user} from './live-session.js';
 import {bountyConnection as config} from './nova-bounty-config.js';
-import {createLeaderboardOcr} from './nova-bounty-ocr.js';
+import {createLeaderboardOcr} from './nova-bounty-ocr.js?v=20260925b';
 
 const $=id=>document.getElementById(id);
 const el=(tag,text)=>{const node=document.createElement(tag);if(text!==undefined)node.textContent=text;return node;};

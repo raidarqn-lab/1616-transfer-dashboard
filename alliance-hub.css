@@ -29,3 +29,14 @@ body.hub-collapsed .rail{width:82px}body.hub-collapsed .workspace{margin-left:82
 .hub-status{min-height:24px;color:#9fc0d0}.hub-status.error{color:#ff9dac}
 @media(max-width:900px){.hub-page .rail{width:82px}.hub-page .workspace{margin-left:82px}.hub-page .rail .brand strong,.hub-page .rail .rail-label,.hub-page .rail nav button span,.hub-page .rail-bottom{display:none}.hub-page .rail nav button{justify-content:center}.hub-content-grid,.hub-admin-layout{grid-template-columns:1fr}.hub-collapse{display:none}}
 @media(max-width:620px){.hub-page .rail{display:none}.hub-page .workspace{margin-left:0}.hub-form-grid{grid-template-columns:1fr}.hub-overview{align-items:start;flex-direction:column}.hub-search{grid-template-columns:1fr}}
+
+/* Keep leadership destinations identifiable at every viewport width. */
+.hub-page .rail nav button{font-family:inherit;font-size:14px;font-weight:600;white-space:normal}
+.hub-page .rail nav button span{display:block;margin-left:0;font-size:14px;color:inherit}
+.hub-page .rail nav button[hidden]{display:none}
+.hub-page .rail nav svg{flex:0 0 20px;width:20px;height:20px}
+body.hub-collapsed .rail{width:160px}body.hub-collapsed .workspace{margin-left:160px}
+body.hub-collapsed .rail nav button{justify-content:flex-start;padding:12px 6px;gap:8px}
+body.hub-collapsed .rail nav button span{display:block;font-size:12px}
+@media(max-width:1000px){.hub-page .rail{width:190px;padding:22px 10px}.hub-page .workspace{margin-left:190px}.hub-page .rail nav button{justify-content:flex-start;padding:12px 8px;gap:9px}.hub-page .rail nav button span{display:block;font-size:13px}}
+@media(max-width:620px){.hub-page .rail,body.hub-collapsed .rail{display:flex;position:static;width:100%;padding:12px;border-right:0;border-bottom:1px solid var(--hub-border)}.hub-page .workspace,body.hub-collapsed .workspace{margin-left:0}.hub-page .rail .brand,.hub-page .rail .rail-label,.hub-page .rail-bottom,.hub-collapse{display:none}.hub-page .rail nav{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}.hub-page .rail nav button span{font-size:13px}.hub-page .rail nav button{min-height:44px}}

@@ -44,7 +44,9 @@ function cropLeaderboard(image){
 function loadImage(url){return new Promise((resolve,reject)=>{const image=new Image();image.crossOrigin='anonymous';image.onload=()=>resolve(image);image.onerror=()=>reject(Error('The private screenshot could not be opened for OCR.'));image.src=url;});}
 
 export async function createLeaderboardOcr(onProgress=()=>{}){
- const {createWorker,PSM}=await import(TESSERACT_URL);
+ const module=await import(TESSERACT_URL);
+ const {createWorker,PSM}=module.default??module;
+ if(typeof createWorker!=='function'||!PSM)throw Error('The OCR library could not initialize. Reload this page and try again.');
  const worker=await createWorker(['eng','vie'],1,{logger:event=>{if(event?.status)onProgress(event.status,Math.round((event.progress||0)*100));}});
  await worker.setParameters({tessedit_pageseg_mode:PSM.SPARSE_TEXT,preserve_interword_spaces:'1',user_defined_dpi:'300'});
  return {
