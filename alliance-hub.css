@@ -73,3 +73,5 @@ body.hub-collapsed .rail nav button span{display:block;font-size:12px}
 .event-type-menu svg.event-custom-art{width:56px;height:56px;display:block;stroke-width:1.7}
 
 .event-type-menu .event-art-illustrated{mix-blend-mode:screen;padding:5px;box-sizing:border-box}.event-type-menu button{isolation:auto}
+
+#directory-results{display:block;overflow-x:auto}#directory-results table{width:100%;min-width:950px;border-collapse:collapse}#directory-results th,#directory-results td{padding:14px;text-align:left;border-bottom:1px solid #24404d}#directory-results small{display:block;margin-top:5px;color:#96b1c0}#directory-profile [role="tablist"]{display:flex;flex-wrap:wrap;gap:8px;margin:20px 0}#directory-profile [aria-selected="true"]{border-color:#00cfdf;color:#00cfdf}

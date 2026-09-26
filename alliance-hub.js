@@ -14,9 +14,10 @@ async function hubCall(body){
 function setStatus(message,error=false){const node=$('hub-admin-status');node.textContent=message;node.classList.toggle('error',error);}
 function show(view){
  if(view==='admin'&&!access?.accountsManage){if(!user)location.href='./sign-in.html';return;}
- sections.forEach(section=>section.hidden=section.dataset.section!==view);
+ sections.forEach(section=>section.hidden=section.dataset.section!==(view==='roster'?'records':view));
  nav.forEach(button=>button.classList.toggle('active',button.dataset.hubView===view));
  history.replaceState(null,'','#'+view);document.title=`Alliance Hub · ${view[0].toUpperCase()+view.slice(1)}`;
+ if(view==='records'||view==='roster')window.dispatchEvent(new CustomEvent('nova-records-open',{detail:{roster:view==='roster'}}));
  if(view==='admin')loadStaff();
  if(view==='events'||view==='announcements')loadContent();
 }

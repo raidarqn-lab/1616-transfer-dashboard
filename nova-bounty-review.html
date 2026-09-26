@@ -98,6 +98,7 @@
               <label><input class="final-check" type="checkbox"> Alliances and all pages checked</label>
               <label><input class="final-check" type="checkbox"> Overlaps, duplicates and pinned rows checked</label>
             </div>
+            <label class="r4-reason">Bounty reward points · <span id="bounty-points-code"></span><input id="bounty-points" type="number" min="0" max="10000" step="1" value="10" required aria-describedby="bounty-points-help"></label><p id="bounty-points-help">Suggested: 10 points per bounty. Override when needed, then save the review draft. Applies to pending approvals for this bounty; previous awards stay unchanged. These are contribution points, separate from player leaderboard scores.</p>
             <label class="r4-reason">Review note<textarea id="review-note" rows="4" placeholder="Record what was checked or corrected"></textarea></label>
             <div class="r4-actions"><button id="reject-review" class="reject-button">Reject submission</button><button id="decision-preview">Preview approval</button><button id="approve-review" class="primary" disabled>Approve and publish NvSP scores</button></div>
             <p id="decision-help">Confirm every included row and screenshot before publishing. Opponent rows remain with the evidence and are not posted to the member leaderboard.</p>
@@ -111,6 +112,6 @@
   </div>
 
   <dialog id="preview-dialog"><button id="close-preview" class="close" aria-label="Close">×</button><div id="preview-content"></div></dialog>
-  <script type="module" src="./nova-bounty-review.js?v=ocr-20260925b"></script>
+  <script type="module" src="./nova-bounty-review.js?v=points-20260926a"></script>
 </body>
 </html>
