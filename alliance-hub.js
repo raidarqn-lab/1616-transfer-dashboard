@@ -13,7 +13,7 @@ async function hubCall(body){
 }
 function setStatus(message,error=false){const node=$('hub-admin-status');node.textContent=message;node.classList.toggle('error',error);}
 function show(view){
- if(view==='admin'&&!access?.accountsManage)view='bounties';
+ if(view==='admin'&&!access?.accountsManage){if(!user)location.href='./sign-in.html';return;}
  sections.forEach(section=>section.hidden=section.dataset.section!==view);
  nav.forEach(button=>button.classList.toggle('active',button.dataset.hubView===view));
  history.replaceState(null,'','#'+view);document.title=`Alliance Hub · ${view[0].toUpperCase()+view.slice(1)}`;
@@ -69,3 +69,8 @@ document.querySelectorAll('[data-event-type]').forEach(button=>button.onclick=()
 eventTypeSelect.addEventListener('change',paintEventType);
 document.getElementById('event-editor').addEventListener('reset',()=>setTimeout(paintEventType,0));
 paintEventType();
+
+let createPlayer=null;
+$('member-create-search').onsubmit=async event=>{event.preventDefault();createPlayer=null;$('member-create-form').hidden=true;$('member-create-output').hidden=true;$('member-create-status').textContent='Searching players…';try{const rows=await hubCall({action:'player-search',query:$('member-create-query').value});const out=$('member-create-results');out.replaceChildren();for(const player of rows){const button=document.createElement('button');button.type='button';button.textContent=`${player.name} · ${player.alliance||'No alliance'} · Server ${player.server||'—'}`;button.onclick=()=>{createPlayer=player;$('member-create-player').textContent=`Member profile: ${player.name} · ${player.alliance} · ${player.key}`;$('member-create-username').value=player.name.toLowerCase().replace(/[^a-z0-9_]/g,'').slice(0,32);$('member-create-form').hidden=false;};out.append(button);}$('member-create-status').textContent=rows.length?'Select the matching player.':'No matching player found.';}catch(error){$('member-create-status').textContent=error.message;}};
+$('member-create-form').onsubmit=async event=>{event.preventDefault();if(!createPlayer)return;const button=event.currentTarget.querySelector('button');button.disabled=true;$('member-create-status').textContent='Creating member login…';try{const result=await hubCall({action:'hub-member-create',playerKey:createPlayer.key,username:$('member-create-username').value.trim().toLowerCase()});$('member-created-username').value=result.username;$('member-created-code').value=result.inviteCode;$('member-create-output').hidden=false;$('member-create-form').hidden=true;$('member-create-status').textContent='Member login created. No leadership permissions granted.';}catch(error){$('member-create-status').textContent=error.message;}finally{button.disabled=false;}};
+$('member-created-hide').onclick=()=>{$('member-created-code').value='';$('member-create-output').hidden=true;};
