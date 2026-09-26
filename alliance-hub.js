@@ -18,7 +18,7 @@ function show(view){
  nav.forEach(button=>button.classList.toggle('active',button.dataset.hubView===view));
  history.replaceState(null,'','#'+view);document.title=`Alliance Hub · ${view[0].toUpperCase()+view.slice(1)}`;
  if(view==='records'||view==='roster')window.dispatchEvent(new CustomEvent('nova-records-open',{detail:{roster:view==='roster'}}));
- if(view==='admin')loadStaff();
+ if(view==='admin'){loadStaff();window.dispatchEvent(new Event('nova-initiatives-open'));}
  if(view==='events'||view==='announcements')loadContent();
 }
 nav.forEach(button=>button.onclick=()=>show(button.dataset.hubView));
