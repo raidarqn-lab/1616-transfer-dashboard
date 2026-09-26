@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Alliance Hub · Leadership</title>
   <link rel="stylesheet" href="./nova-bounty-review.css?v=live-r4-20260925">
-  <link rel="stylesheet" href="./alliance-hub.css?v=hard-save-20260926profile2">
+  <link rel="stylesheet" href="./alliance-hub.css?v=initiatives-views-20260926">
 </head>
 <body class="hub-page">
   <svg class="sprite" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
@@ -133,6 +133,7 @@
       <section class="hub-section" data-section="admin" hidden>
         <div class="hub-overview"><div><div class="eyebrow">MASTER ADMINISTRATION</div><h1>Alliance Hub Admin</h1><p>Manage leadership scope, R4 access and the member accounts used on nova.join1616.com.</p></div><div class="hub-stat"><strong>MASTER</strong><span>RAIDARQN@GMAIL.COM</span></div></div>
         <p class="hub-admin-note">Alliance Hub permissions and Transfer Hub permissions are independent. Granting R4 access here does not grant access to private transfer operations.</p>
+        <section id="player-initiatives-admin" class="hub-card" aria-label="Player initiatives"></section>
         <p id="hub-admin-status" class="hub-status" role="status"></p>
         <div class="hub-admin-layout"><section class="hub-card"><div class="eyebrow">NOVA MEMBER SITE · MEMBER ACCESS ONLY</div><h2>Create member login</h2><p>Find the player, choose a username, then issue a private setup code. The member chooses their password on the member site. This grants no leadership or Transfer Hub access.</p><form id="member-create-search" class="hub-search"><label>Player name or ID<input id="member-create-query" required minlength="2" placeholder="e.g. LizardMercer"></label><button type="submit">Find player</button></form><div id="member-create-results" class="search-results"></div><form id="member-create-form" class="hub-form-grid" hidden><p id="member-create-player" class="wide"></p><label>Username<input id="member-create-username" required pattern="[a-z0-9_]{3,32}" minlength="3" maxlength="32" autocomplete="off"></label><button type="submit" class="primary">Create member login</button></form><p id="member-create-status" role="status"></p><div id="member-create-output" hidden><p>Share these details privately with this member. The setup code expires in 48 hours.</p><label>Member sign-in<input readonly value="https://raidarqn-lab.github.io/nova-sapphire/"></label><label>Username<input id="member-created-username" readonly></label><label>Private setup code<input id="member-created-code" readonly autocomplete="off"></label><button id="member-created-hide" type="button">Hide setup details</button></div></section>
           <section class="hub-card"><h2>R4 leadership access</h2><label class="hub-search">Search email or alliance<input id="hub-staff-filter" type="search" placeholder="Search leadership"></label><div class="table-scroll"><table class="hub-table"><thead><tr><th>ACCOUNT</th><th>ROLE</th><th>WORKSPACES</th><th></th></tr></thead><tbody id="hub-staff-rows"></tbody></table></div></section>
@@ -146,7 +147,7 @@
   </div>
 
   <dialog id="preview-dialog"><button id="close-preview" class="close" aria-label="Close">×</button><div id="preview-content"></div></dialog>
-  <script type="module" src="./nova-bounty-review.js?v=hard-save-20260926"></script>
+  <script type="module" src="./nova-bounty-review.js?v=initiatives-views-20260926"></script>
   <script type="module" src="./alliance-hub.js?v=20260926profile2"></script>
 </body>
 </html>
