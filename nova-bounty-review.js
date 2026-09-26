@@ -131,14 +131,37 @@ function renderProfile(row,profile={}){
  $('profile-heading').textContent=row.playerName||profile.name||row.name||'Player profile';$('profile-preview').replaceChildren(card.cloneNode(true));return card;
 }
 
+function drawPlayerHR(body,profile,full){
+ const message=el('p','Leadership notes and follow-up history for this player. Author and timestamps are recorded with every entry.');body.append(message);
+ const form=el('form');form.className='player-info-card hr-form';form.append(el('h3','Add a record'));
+ const field=(label,type,value='')=>{const wrap=el('label',label),input=el(type==='textarea'?'textarea':'input');if(type!=='textarea')input.type=type;input.value=value;wrap.append(input);form.append(wrap);return input;};
+ const author=field('Your name','text',user?.displayName||'');author.required=true;author.maxLength=100;
+ const categoryWrap=el('label','Category'),category=el('select');for(const name of ['General','Attendance','Performance','Recognition','Conduct','Roster change']){const option=el('option',name);option.value=name;category.append(option);}categoryWrap.append(category);form.append(categoryWrap);
+ const title=field('Title','text');title.required=true;title.maxLength=160;
+ const details=field('Notes','textarea');details.required=true;details.maxLength=8000;details.rows=4;
+ const date=field('Event date','date',new Date().toISOString().slice(0,10));date.required=true;
+ const followUp=field('Follow-up date (optional)','date');
+ const save=el('button','Save record');save.type='submit';const status=el('p');status.setAttribute('role','status');form.append(save,status);body.append(form);
+ const history=el('div');body.append(history);
+ const render=()=>{history.replaceChildren(el('h3','Recorded history'));if(!full.hr?.length){history.append(el('p','No HR records yet.'));return;}
+ for(const record of full.hr){const card=el('section');card.className='player-info-card';card.append(el('h3',record.title),el('small',`${record.category} · Event: ${record.event_date}`));const notes=el('p',record.details);notes.style.whiteSpace='pre-wrap';card.append(notes,el('p',`Added by ${record.author_name} · ${new Date(record.created_at).toLocaleString()}`),el('small',`Verified account: ${record.author_email}`));if(record.follow_up)card.append(el('p',`Follow-up: ${record.follow_up}`));
+ const label=el('label','Status'),select=el('select');for(const value of ['Open','In progress','Resolved']){const option=el('option',value);option.value=value;select.append(option);}select.value=record.status;label.append(select);card.append(label);const feedback=el('p');feedback.setAttribute('role','status');card.append(feedback);
+ select.onchange=async()=>{select.disabled=true;try{const data=await call({action:'profile',playerKey:profile.key,hrOperation:'status',entryId:record.id,revision:record.revision,status:select.value});full.hr=data.hr;render();}catch(error){select.value=record.status;feedback.textContent='Unable to update. Reopen the profile if another leader changed this record. '+error.message;}finally{select.disabled=false;}};
+ if(record.revision>1)card.append(el('small',`Updated ${new Date(record.updated_at).toLocaleString()} by ${record.updated_by}`));history.append(card);
+ }};
+ form.onsubmit=async event=>{event.preventDefault();save.disabled=true;status.textContent='Saving…';try{const data=await call({action:'profile',playerKey:profile.key,hrOperation:'create',authorName:author.value,category:category.value,title:title.value,details:details.value,eventDate:date.value,followUp:followUp.value});full.hr=data.hr;title.value='';details.value='';followUp.value='';status.textContent='Saved to player record.';render();}catch(error){status.textContent='Not saved. '+error.message;}finally{save.disabled=false;}};
+ render();
+}
+
 async function showDirectoryProfile(profile){
  profileCache.set(profile.key,profile);const out=$('directory-profile');out.replaceChildren();
  const header=el('header'),identity=el('div'),avatar=el('div',(profile.name||'?').trim().slice(0,1).toUpperCase()),title=el('div'),heading=el('h2',profile.name||'Player profile');header.className='player-header';identity.className='player-identity';avatar.className='player-avatar';title.append(el('small','ALLIANCE HUB · PLAYER RECORD'),heading,el('p',`[${profile.alliance||'Unknown'}] · Server ${profile.server||'—'}${profile.allianceRank?' · '+profile.allianceRank:''}`));identity.append(avatar,title);header.append(identity);const close=el('button','Close ×');close.className='player-close';close.onclick=()=>out.close?out.close():out.replaceChildren();header.append(close);out.append(header);out.setAttribute('aria-label',`${profile.name||'Player'} profile`);if(out.showModal&&!out.open)out.showModal();
  const layout=el('div'),tabs=el('nav'),body=el('section');layout.className='player-layout';tabs.className='player-tabs';tabs.setAttribute('role','tablist');tabs.setAttribute('aria-label','Player profile sections');body.className='player-body';body.setAttribute('role','tabpanel');layout.append(tabs,body);out.append(layout);body.textContent='Loading player record…';
- try{const full=await call({action:'profile',playerKey:profile.key,includeActivity:true});if(!heading.isConnected)return;const choices=[['all','Overview'],['vs','Alliance Duel'],['donations','Alliance Donations'],['desert_storm','Desert Storm'],['canyon_storm','Canyon Storm'],['bounties','Bounties']];
+ try{const full=await call({action:'profile',playerKey:profile.key,includeActivity:true});if(!heading.isConnected)return;const choices=[['all','Overview'],['vs','Alliance Duel'],['donations','Alliance Donations'],['desert_storm','Desert Storm'],['canyon_storm','Canyon Storm'],['bounties','Bounties'],['hr','Human Resources']];
  const facts=(label,values)=>{const section=el('section');section.className='player-info-card';section.append(el('h3',label));const list=el('dl');for(const [key,value] of values){const pair=el('div');pair.append(el('dt',key),el('dd',value===undefined||value===null||value===''?'Not recorded':String(value)));list.append(pair);}section.append(list);return section;};
  const empty=(title,description)=>{const box=el('div');box.className='player-empty';box.append(el('h3',title),el('p',description));body.append(box);};
  const draw=key=>{body.replaceChildren();for(const button of tabs.children)button.setAttribute('aria-selected',String(button.dataset.key===key));const name=choices.find(c=>c[0]===key)[1];body.append(el('h2',name));
+ if(key==='hr'){drawPlayerHR(body,profile,full);return;}
  if(key==='bounties'){
   body.append(el('p','Screenshot submissions and linked bounty evidence, including pending reviews and completed results.'));
   const history=full.bounties||[];
