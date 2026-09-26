@@ -8,13 +8,13 @@ const text=v=>String(v??'').trim();
 
 async function call(body){
  if(!user)throw Error('Sign in to the Portal first.');
- const r=await fetch(config.endpoint,{method:'POST',headers:{'Content-Type':'application/json',apikey:config.anonKey,'X-Portal-Token':await user.getIdToken()},body:JSON.stringify(body),signal:AbortSignal.timeout(30000)});
+ const r=await fetch(config.endpoint,{method:'POST',headers:{'Content-Type':'application/json',apikey:config.anonKey,'X-Portal-Token':await user.getIdToken()},body:JSON.stringify(body),signal:AbortSignal.timeout(body.action==='extract-page'?65000:30000)});
  const d=await r.json();
  if(!r.ok)throw Error(d.error||'Unable to save. Reload the review if another reviewer changed it.');
  return d;
 }
 
-let active,draft,dirty=false,selected=0;
+let active,draft,dirty=false,selected=0,extracting=false;
 const profileCache=new Map();
 window.addEventListener('beforeunload',e=>{if(dirty){e.preventDefault();e.returnValue='';}});
 
@@ -101,5 +101,21 @@ async function load(){
 }
 
 $('save').onclick=async()=>{try{$('save').disabled=true;draft=await call({action:'save-review',batchId:active.id,revision:draft.revision,rows:draft.rows});draft.rows=draft.rows.map(normalizeRow);dirty=false;summary();status('Review draft saved to the live Portal. Scores remain unpublished.');}catch(e){status(e.message);}finally{$('save').disabled=false;}};
+$('extract').onclick=async()=>{
+ if(extracting||!active)return;
+ if(draft.rows.length&&!confirm('Replace the current draft rows with new screenshot suggestions? Unsaved matching work will be lost.'))return;
+ extracting=true;$('extract').disabled=true;const suggestions=[];$('extract-status').textContent=`Starting extraction for ${active.fileCount} screenshots…`;
+ try{
+  for(let page=1;page<=active.fileCount;page++){
+   $('extract-status').textContent=`Reading screenshot ${page} of ${active.fileCount}…`;
+   const result=await call({action:'extract-page',batchId:active.id,sequence:page});
+   for(const row of result.rows||[])suggestions.push(normalizeRow(row));
+  }
+  draft.rows=suggestions;dirty=true;selected=0;renderRows();
+  if(draft.rows.length)selectRow(0);else $('editor').replaceChildren(el('p','No ranking rows were detected. Check the screenshots and add rows manually.'));
+  $('extract-status').textContent=`Generated ${suggestions.length} unconfirmed suggestions from ${active.fileCount} screenshots. Review yellow rows, then save the draft.`;
+ }catch(e){$('extract-status').textContent=`Extraction stopped after ${suggestions.length} suggestions. ${e.message} You can retry without saving.`;}
+ finally{extracting=false;$('extract').disabled=false;}
+};
 $('preview').onclick=()=>{const s=issues(draft.rows),out=$('preview-content');out.replaceChildren(el('h2','Approval preview'),el('p',`${active.bounty}: ${s.included.length} included score rows. ${draft.rows.length-s.included.length} excluded.`),el('p',`${s.unmatched} unmatched, ${s.pending} awaiting confirmation, ${s.duplicates} duplicate conflicts.`),el('p','Approval is not enabled yet. This preview does not update player scores, award bounty points, or delete screenshots.'));for(const r of s.included)out.append(el('p',`${rowConfirmed(r)?'✓':'●'} ${r.playerName||r.name} · ${r.playerAlliance||r.alliance||'Alliance unknown'} → ${r.playerKey||'UNMATCHED'} · ${Number(r.score).toLocaleString()} points`));$('preview-dialog').showModal();};
 $('close-preview').onclick=()=>$('preview-dialog').close();$('filter').oninput=renderRows;$('page').onchange=()=>evidence(Number($('page').value));$('add').onclick=()=>{draft.rows.push(normalizeRow({rank:draft.rows.length+1,name:'New row',alliance:'',score:'0',page:Number($('page').value)||1,playerKey:'',excluded:false}));changed();selectRow(draft.rows.length-1);};$('refresh').onclick=load;load();
