@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Alliance Hub · Leadership</title>
+  <link rel="stylesheet" href="./nova-bounty-review.css?v=live-r4-20260925">
+  <link rel="stylesheet" href="./alliance-hub.css?v=20260925a">
+</head>
+<body class="hub-page">
+  <svg class="sprite" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
+    <symbol id="target" viewBox="0 0 24 24"><circle cx="12" cy="12" r="7"></circle><circle cx="12" cy="12" r="2"></circle><path d="M12 1v5m0 12v5M1 12h5m12 0h5"></path></symbol>
+    <symbol id="layers" viewBox="0 0 24 24"><path d="m12 3 10 5-10 5L2 8l10-5Zm-10 9 10 5 10-5M2 16l10 5 10-5"></path></symbol>
+    <symbol id="shield" viewBox="0 0 24 24"><path d="m12 2 9 4-1 8-8 8-8-8-1-8 9-4Z"></path><path d="m8 12 3 3 5-6"></path></symbol>
+  </svg>
+
+  <aside class="rail">
+    <a class="brand" href="./alliance-hub.html" aria-label="Alliance Hub for Leaders">
+      <img src="https://raidarqn-lab.github.io/nova-sapphire/assets/nova-transparent.png" alt="Nova alliance">
+      <strong>ALLIANCE <span>HUB</span></strong>
+    </a>
+    <div class="rail-label">LEADERSHIP · SERVER 1616</div>
+    <button id="hub-collapse" class="hub-collapse" type="button">Collapse panel</button>
+    <nav aria-label="Alliance Hub navigation">
+      <button class="active" data-hub-view="bounties" type="button"><svg><use href="#target"></use></svg><span>Bounties</span></button>
+      <button data-hub-view="events" type="button"><svg><use href="#layers"></use></svg><span>Events</span></button>
+      <button data-hub-view="announcements" type="button"><svg><use href="#layers"></use></svg><span>Announcements</span></button>
+      <button data-hub-view="admin" type="button"><svg><use href="#shield"></use></svg><span>Admin</span></button>
+    </nav>
+    <div class="rail-bottom"><span class="status-dot"></span> LIVE PORTAL<p id="hub-role-name">Alliance leader</p><a href="./live.html">Open Transfer Hub</a><br><a href="https://nova.join1616.com/">Open member site</a></div>
+  </aside>
+
+  <div class="workspace">
+    <header>
+      <div class="breadcrumb">ALLIANCE OPERATIONS <span>/</span> <strong>ALLIANCE HUB</strong></div>
+      <div class="live-badge">LIVE DATA</div>
+      <div class="header-clocks" aria-label="Current server and local time"><div><span>SERVER · UTC</span><time id="server-time">—</time></div><div><span>LOCAL</span><time id="local-time">—</time></div></div>
+      <div class="member-badge"><span>R4</span><div id="hub-identity">Leadership<small>Verified Portal session</small></div></div>
+    </header>
+
+    <main>
+      <p id="hub-access-status" class="hub-status" role="status"></p>
+      <section class="hub-section" data-section="bounties">
+      <div class="page-heading">
+        <div><div class="eyebrow">LEADERSHIP / SAPPHIRE INTELLIGENCE</div><h1>R4 Review</h1><p>Check the evidence. Confirm the suggested matches. Reward the contribution.</p></div>
+        <button id="refresh">Refresh queue</button>
+      </div>
+
+      <p id="status" class="r4-notice" role="status">Connecting to the live review queue…</p>
+      <section class="panel directory-panel" aria-labelledby="directory-title">
+        <div><div class="eyebrow">PRIVATE TRANSFER DATA · SUPABASE</div><h2 id="directory-title">Transfer Player Directory</h2><p>Search the player records already available to leadership in the Transfer Portal.</p></div>
+        <form id="directory-search" class="directory-search">
+          <label>Player name, alliance, server or player ID<input id="directory-query" autocomplete="off" minlength="2" maxlength="100" required placeholder="Search private player records"></label>
+          <button class="primary" type="submit">Search players</button>
+        </form>
+        <p id="directory-status" role="status">Enter at least two characters.</p>
+        <div id="directory-results" class="search-results directory-results"></div>
+        <div id="directory-profile"></div>
+      </section>
+      <div class="r4-layout">
+        <aside class="panel r4-queue">
+          <div class="eyebrow">REVIEW QUEUE</div>
+          <h2>Awaiting review <span id="queue-count">0</span></h2>
+          <div id="queue"></div>
+          <p class="hint">Each submission is one complete bounty evidence set. Open it to review every uploaded screenshot.</p>
+        </aside>
+
+        <section id="workspace" class="r4-work" hidden>
+          <section class="panel r4-summary">
+            <div><div class="eyebrow">SUBMISSION BRIEF</div><h2 id="batch-title">Daily all-player leaderboard</h2><p id="batch-meta"></p><strong id="batch-alliance">Alliance information will be confirmed during review.</strong></div>
+            <div class="r4-reward"><b>+10</b><span>BOUNTY POINTS</span></div>
+            <p id="counts" class="r4-wide"></p>
+            <div class="r4-wide r4-toolbar"><button id="extract" class="primary">Read screenshots with OCR</button><button id="save">Save review draft</button><button id="preview">Preview decision</button><button id="add">Add row</button></div>
+            <p id="extract-status" class="r4-wide" role="status"></p>
+          </section>
+
+          <div class="r4-columns">
+            <section class="panel r4-evidence">
+              <div class="r4-section-head"><h2>Original evidence</h2><span class="pill">REAL SCREENSHOTS</span></div>
+              <div class="r4-evidence-brief"><div class="eyebrow">BOUNTY FOR REVIEW</div><h3 id="evidence-title">Daily leaderboard</h3><p id="evidence-meta" class="r4-brief-meta"></p><code id="evidence-code"></code></div>
+              <div id="pages" class="r4-pages" aria-label="Screenshot pages"></div>
+              <p id="page-progress">0 screenshots reviewed</p>
+              <p id="image-status" role="status"></p>
+              <div id="image" class="r4-original"></div>
+            </section>
+
+            <section class="panel r4-data">
+              <div class="r4-section-head"><h2>Suggested player matches</h2><span id="page-state" class="review-indicator pending" tabindex="0">●<span class="review-tooltip">Needs confirmation</span></span></div>
+              <p>OCR suggestions are unconfirmed. Search the private Supabase player directory if a name is wrong, then confirm the player, alliance and score.</p>
+              <label class="r4-filter">Filter this page<input id="filter" placeholder="Name, alliance, ID or rank"></label>
+              <div class="table-scroll"><table><thead><tr><th>RANK</th><th>PLAYER / ALLIANCE / SCORE REVIEW</th></tr></thead><tbody id="rows"></tbody></table></div>
+              <div id="editor" class="r4-match-workspace"><p>Select a suggested row to search and inspect the private transfer profile.</p></div>
+              <div class="r4-actions"><button id="confirm-page" class="primary">Confirm this page</button><button id="clear-page">Clear this page</button></div>
+              <div class="r4-coverage"><h3>Coverage checks</h3><p id="coverage"></p><p class="r4-warning">Repeated, overlapping or pinned rows stay visible for R4 review and are never silently discarded.</p></div>
+            </section>
+          </div>
+
+          <section class="panel r4-decision">
+            <div class="eyebrow">FINAL REVIEW</div><h2>Ready for a decision?</h2>
+            <div class="r4-checks">
+              <label><input class="final-check" type="checkbox"> Player suggestions checked</label>
+              <label><input class="final-check" type="checkbox"> Bounty and game date checked</label>
+              <label><input class="final-check" type="checkbox"> Alliances and all pages checked</label>
+              <label><input class="final-check" type="checkbox"> Overlaps, duplicates and pinned rows checked</label>
+            </div>
+            <label class="r4-reason">Review note<textarea id="review-note" rows="4" placeholder="Record what was checked or corrected"></textarea></label>
+            <div class="r4-actions"><button id="reject-review" class="reject-button">Reject submission</button><button id="decision-preview">Preview approval</button><button id="approve-review" class="primary" disabled>Approve and publish NvSP scores</button></div>
+            <p id="decision-help">Confirm every included row and screenshot before publishing. Opponent rows remain with the evidence and are not posted to the member leaderboard.</p>
+          </section>
+
+          <section class="score-panel"><div class="eyebrow">R4 PRIVATE PROFILE PREVIEW</div><h3 id="profile-heading">Select a player match</h3><div id="profile-preview"><p>Search a score row to view transfer profile data and known identities.</p></div></section>
+        </section>
+      </div>
+      </section>
+
+      <section class="hub-section" data-section="events" hidden>
+        <div class="hub-overview"><div><div class="eyebrow">ALLIANCE CONTENT / MEMBER SITE</div><h1>Events</h1><p>Create, schedule and publish the events shown to signed-in members on nova.join1616.com.</p></div><div class="hub-stat"><strong id="event-count">0</strong><span>PUBLISHED EVENTS</span></div></div>
+        <div class="hub-content-grid"><aside class="hub-card"><h2>Event schedule</h2><div id="event-list" class="hub-empty">Published and draft events will appear here.</div></aside><section class="hub-card"><h2>Event editor</h2><form id="event-editor" class="hub-form-grid"><label>Event name<input name="title" required maxlength="120"></label><label>Category<select name="category"><option>Alliance event</option><option>Desert Storm</option><option>Canyon Storm</option><option>Marshall's Guard</option><option>Season event</option></select></label><label>Starts<input name="startsAt" type="datetime-local" required></label><label>Ends<input name="endsAt" type="datetime-local"></label><label class="wide">Member instructions<textarea name="body" rows="8" maxlength="4000"></textarea></label><label>Status<select name="status"><option value="draft">Draft</option><option value="published">Published</option></select></label><div class="hub-actions"><button class="primary" type="submit">Save event</button></div></form></section></div>
+      </section>
+
+      <section class="hub-section" data-section="announcements" hidden>
+        <div class="hub-overview"><div><div class="eyebrow">ALLIANCE CONTENT / MEMBER SITE</div><h1>Announcements</h1><p>Publish alliance notices to the protected Sapphire member site.</p></div><div class="hub-stat"><strong id="announcement-count">0</strong><span>ACTIVE NOTICES</span></div></div>
+        <div class="hub-content-grid"><aside class="hub-card"><h2>Announcement list</h2><div id="announcement-list" class="hub-empty">Published and draft announcements will appear here.</div></aside><section class="hub-card"><h2>Announcement editor</h2><form id="announcement-editor" class="hub-form-grid"><label class="wide">Title<input name="title" required maxlength="120"></label><label>Priority<select name="priority"><option value="normal">Normal</option><option value="important">Important</option><option value="urgent">Urgent</option></select></label><label>Audience<select name="audience"><option value="all">All Sapphire members</option><option value="r4">R4 leadership</option><option value="alliance">Selected alliance</option></select></label><label class="wide">Message<textarea name="body" rows="9" required maxlength="4000"></textarea></label><label>Status<select name="status"><option value="draft">Draft</option><option value="published">Published</option></select></label><div class="hub-actions"><button class="primary" type="submit">Save announcement</button></div></form></section></div>
+      </section>
+
+      <section class="hub-section" data-section="admin" hidden>
+        <div class="hub-overview"><div><div class="eyebrow">MASTER ADMINISTRATION</div><h1>Alliance Hub Admin</h1><p>Manage leadership scope, R4 access and the member accounts used on nova.join1616.com.</p></div><div class="hub-stat"><strong>MASTER</strong><span>RAIDARQN@GMAIL.COM</span></div></div>
+        <p class="hub-admin-note">Alliance Hub permissions and Transfer Hub permissions are independent. Granting R4 access here does not grant access to private transfer operations.</p>
+        <p id="hub-admin-status" class="hub-status" role="status"></p>
+        <div class="hub-admin-layout">
+          <section class="hub-card"><h2>R4 leadership access</h2><label class="hub-search">Search email or alliance<input id="hub-staff-filter" type="search" placeholder="Search leadership"></label><div class="table-scroll"><table class="hub-table"><thead><tr><th>ACCOUNT</th><th>ROLE</th><th>WORKSPACES</th><th></th></tr></thead><tbody id="hub-staff-rows"></tbody></table></div></section>
+          <section class="hub-card"><div id="hub-account-empty" class="hub-empty">Select a leadership account to manage its permissions.</div><div id="hub-account-panel" class="hub-account-panel" hidden><div class="eyebrow">LEADERSHIP ACCOUNT</div><h2 id="hub-account-email"></h2><div class="hub-form-grid"><label>Alliance Hub role<select id="hub-role"><option value="r4">R4</option><option value="alliance_admin">Alliance administrator</option><option value="master">Master administrator</option></select></label><label>Alliance permissions<input id="hub-alliances" placeholder="NvSP, NvEM"></label></div><div class="hub-checks"><label><input id="hub-bounties" type="checkbox"> Bounties</label><label><input id="hub-events" type="checkbox"> Events</label><label><input id="hub-announcements" type="checkbox"> Announcements</label><label><input id="hub-accounts" type="checkbox"> Member administration</label><label><input id="hub-transfer" type="checkbox"> Transfer Hub access</label></div><div class="hub-actions"><button id="hub-save-access" class="primary" type="button">Save permissions</button><button id="hub-revoke" class="danger" type="button">Revoke R4 access</button></div></div></section>
+          <section class="hub-card"><h2>Sapphire member accounts</h2><p>Search the protected accounts used to enter nova.join1616.com.</p><form id="hub-member-search" class="hub-search"><label>Username, player name or player ID<input id="hub-member-query" required minlength="2" placeholder="Search members"></label><button class="primary" type="submit">Search</button></form><div id="hub-member-results" class="search-results"></div></section>
+          <section class="hub-card"><div class="eyebrow">SELECTED MEMBER</div><h2 id="hub-member-name">No member selected</h2><p>Account state: <strong id="hub-member-state">—</strong></p><input id="hub-member-id" type="hidden"><div class="hub-form-grid"><label class="wide">Username<input id="hub-member-username" pattern="[A-Za-z0-9_]{3,32}"></label></div><div class="hub-actions"><button id="hub-reset-username" type="button">Save username</button><button id="hub-reset-password" type="button">Issue password reset</button><button id="hub-member-revoke" class="danger" type="button">Revoke member access</button></div><div id="hub-reset-output" hidden><p>One-time reset code. It is shown once:</p><code id="hub-reset-code"></code></div></section>
+        </div>
+      </section>
+      <footer><span>NOVA SAPPHIRE · ALLIANCE OPERATIONS</span><span>Private leadership workspace</span></footer>
+    </main>
+  </div>
+
+  <dialog id="preview-dialog"><button id="close-preview" class="close" aria-label="Close">×</button><div id="preview-content"></div></dialog>
+  <script type="module" src="./nova-bounty-review.js?v=directory-20260925a"></script>
+  <script type="module" src="./alliance-hub.js?v=20260925a"></script>
+</body>
+</html>

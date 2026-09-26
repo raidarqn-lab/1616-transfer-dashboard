@@ -37,6 +37,16 @@ function issues(rows){
  for(const row of included){if(ranks.has(row.rank)||(row.playerKey&&keys.has(row.playerKey)))duplicates++;ranks.add(row.rank);if(row.playerKey)keys.add(row.playerKey);}
  return {included,duplicates,unmatched:included.filter(row=>!row.playerKey).length,pending:included.filter(row=>!rowConfirmed(row)).length};
 }
+function decisionReady(){
+ if(!active||!draft)return false;
+ const report=issues(draft.rows),allPages=Array.from({length:active.fileCount},(_,index)=>pageConfirmed(index+1)).every(Boolean);
+ return report.included.length>0&&report.pending===0&&report.duplicates===0&&allPages&&[...document.querySelectorAll('.final-check')].every(input=>input.checked);
+}
+function renderDecision(){
+ const ready=decisionReady(),button=$('approve-review');if(!button)return;
+ button.disabled=!ready;
+ $('decision-help').textContent=ready?'Ready to publish confirmed NvSP rows. Opponent rows remain private review evidence.':'Confirm every included row, screenshot and final review check before publishing.';
+}
 function markChanged(){dirty=true;renderSummary();renderPages();}
 function resetConfirmations(row,...keys){for(const key of keys)row[key]=false;}
 function formatScore(value){const number=Number(String(value).replace(/,/g,''));return Number.isFinite(number)?number.toLocaleString():clean(value);}
@@ -54,6 +64,7 @@ function renderSummary(){
  indicator.className=`review-indicator ${confirmed?'approved':'pending'}`;
  indicator.firstChild.nodeValue=confirmed?'✓':'●';
  indicator.querySelector('.review-tooltip').textContent=confirmed?'Confirmed':'Needs confirmation';
+ renderDecision();
 }
 
 async function evidence(page){
@@ -110,9 +121,26 @@ function renderRows(){
 }
 
 function profileLine(label,value){const p=el('p');p.append(el('strong',`${label}: `),document.createTextNode(clean(value)||'Unknown'));return p;}
+function profileCard(profile,row={}){
+ const card=el('div');card.className='profile-card';card.append(profileLine('Player ID',profile.sourceUid||row.playerKey||profile.key),profileLine('Alliance',row.playerAlliance||profile.alliance),profileLine('Server',profile.server),profileLine('Transfer status',profile.status),profileLine('Seat',profile.confirmedSeat||profile.seat),profileLine('Profession',profile.profession),profileLine('Hero power',profile.power),profileLine('Known names',[profile.translatedName,...(profile.aliases||[]),...(profile.previousGameNames||[])].filter(Boolean).join(' · ')));return card;
+}
 function renderProfile(row,profile={}){
- const card=el('div');card.className='profile-card';card.append(profileLine('Player ID',profile.sourceUid||row.playerKey),profileLine('Alliance',row.playerAlliance||profile.alliance),profileLine('Server',profile.server),profileLine('Transfer status',profile.status),profileLine('Seat',profile.confirmedSeat||profile.seat),profileLine('Profession',profile.profession),profileLine('Hero power',profile.power),profileLine('Known names',[profile.translatedName,...(profile.aliases||[]),...(profile.previousGameNames||[])].filter(Boolean).join(' · ')));
+ const card=profileCard(profile,row);
  $('profile-heading').textContent=row.playerName||profile.name||row.name||'Player profile';$('profile-preview').replaceChildren(card.cloneNode(true));return card;
+}
+
+function showDirectoryProfile(profile){
+ profileCache.set(profile.key,profile);const out=$('directory-profile'),heading=el('h3',profile.name||profile.translatedName||'Player profile'),card=profileCard(profile);out.replaceChildren(heading,card);
+ if(draft&&selected>=0){const attach=el('button','Use this player for the selected OCR row');attach.className='primary directory-attach';attach.onclick=()=>{const row=draft.rows[selected];row.playerKey=profile.key;row.playerName=profile.name;row.playerAlliance=profile.alliance||'';resetConfirmations(row,'playerChecked','allianceChecked');markChanged();renderRows();selectRow(selected);status(`${profile.name} attached as an unconfirmed match. Confirm the player and alliance after checking the evidence.`);};out.append(attach);}
+}
+
+async function searchDirectory(event){
+ event?.preventDefault();const query=clean($('directory-query').value),button=$('directory-search').querySelector('button'),results=$('directory-results');
+ if(query.length<2){$('directory-status').textContent='Enter at least two characters.';return;}
+ button.disabled=true;$('directory-status').textContent='Searching the private Supabase player directory…';results.replaceChildren();$('directory-profile').replaceChildren();
+ try{const players=await call({action:'player-search',query});$('directory-status').textContent=`${players.length} matching player${players.length===1?'':'s'} found.`;if(!players.length)results.append(el('p','No matching player record. Try a name, alliance, server number or player ID.'));for(const profile of players){const item=el('button'),title=el('strong',profile.name||profile.translatedName||'Unnamed player'),details=el('span',`${profile.alliance||'Alliance unknown'} · Server ${profile.server||'unknown'} · ID ${profile.sourceUid||profile.key}`);item.append(title,details);item.onclick=()=>showDirectoryProfile(profile);results.append(item);}}
+ catch(error){$('directory-status').textContent=error.message;}
+ finally{button.disabled=false;}
 }
 function selectRow(index){
  selected=index;const row=draft.rows[index],editor=$('editor');renderRows();editor.replaceChildren();
@@ -148,7 +176,8 @@ async function load(){
  }catch(error){status(error.message);}
 }
 
-$('save').onclick=async()=>{try{$('save').disabled=true;draft=await call({action:'save-review',batchId:active.id,revision:draft.revision,rows:draft.rows});draft.rows=draft.rows.map(normalizeRow);dirty=false;renderRows();status('Private R4 review draft saved. Scores and rewards remain unpublished.');}catch(error){status(error.message);}finally{$('save').disabled=false;}};
+async function saveDraft(){draft=await call({action:'save-review',batchId:active.id,revision:draft.revision,rows:draft.rows});draft.rows=draft.rows.map(normalizeRow);dirty=false;renderRows();return draft;}
+$('save').onclick=async()=>{try{$('save').disabled=true;await saveDraft();status('Private R4 review draft saved. Scores and rewards remain unpublished.');}catch(error){status(error.message);}finally{$('save').disabled=false;}};
 $('extract').onclick=async()=>{
  if(extracting||!active)return;if(draft.rows.length&&!confirm('Replace the current draft rows with new screenshot suggestions? Unsaved matching work will be lost.'))return;
  extracting=true;$('extract').disabled=true;const suggestions=[];let ocr;$('extract-status').textContent='Loading private browser OCR…';
@@ -169,8 +198,27 @@ function showPreview(){
  if(report.included.length>50)out.append(el('p',`…and ${report.included.length-50} more rows.`));$('preview-dialog').showModal();
 }
 $('preview').onclick=showPreview;$('decision-preview').onclick=showPreview;$('close-preview').onclick=()=>$('preview-dialog').close();
+document.querySelectorAll('.final-check').forEach(input=>input.onchange=renderDecision);
+$('approve-review').onclick=async()=>{
+ if(!decisionReady()||!confirm('Approve this submission and publish only confirmed NvSP player scores to the member Hall of Fame?'))return;
+ const button=$('approve-review');button.disabled=true;
+ try{
+  if(dirty)await saveDraft();
+  const result=await call({action:'approve-review',batchId:active.id,revision:draft.revision,note:clean($('review-note').value)});
+  dirty=false;active=null;draft=null;$('workspace').hidden=true;
+  status(`Approved. ${result.published} NvSP scores published; ${result.opponentRowsRetained} opponent rows retained as private evidence. +${result.pointsAwarded} bounty points awarded.`);await load();
+ }catch(error){status(error.message);renderDecision();}
+};
+$('reject-review').onclick=async()=>{
+ const note=clean($('review-note').value);if(note.length<3){status('Add a review note explaining why the submission is rejected.');$('review-note').focus();return;}
+ if(!confirm('Reject this submission? No scores or bounty points will be published.'))return;
+ const button=$('reject-review');button.disabled=true;
+ try{await call({action:'reject-review',batchId:active.id,note});dirty=false;active=null;draft=null;$('workspace').hidden=true;status('Submission rejected. No scores or points were published.');await load();}
+ catch(error){status(error.message);}finally{button.disabled=false;}
+};
 $('filter').oninput=renderRows;$('add').onclick=()=>{draft.rows.push(normalizeRow({rank:pageRows().length?Math.max(...pageRows().map(row=>row.rank))+1:1,name:'New row',alliance:'',score:'0',page:currentPage,playerKey:'',excluded:false}));markChanged();selected=draft.rows.length-1;renderRows();selectRow(selected);};
 $('confirm-page').onclick=()=>{for(const row of pageRows()){if(row.excluded)continue;row.playerChecked=!!row.playerKey;row.allianceChecked=!!(row.alliance&&row.playerAlliance);row.scoreChecked=!!clean(row.score);}markChanged();renderRows();status(pageConfirmed()?'This screenshot page is fully confirmed. Save the review draft to keep the checks.':'Rows without a matched player, alliance or score remain yellow.');};
 $('clear-page').onclick=()=>{for(const row of pageRows()){row.playerChecked=false;row.allianceChecked=false;row.scoreChecked=false;}markChanged();renderRows();status('Confirmation checks cleared for this screenshot page.');};
 $('refresh').onclick=load;
+$('directory-search').onsubmit=searchDirectory;
 load();

@@ -42,6 +42,16 @@
       </div>
 
       <p id="status" class="r4-notice" role="status">Connecting to the live review queue…</p>
+      <section class="panel directory-panel" aria-labelledby="directory-title">
+        <div><div class="eyebrow">PRIVATE TRANSFER DATA · SUPABASE</div><h2 id="directory-title">Transfer Player Directory</h2><p>Search the player records already available to leadership in the Transfer Portal.</p></div>
+        <form id="directory-search" class="directory-search">
+          <label>Player name, alliance, server or player ID<input id="directory-query" autocomplete="off" minlength="2" maxlength="100" required placeholder="Search private player records"></label>
+          <button class="primary" type="submit">Search players</button>
+        </form>
+        <p id="directory-status" role="status">Enter at least two characters.</p>
+        <div id="directory-results" class="search-results directory-results"></div>
+        <div id="directory-profile"></div>
+      </section>
       <div class="r4-layout">
         <aside class="panel r4-queue">
           <div class="eyebrow">REVIEW QUEUE</div>
@@ -89,8 +99,8 @@
               <label><input class="final-check" type="checkbox"> Overlaps, duplicates and pinned rows checked</label>
             </div>
             <label class="r4-reason">Review note<textarea id="review-note" rows="4" placeholder="Record what was checked or corrected"></textarea></label>
-            <div class="r4-actions"><button class="reject-button" disabled>Reject submission</button><button id="decision-preview" class="primary">Preview approval</button></div>
-            <p>Approval and rewards remain disabled until the live validation pass is complete. Saving stores only the private R4 review draft.</p>
+            <div class="r4-actions"><button id="reject-review" class="reject-button">Reject submission</button><button id="decision-preview">Preview approval</button><button id="approve-review" class="primary" disabled>Approve and publish NvSP scores</button></div>
+            <p id="decision-help">Confirm every included row and screenshot before publishing. Opponent rows remain with the evidence and are not posted to the member leaderboard.</p>
           </section>
 
           <section class="score-panel"><div class="eyebrow">R4 PRIVATE PROFILE PREVIEW</div><h3 id="profile-heading">Select a player match</h3><div id="profile-preview"><p>Search a score row to view transfer profile data and known identities.</p></div></section>
@@ -101,6 +111,6 @@
   </div>
 
   <dialog id="preview-dialog"><button id="close-preview" class="close" aria-label="Close">×</button><div id="preview-content"></div></dialog>
-  <script type="module" src="./nova-bounty-review.js?v=ocr-20260925a"></script>
+  <script type="module" src="./nova-bounty-review.js?v=directory-20260925a"></script>
 </body>
 </html>
