@@ -71,3 +71,5 @@ body.hub-collapsed .rail nav button span{display:block;font-size:12px}
 .event-type-menu button{display:grid;grid-template-columns:56px minmax(0,1fr);gap:12px;min-height:72px}.event-type-menu .event-art{width:56px;height:56px;object-fit:contain;display:block}.event-type-menu svg{width:36px;height:36px;justify-self:center}.event-type-menu .event-art-gold{filter:sepia(1) saturate(3)}
 
 .event-type-menu svg.event-custom-art{width:56px;height:56px;display:block;stroke-width:1.7}
+
+.event-type-menu .event-art-illustrated{mix-blend-mode:screen;padding:5px;box-sizing:border-box}.event-type-menu button{isolation:isolate}
