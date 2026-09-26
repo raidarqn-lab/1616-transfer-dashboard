@@ -40,3 +40,26 @@ body.hub-collapsed .rail nav button{justify-content:flex-start;padding:12px 6px;
 body.hub-collapsed .rail nav button span{display:block;font-size:12px}
 @media(max-width:1000px){.hub-page .rail{width:190px;padding:22px 10px}.hub-page .workspace{margin-left:190px}.hub-page .rail nav button{justify-content:flex-start;padding:12px 8px;gap:9px}.hub-page .rail nav button span{display:block;font-size:13px}}
 @media(max-width:620px){.hub-page .rail,body.hub-collapsed .rail{display:flex;position:static;width:100%;padding:12px;border-right:0;border-bottom:1px solid var(--hub-border)}.hub-page .workspace,body.hub-collapsed .workspace{margin-left:0}.hub-page .rail .brand,.hub-page .rail .rail-label,.hub-page .rail-bottom,.hub-collapse{display:none}.hub-page .rail nav{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}.hub-page .rail nav button span{font-size:13px}.hub-page .rail nav button{min-height:44px}}
+
+/* Leadership identity and workspace switcher. */
+.hub-page .rail .brand strong{display:flex;justify-content:center;gap:0;font-size:23px;letter-spacing:1px;padding:0;line-height:1.2}
+.hub-page .rail .brand strong span{display:inline;font-size:inherit;letter-spacing:inherit;margin:0;color:var(--hub-cyan)}
+.hub-page .rail .rail-label{display:block;font-size:10px;letter-spacing:1px;margin:14px 0 10px;color:#aac3d2}
+.hub-leadership-only{align-self:center;padding:6px 12px;border:1px solid #6c6233;border-radius:6px;background:#272314;color:#ffe28a;font-size:11px;font-weight:800;letter-spacing:1.3px;margin-bottom:12px}
+.hub-page .rail-bottom{display:block;font-size:11px;letter-spacing:.5px}
+.hub-page .rail-bottom a{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:46px;margin-top:10px;padding:12px 10px;border:1px solid #315163;border-radius:8px;background:#102330;color:#dceff8;font-size:14px;font-weight:650;letter-spacing:0;text-decoration:none}
+.hub-page .rail-bottom a:hover{border-color:var(--hub-cyan);color:var(--hub-cyan)}
+.hub-page .rail-bottom p{display:block;font-size:11px}
+@media(max-width:1000px){.hub-page .rail .brand strong{font-size:18px}.hub-page .rail .rail-label{font-size:8px;letter-spacing:.5px}.hub-page .rail-bottom a{font-size:13px}}
+@media(max-width:620px){.hub-page .rail .brand{display:flex}.hub-page .rail .brand img{display:none}.hub-page .rail .brand strong{font-size:21px}.hub-page .rail .rail-label{font-size:10px;margin:8px 0}.hub-page .rail-bottom{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:8px 0 0}.hub-page .rail-bottom>.status-dot,.hub-page .rail-bottom>p{display:none}.hub-page .rail-bottom{font-size:0}.hub-page .rail-bottom a{margin-top:0;font-size:13px}}
+
+/* Transfer Portal navigation treatment in Sapphire colours. */
+.hub-page .rail{background:#081923;border-color:#24414f;padding:20px 12px;gap:7px;overflow-y:auto;height:100dvh;scrollbar-width:thin;scrollbar-color:#315665 #081923}
+.hub-page .rail nav{gap:7px}
+.hub-page .rail nav button{min-height:46px;border:0;border-radius:9px;padding:12px 10px;gap:11px;color:#b1c6d1;box-shadow:none}
+.hub-page .rail nav button:hover{background:#183340;color:#ecfbff}
+.hub-page .rail nav button.active{background:#125164;color:#ecfdff;box-shadow:inset 3px 0 #58e5ed}
+.hub-page .rail nav svg{stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.hub-page .rail nav [data-hub-view="admin"] svg{border-radius:50%;outline:2px solid #537d8f;outline-offset:4px;background:#173645;box-shadow:0 0 0 3px #173645}
+.hub-page .rail nav button:focus-visible{outline:2px solid #58e5ed;outline-offset:2px}
+@media(max-width:620px){.hub-page .rail{height:auto;padding:12px}}
