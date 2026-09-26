@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Alliance Hub · Leadership</title>
   <link rel="stylesheet" href="./nova-bounty-review.css?v=live-r4-20260925">
-  <link rel="stylesheet" href="./alliance-hub.css?v=20260926profiles">
+  <link rel="stylesheet" href="./alliance-hub.css?v=20260926contacts">
 </head>
 <body class="hub-page">
   <svg class="sprite" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
@@ -52,8 +52,8 @@
           <button class="primary" type="submit">Search players</button>
         </form>
         <p id="directory-status" role="status">Browse all players or search by name, alliance, server or player ID.</p>
-        <div id="directory-results" class="search-results directory-results"></div>
-        <div class="r4-actions"><button id="records-previous" type="button" disabled>Previous</button><span id="records-page"></span><button id="records-next" type="button">Next</button></div><div id="directory-profile"></div>
+        <div class="records-toolbar"><details id="records-fields"><summary>Hide fields</summary><div id="records-field-options"></div></details><label>Sort<select id="records-sort"><option value="name">Player name</option><option value="server">Server</option><option value="alliance">Alliance</option></select></label><label>Server<input id="records-server" inputmode="numeric" placeholder="All servers"></label><button id="records-filter" type="button">Apply filter</button><button id="records-reset" type="button">Reset view</button></div><div id="directory-results" class="search-results directory-results"></div>
+        <div class="r4-actions"><button id="records-previous" type="button" disabled>Previous</button><span id="records-page"></span><button id="records-next" type="button">Next</button></div><dialog id="directory-profile" class="player-profile-dialog"></dialog>
       </section></section>
       <section class="hub-section" data-section="bounties">
       <div class="page-heading">
@@ -146,7 +146,7 @@
   </div>
 
   <dialog id="preview-dialog"><button id="close-preview" class="close" aria-label="Close">×</button><div id="preview-content"></div></dialog>
-  <script type="module" src="./nova-bounty-review.js?v=profiles-20260926a"></script>
-  <script type="module" src="./alliance-hub.js?v=20260926profiles"></script>
+  <script type="module" src="./nova-bounty-review.js?v=profiles-20260926c"></script>
+  <script type="module" src="./alliance-hub.js?v=20260926contacts"></script>
 </body>
 </html>
