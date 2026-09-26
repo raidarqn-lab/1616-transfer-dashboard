@@ -55,7 +55,7 @@
             <div><div class="eyebrow">SUBMISSION BRIEF</div><h2 id="batch-title">Daily all-player leaderboard</h2><p id="batch-meta"></p><strong id="batch-alliance">Alliance information will be confirmed during review.</strong></div>
             <div class="r4-reward"><b>+10</b><span>BOUNTY POINTS</span></div>
             <p id="counts" class="r4-wide"></p>
-            <div class="r4-wide r4-toolbar"><button id="extract" class="primary">Generate screenshot suggestions</button><button id="save">Save review draft</button><button id="preview">Preview decision</button><button id="add">Add row</button></div>
+            <div class="r4-wide r4-toolbar"><button id="extract" class="primary">Read screenshots with OCR</button><button id="save">Save review draft</button><button id="preview">Preview decision</button><button id="add">Add row</button></div>
             <p id="extract-status" class="r4-wide" role="status"></p>
           </section>
 
@@ -71,7 +71,7 @@
 
             <section class="panel r4-data">
               <div class="r4-section-head"><h2>Suggested player matches</h2><span id="page-state" class="review-indicator pending" tabindex="0">●<span class="review-tooltip">Needs confirmation</span></span></div>
-              <p>Suggestions are read from the submitted evidence. Search the transfer directory if a name is wrong, then confirm the player, alliance and score.</p>
+              <p>OCR suggestions are unconfirmed. Search the private Supabase player directory if a name is wrong, then confirm the player, alliance and score.</p>
               <label class="r4-filter">Filter this page<input id="filter" placeholder="Name, alliance, ID or rank"></label>
               <div class="table-scroll"><table><thead><tr><th>RANK</th><th>PLAYER / ALLIANCE / SCORE REVIEW</th></tr></thead><tbody id="rows"></tbody></table></div>
               <div id="editor" class="r4-match-workspace"><p>Select a suggested row to search and inspect the private transfer profile.</p></div>
@@ -101,6 +101,6 @@
   </div>
 
   <dialog id="preview-dialog"><button id="close-preview" class="close" aria-label="Close">×</button><div id="preview-content"></div></dialog>
-  <script type="module" src="./nova-bounty-review.js?v=d64266a"></script>
+  <script type="module" src="./nova-bounty-review.js?v=ocr-20260925a"></script>
 </body>
 </html>

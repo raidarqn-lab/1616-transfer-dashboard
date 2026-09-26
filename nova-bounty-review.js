@@ -1,5 +1,6 @@
 import {user} from './live-session.js';
 import {bountyConnection as config} from './nova-bounty-config.js';
+import {createLeaderboardOcr} from './nova-bounty-ocr.js';
 
 const $=id=>document.getElementById(id);
 const el=(tag,text)=>{const node=document.createElement(tag);if(text!==undefined)node.textContent=text;return node;};
@@ -65,6 +66,7 @@ async function evidence(page){
   image.src=url;$('image').replaceChildren(image);
  }catch(error){status(error.message);}
 }
+async function evidenceUrl(page){return (await call({action:'evidence',batchId:active.id,sequence:page})).url;}
 
 function renderPages(){
  const pages=$('pages');pages.replaceChildren();
@@ -149,10 +151,17 @@ async function load(){
 $('save').onclick=async()=>{try{$('save').disabled=true;draft=await call({action:'save-review',batchId:active.id,revision:draft.revision,rows:draft.rows});draft.rows=draft.rows.map(normalizeRow);dirty=false;renderRows();status('Private R4 review draft saved. Scores and rewards remain unpublished.');}catch(error){status(error.message);}finally{$('save').disabled=false;}};
 $('extract').onclick=async()=>{
  if(extracting||!active)return;if(draft.rows.length&&!confirm('Replace the current draft rows with new screenshot suggestions? Unsaved matching work will be lost.'))return;
- extracting=true;$('extract').disabled=true;const suggestions=[];$('extract-status').textContent=`Starting extraction for ${active.fileCount} screenshots…`;
- try{for(let page=1;page<=active.fileCount;page++){$('extract-status').textContent=`Reading screenshot ${page} of ${active.fileCount}…`;const result=await call({action:'extract-page',batchId:active.id,sequence:page});for(const row of result.rows||[])suggestions.push(normalizeRow(row));}draft.rows=suggestions;dirty=true;selected=-1;renderPages();renderRows();$('extract-status').textContent=`Generated ${suggestions.length} unconfirmed suggestions from ${active.fileCount} screenshots. Review yellow rows, then save the draft.`;}
- catch(error){$('extract-status').textContent=`Extraction stopped after ${suggestions.length} suggestions. ${error.message} You can retry without saving.`;}
- finally{extracting=false;$('extract').disabled=false;}
+ extracting=true;$('extract').disabled=true;const suggestions=[];let ocr;$('extract-status').textContent='Loading private browser OCR…';
+ try{
+  ocr=await createLeaderboardOcr((stage,percent)=>{$('extract-status').textContent=`Preparing OCR: ${stage}${percent?` ${percent}%`:''}`;});
+  for(let page=1;page<=active.fileCount;page++){
+   $('extract-status').textContent=`Reading screenshot ${page} of ${active.fileCount} locally…`;
+   for(const row of await ocr.read(await evidenceUrl(page),page))suggestions.push(normalizeRow(row));
+  }
+  draft.rows=suggestions;dirty=true;selected=-1;renderPages();renderRows();$('extract-status').textContent=`OCR generated ${suggestions.length} unconfirmed suggestions from ${active.fileCount} screenshots. Search Supabase for incorrect names, confirm every field, then save the draft.`;
+ }
+ catch(error){$('extract-status').textContent=`OCR stopped after ${suggestions.length} suggestions. ${error.message} Nothing was confirmed or awarded.`;}
+ finally{await ocr?.terminate();extracting=false;$('extract').disabled=false;}
 };
 function showPreview(){
  const report=issues(draft.rows),out=$('preview-content');out.replaceChildren(el('div','FINAL REVIEW'),el('h2','Approval preview'),el('p',`${active.bounty}: ${report.included.length} included score rows. ${draft.rows.length-report.included.length} excluded.`),el('p',`${report.unmatched} unmatched, ${report.pending} awaiting confirmation, ${report.duplicates} duplicate conflicts.`),el('p','Approval remains disabled during live validation. This preview does not publish scores, award bounty points, or delete evidence.'));
