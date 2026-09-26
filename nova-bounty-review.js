@@ -179,7 +179,7 @@ function selectRow(index){
  const runSearch=async()=>{
   find.disabled=true;results.replaceChildren(el('p','Searching the private transfer directory…'));
   try{
-   const request={action:'player-search',query:input.value});results.replaceChildren();
+   const players=await call({action:'player-search',query:input.value});results.replaceChildren();
    if(!players.length)results.append(el('p','No match found. Change the name, alliance, server or player ID and search again.'));
    for(const profile of players){const button=el('button',`${profile.name} · ${profile.alliance||'Alliance unknown'} · Server ${profile.server||'unknown'} · ${profile.sourceUid||profile.key}`);button.onclick=()=>{profileCache.set(profile.key,profile);row.playerKey=profile.key;row.playerName=profile.name;row.playerAlliance=profile.alliance||'';resetConfirmations(row,'playerChecked','allianceChecked');markChanged();renderProfile(row,profile);selectRow(index);};results.append(button);}
   }catch(error){status(error.message);results.replaceChildren();}finally{find.disabled=false;}
