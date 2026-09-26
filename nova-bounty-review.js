@@ -131,11 +131,11 @@ function selectRow(index){
 async function openBatch(batch){
  if(dirty&&!confirm('Discard unsaved review changes?'))return;
  try{
-  const data=await call({action:'review-draft',batchId:batch.id});active=batch;draft={...data,rows:(data.rows||[]).map(normalizeRow)};dirty=false;selected=-1;currentPage=1;$('workspace').hidden=false;
+  const data=await call({action:'review-draft',batchId:batch.id});active=batch;draft={...data,rows:(data.rows||[]).map(normalizeRow)};dirty=false;selected=-1;currentPage=draft.rows[0]?.page||1;$('workspace').hidden=false;
   $('batch-title').textContent='Daily all-player leaderboard';$('batch-meta').textContent=`${batch.gameDate} · ${batch.fileCount} uploaded screenshots · Submitted by ${batch.profileName||batch.playerKey}`;
   $('evidence-title').textContent=`${batch.bounty} · ${batch.gameDate}`;$('evidence-meta').textContent=`${batch.fileCount} screenshots · ${batch.profileName||batch.playerKey}`;$('evidence-code').textContent=batch.bounty;
   document.querySelectorAll('.r4-queue-item').forEach(button=>button.classList.toggle('active',button.dataset.batch===batch.id));
-  renderPages();renderRows();renderSummary();evidence(1);status('Live submission loaded. Yellow dots need review; green checks appear only after the data is confirmed.');
+  renderPages();renderRows();renderSummary();evidence(currentPage);status('Live submission loaded. Yellow dots need review; green checks appear only after the data is confirmed.');
  }catch(error){status(error.message);}
 }
 async function load(){
