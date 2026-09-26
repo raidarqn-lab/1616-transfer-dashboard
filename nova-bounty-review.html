@@ -1,1 +1,106 @@
-<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Nova · Score matching</title><style>body{background:#071824;color:#eefaff;font:16px system-ui;margin:0}main{max-width:1500px;margin:auto;padding:24px}a{color:#00d8e5}button,input,select{font:inherit;border-radius:7px;padding:10px;border:1px solid #356072}button{background:#00ced9;color:#041b24;cursor:pointer;margin:4px}button:disabled{opacity:.5}input,select{background:#102d3c;color:white;max-width:100%;box-sizing:border-box}label{display:block;margin:12px 0}label input:not([type=checkbox]){display:block;width:100%;margin-top:5px}input[type=checkbox]{margin-right:8px}section{background:#0b2634;border:1px solid #255367;border-radius:12px;padding:16px;margin-top:16px}.layout{display:grid;grid-template-columns:minmax(260px,1fr) minmax(270px,1fr) minmax(300px,1.3fr);gap:16px}.row{display:block;text-align:left;width:100%;background:#153c4b;color:white;margin:5px 0}.row.pending{border-left:5px solid #ffd84a}.row.confirmed{border-left:5px solid #9cff57}.selected{outline:2px solid #00d8e5}.profile-card{background:#102f3d;margin:14px 0;padding:12px}.profile-card h3{margin-top:0}.profile-card p{margin:5px 0}.search-results button{display:block;width:100%;text-align:left;background:#153c4b;color:white}#rows{max-height:65vh;overflow:auto}img{max-width:100%;height:auto}#image{max-height:75vh;overflow:auto}p{line-height:1.5}dialog{background:#0b2634;color:white;border:1px solid #00d8e5;border-radius:12px;max-width:700px;max-height:80vh}dialog::backdrop{background:#000b}@media(max-width:1000px){.layout{grid-template-columns:1fr 1fr}.evidence{grid-column:1/-1}}@media(max-width:650px){main{padding:12px}.layout{grid-template-columns:1fr}.evidence{grid-column:auto}#rows{max-height:35vh}}</style><main><a href="./live.html">← Portal</a><h1>Screenshot matching</h1><p>Review the player name, alliance and score against the original, then match the row to the correct transfer profile. A green check appears only after all three fields are confirmed; yellow rows still need review.</p><button id="refresh">Refresh queue</button><p id="status" role="status"></p><div id="queue"></div><section id="workspace" hidden><h2 id="batch-title"></h2><p id="counts"></p><button id="extract">Generate screenshot suggestions</button><button id="save">Save review draft</button><button id="preview">Preview approval</button><p id="extract-status" role="status"></p><div class="layout"><section><h2>Score rows</h2><label>Filter rows<input id="filter" placeholder="Name, alliance, ID or rank"></label><button id="add">Add row</button><div id="rows"></div></section><section><h2>Player and alliance match</h2><div id="editor"></div></section><section class="evidence"><h2>Original screenshot</h2><label>Screenshot page<select id="page"></select></label><p id="image-status" role="status"></p><div id="image"></div></section></div></section></main><dialog id="preview-dialog"><button id="close-preview">Close preview</button><div id="preview-content"></div></dialog><script type="module" src="./nova-bounty-review.js?v=matching-20260925b"></script></html>
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Nova Sapphire · R4 Review</title>
+  <link rel="stylesheet" href="./nova-bounty-review.css?v=live-r4-20260925">
+</head>
+<body>
+  <svg class="sprite" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
+    <symbol id="target" viewBox="0 0 24 24"><circle cx="12" cy="12" r="7"></circle><circle cx="12" cy="12" r="2"></circle><path d="M12 1v5m0 12v5M1 12h5m12 0h5"></path></symbol>
+    <symbol id="layers" viewBox="0 0 24 24"><path d="m12 3 10 5-10 5L2 8l10-5Zm-10 9 10 5 10-5M2 16l10 5 10-5"></path></symbol>
+    <symbol id="shield" viewBox="0 0 24 24"><path d="m12 2 9 4-1 8-8 8-8-8-1-8 9-4Z"></path><path d="m8 12 3 3 5-6"></path></symbol>
+  </svg>
+
+  <aside class="rail">
+    <a class="brand" href="https://raidarqn-lab.github.io/nova-sapphire/#bounties" aria-label="Nova Sapphire member hub">
+      <img src="https://raidarqn-lab.github.io/nova-sapphire/assets/nova-transparent.png" alt="Nova alliance">
+      <strong>NOVA <span>SAPPHIRE</span></strong>
+    </a>
+    <div class="rail-label">LAST WAR · SERVER 1616</div>
+    <nav aria-label="Alliance navigation">
+      <a href="https://raidarqn-lab.github.io/nova-sapphire/#bounties"><svg><use href="#target"></use></svg> Bounty board</a>
+      <a href="https://raidarqn-lab.github.io/nova-sapphire/#contributions"><svg><use href="#layers"></use></svg> My contributions</a>
+      <a class="active" href="./nova-bounty-review.html" aria-current="page"><svg><use href="#shield"></use></svg> R4 Review</a>
+    </nav>
+    <div class="rail-bottom"><span class="status-dot"></span> LIVE PORTAL<p>Real alliance data</p><a href="./live.html">← Alliance Hub</a></div>
+  </aside>
+
+  <div class="workspace">
+    <header>
+      <div class="breadcrumb">ALLIANCE OPERATIONS <span>/</span> <strong>R4 REVIEW</strong></div>
+      <div class="live-badge">LIVE DATA</div>
+      <div class="header-clocks" aria-label="Current server and local time"><div><span>SERVER · UTC</span><time id="server-time">—</time></div><div><span>LOCAL</span><time id="local-time">—</time></div></div>
+      <div class="member-badge"><span>R4</span><div>Leadership<small>Verified Portal session</small></div></div>
+    </header>
+
+    <main>
+      <div class="page-heading">
+        <div><div class="eyebrow">LEADERSHIP / SAPPHIRE INTELLIGENCE</div><h1>R4 Review</h1><p>Check the evidence. Confirm the suggested matches. Reward the contribution.</p></div>
+        <button id="refresh">Refresh queue</button>
+      </div>
+
+      <p id="status" class="r4-notice" role="status">Connecting to the live review queue…</p>
+      <div class="r4-layout">
+        <aside class="panel r4-queue">
+          <div class="eyebrow">REVIEW QUEUE</div>
+          <h2>Awaiting review <span id="queue-count">0</span></h2>
+          <div id="queue"></div>
+          <p class="hint">Each submission is one complete bounty evidence set. Open it to review every uploaded screenshot.</p>
+        </aside>
+
+        <section id="workspace" class="r4-work" hidden>
+          <section class="panel r4-summary">
+            <div><div class="eyebrow">SUBMISSION BRIEF</div><h2 id="batch-title">Daily all-player leaderboard</h2><p id="batch-meta"></p><strong id="batch-alliance">Alliance information will be confirmed during review.</strong></div>
+            <div class="r4-reward"><b>+10</b><span>BOUNTY POINTS</span></div>
+            <p id="counts" class="r4-wide"></p>
+            <div class="r4-wide r4-toolbar"><button id="extract" class="primary">Generate screenshot suggestions</button><button id="save">Save review draft</button><button id="preview">Preview decision</button><button id="add">Add row</button></div>
+            <p id="extract-status" class="r4-wide" role="status"></p>
+          </section>
+
+          <div class="r4-columns">
+            <section class="panel r4-evidence">
+              <div class="r4-section-head"><h2>Original evidence</h2><span class="pill">REAL SCREENSHOTS</span></div>
+              <div class="r4-evidence-brief"><div class="eyebrow">BOUNTY FOR REVIEW</div><h3 id="evidence-title">Daily leaderboard</h3><p id="evidence-meta" class="r4-brief-meta"></p><code id="evidence-code"></code></div>
+              <div id="pages" class="r4-pages" aria-label="Screenshot pages"></div>
+              <p id="page-progress">0 screenshots reviewed</p>
+              <p id="image-status" role="status"></p>
+              <div id="image" class="r4-original"></div>
+            </section>
+
+            <section class="panel r4-data">
+              <div class="r4-section-head"><h2>Suggested player matches</h2><span id="page-state" class="review-indicator pending" tabindex="0">●<span class="review-tooltip">Needs confirmation</span></span></div>
+              <p>Suggestions are read from the submitted evidence. Search the transfer directory if a name is wrong, then confirm the player, alliance and score.</p>
+              <label class="r4-filter">Filter this page<input id="filter" placeholder="Name, alliance, ID or rank"></label>
+              <div class="table-scroll"><table><thead><tr><th>RANK</th><th>PLAYER / ALLIANCE / SCORE REVIEW</th></tr></thead><tbody id="rows"></tbody></table></div>
+              <div id="editor" class="r4-match-workspace"><p>Select a suggested row to search and inspect the private transfer profile.</p></div>
+              <div class="r4-actions"><button id="confirm-page" class="primary">Confirm this page</button><button id="clear-page">Clear this page</button></div>
+              <div class="r4-coverage"><h3>Coverage checks</h3><p id="coverage"></p><p class="r4-warning">Repeated, overlapping or pinned rows stay visible for R4 review and are never silently discarded.</p></div>
+            </section>
+          </div>
+
+          <section class="panel r4-decision">
+            <div class="eyebrow">FINAL REVIEW</div><h2>Ready for a decision?</h2>
+            <div class="r4-checks">
+              <label><input class="final-check" type="checkbox"> Player suggestions checked</label>
+              <label><input class="final-check" type="checkbox"> Bounty and game date checked</label>
+              <label><input class="final-check" type="checkbox"> Alliances and all pages checked</label>
+              <label><input class="final-check" type="checkbox"> Overlaps, duplicates and pinned rows checked</label>
+            </div>
+            <label class="r4-reason">Review note<textarea id="review-note" rows="4" placeholder="Record what was checked or corrected"></textarea></label>
+            <div class="r4-actions"><button class="reject-button" disabled>Reject submission</button><button id="decision-preview" class="primary">Preview approval</button></div>
+            <p>Approval and rewards remain disabled until the live validation pass is complete. Saving stores only the private R4 review draft.</p>
+          </section>
+
+          <section class="score-panel"><div class="eyebrow">R4 PRIVATE PROFILE PREVIEW</div><h3 id="profile-heading">Select a player match</h3><div id="profile-preview"><p>Search a score row to view transfer profile data and known identities.</p></div></section>
+        </section>
+      </div>
+      <footer><span>NOVA SAPPHIRE · ALLIANCE OPERATIONS</span><span>Private leadership workspace</span></footer>
+    </main>
+  </div>
+
+  <dialog id="preview-dialog"><button id="close-preview" class="close" aria-label="Close">×</button><div id="preview-content"></div></dialog>
+  <script type="module" src="./nova-bounty-review.js?v=live-r4-20260925"></script>
+</body>
+</html>
