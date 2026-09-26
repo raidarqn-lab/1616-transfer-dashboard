@@ -63,3 +63,5 @@ body.hub-collapsed .rail nav button span{display:block;font-size:12px}
 .hub-page .rail nav [data-hub-view="admin"] svg{border-radius:50%;outline:2px solid #537d8f;outline-offset:4px;background:#173645;box-shadow:0 0 0 3px #173645}
 .hub-page .rail nav button:focus-visible{outline:2px solid #58e5ed;outline-offset:2px}
 @media(max-width:620px){.hub-page .rail{height:auto;padding:12px}}
+
+.event-type-menu{display:grid;gap:6px;margin-bottom:26px}.event-type-menu button{display:flex;align-items:center;gap:11px;min-height:44px;text-align:left;border:0;border-radius:9px;background:transparent;color:#b1c6d1;padding:10px;font-size:13px}.event-type-menu button:hover{background:#183340}.event-type-menu button.active{background:#125164;color:#ecfdff;box-shadow:inset 3px 0 #58e5ed}.event-type-menu svg{width:21px;height:21px;flex-shrink:0;stroke-width:2}.event-type-menu .event-gold{color:#ffd568}
