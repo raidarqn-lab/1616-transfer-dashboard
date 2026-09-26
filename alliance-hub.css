@@ -72,4 +72,4 @@ body.hub-collapsed .rail nav button span{display:block;font-size:12px}
 
 .event-type-menu svg.event-custom-art{width:56px;height:56px;display:block;stroke-width:1.7}
 
-.event-type-menu .event-art-illustrated{mix-blend-mode:screen;padding:5px;box-sizing:border-box}.event-type-menu button{isolation:isolate}
+.event-type-menu .event-art-illustrated{mix-blend-mode:screen;padding:5px;box-sizing:border-box}.event-type-menu button{isolation:auto}
