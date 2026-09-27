@@ -77,3 +77,17 @@ $('member-create-form').onsubmit=async event=>{event.preventDefault();if(!create
 $('member-created-hide').onclick=()=>{$('member-created-code').value='';$('member-create-output').hidden=true;};
 
 window.addEventListener('nova-admin-name-changed',async()=>{const identity=await hubCall({action:'hub-access'});$('hub-identity').textContent=identity.displayName||'Leadership';$('hub-master-name').textContent=identity.displayName||'Leadership';loadStaff();});
+
+// Organize existing controls without changing account or initiative permissions.
+function organizeAdmin(){
+ const root=document.querySelector('[data-section="admin"]'),layout=root.querySelector('.hub-admin-layout'),cards=[...layout.children];
+ const tabs=document.createElement('div');tabs.className='admin-category-tabs';tabs.setAttribute('role','tablist');tabs.setAttribute('aria-label','Administration categories');
+ const configs=[['members','Member Admin','Member logins, usernames and account recovery'],['leadership','Leadership & Access','Leadership accounts, author names and portal permissions'],['initiatives','Player Initiatives','Hard-save orders and season departure plans']];
+ const panels=configs.map(([key,label,description])=>{const panel=document.createElement('section');panel.id='admin-category-'+key;panel.className='admin-category-panel';panel.setAttribute('role','tabpanel');panel.setAttribute('aria-labelledby','admin-tab-'+key);const intro=document.createElement('p');intro.className='admin-category-description';intro.textContent=description;panel.append(intro);const button=document.createElement('button');button.id='admin-tab-'+key;button.type='button';button.textContent=label;button.setAttribute('role','tab');button.setAttribute('aria-controls',panel.id);button.onclick=()=>select(key);tabs.append(button);return panel;});
+ const select=key=>{configs.forEach(([id],i)=>{const active=id===key;panels[i].hidden=!active;tabs.children[i].setAttribute('aria-selected',String(active));tabs.children[i].tabIndex=active?0:-1;});};
+ tabs.onkeydown=e=>{if(!['ArrowLeft','ArrowRight','Home','End'].includes(e.key))return;e.preventDefault();let i=[...tabs.children].indexOf(document.activeElement);i=e.key==='Home'?0:e.key==='End'?2:(i+(e.key==='ArrowRight'?1:2))%3;select(configs[i][0]);tabs.children[i].focus();};
+ const memberGrid=document.createElement('div');memberGrid.className='admin-member-grid';memberGrid.append(cards[3],cards[4],cards[0]);panels[0].append(memberGrid);
+ const leaderGrid=document.createElement('div');leaderGrid.className='admin-leader-grid';leaderGrid.append(cards[1],cards[2]);panels[1].append(root.querySelector('.hub-admin-note'),leaderGrid,$('admin-identities'));
+ panels[2].append($('player-initiatives-admin'));layout.replaceWith(...panels);root.querySelector('.hub-overview').after(tabs);select('members');
+}
+organizeAdmin();
