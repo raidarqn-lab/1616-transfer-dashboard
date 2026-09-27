@@ -1,3 +1,4 @@
+import {setupLeaderInvitations} from './leader-invitations.js';
 import {setupMemberRecovery} from './member-recovery.js?v=recovery-form-20260927';
 import {setupMemberAdmin} from './member-admin.js?v=linked-members-v2-20260927';
 import {setupEventSchedule,renderEventSchedule,openEventEditor,eventSaved} from './event-schedule.js?v=events-organized-20260927';
@@ -133,6 +134,7 @@ function refineAdminWorkflows(){
  const leaderDanger=document.createElement('div');leaderDanger.className='admin-danger-zone';leaderDanger.append($('hub-revoke'));$('hub-account-panel').append(leaderDanger);
 }
 refineAdminWorkflows();
+setupLeaderInvitations({call:hubCall});
 
 setupEventSchedule({reload:loadContent,edit:fillContent,save:hubCall,name:()=>access?.displayName||'Leadership'});
 
