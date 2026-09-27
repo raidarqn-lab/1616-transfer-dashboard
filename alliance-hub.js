@@ -1,3 +1,4 @@
+import {setupTrains} from './train-dashboard.js';
 import {setupMemberHandoff} from './member-handoff.js?v=20260927';
 import {setupLeaderInvitations} from './leader-invitations.js?v=individual-20260927';
 import {setupMemberRecovery} from './member-recovery.js?v=recovery-form-20260927';
@@ -23,6 +24,7 @@ function show(view){
  nav.forEach(button=>button.classList.toggle('active',button.dataset.hubView===view));
  history.replaceState(null,'','#'+view);document.title=`Alliance Hub · ${view[0].toUpperCase()+view.slice(1)}`;
  if(view==='records'||view==='roster')window.dispatchEvent(new CustomEvent('nova-records-open',{detail:{roster:view==='roster'}}));
+ if(view==='trains')window.dispatchEvent(new Event('nova-trains-open'));
  if(view==='admin'){loadStaff();window.dispatchEvent(new Event('nova-initiatives-open'));}
  if(view==='events'||view==='announcements')loadContent();
 }
@@ -67,6 +69,7 @@ async function loadContent(){try{content=await hubCall({action:'hub-content-list
 async function saveContent(event){event.preventDefault();const form=event.currentTarget;if(form.dataset.saving==='true')return;const kind=form.id==='event-editor'?'event':'announcement',values=Object.fromEntries(new FormData(form)),id=form.dataset.id||'',revision=Number(form.dataset.revision||0);const payload=kind==='event'?{...JSON.parse(form.dataset.payload||'{}'),category:values.category,...eventLocationPayload(values),...(!id?{recurrence:{frequency:values.repeatFrequency||'once',count:Number(values.repeatCount||1)}}:{})}:{priority:values.priority,audience:values.audience,imagePath:values.imagePath||'',imageUrl:values.imagePath?'':values.imageUrl?.trim()||'',imageAlt:values.imageAlt?.trim()||''};if(kind==='event'&&values.endsAt&&values.endsAt<=values.startsAt){setStatus('End must be after start.',true);return;}if(kind==='event'&&!confirm((id?'Save changes to ':'Schedule ')+values.category+' at '+values.startsAt.replace('T',' ')+' UTC'+(!id&&values.repeatFrequency!=='once'?' · '+values.repeatCount+' occurrences':'')+'?'))return;form.dataset.saving='true';const submit=form.querySelector('[type=submit]');submit.disabled=true;try{if(kind==='announcement'){const file=$('announcement-image-file').files[0];if(file){const uploaded=await uploadAnnouncementImage(file);payload.imagePath=uploaded.imagePath;payload.imageUrl='';form.elements.imagePath.value=uploaded.imagePath;form.elements.imageUrl.value=uploaded.imageUrl;$('announcement-image-file').value='';previewAnnouncementImage();}}await hubCall({action:'hub-content-save',id,revision,kind,status:values.status,alliance:'NvSP',title:kind==='event'?values.category:values.title,body:values.body||'',startsAt:values.startsAt?`${values.startsAt}:00Z`:'',endsAt:values.endsAt?`${values.endsAt}:00Z`:'',payload});form.reset();delete form.dataset.id;delete form.dataset.revision;await loadContent();if(kind==='event')eventSaved();setStatus(`${kind==='event'?'Event':'Announcement'} saved. Published content is now available to signed-in members on nova.join1616.com.`);}catch(error){setStatus(error.message,true);}finally{delete form.dataset.saving;submit.disabled=false;}}
 $('event-editor').onsubmit=saveContent;$('announcement-editor').onsubmit=saveContent;
 
+setupTrains({call:hubCall});
 (async()=>{try{access=await hubCall({action:'hub-access'});$('hub-identity').textContent=access.displayName||'Leadership';$('hub-master-name').textContent=access.displayName||'Leadership';$('hub-role-name').textContent=access.role==='master'?'Master administrator':'Alliance leader';document.querySelector('[data-hub-view="admin"]').hidden=!access.accountsManage;show(location.hash.slice(1)||'bounties');}catch(error){$('hub-access-status').textContent=error.message;sections.forEach(section=>section.hidden=true);}})();
 
 const eventTypeSelect=document.querySelector('#event-editor [name="category"]');
