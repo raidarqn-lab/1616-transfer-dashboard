@@ -1,4 +1,4 @@
-import {renderReports} from './player-reports.js?v=custom-reports-20260926';
+import {renderReports} from './player-reports.js?v=custom-reports-final-20260926';
 import {user} from './live-session.js';
 import {bountyConnection as config} from './nova-bounty-config.js';
 import {createLeaderboardOcr} from './nova-bounty-ocr.js?v=20260925b';
