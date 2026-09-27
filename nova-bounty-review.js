@@ -151,7 +151,32 @@ function editPlayerOverview(body,profile,full,onSaved){
 
 function confirmPlanChange(title,lines){return new Promise(resolve=>{const dialog=el('dialog');dialog.className='strategy-dialog';dialog.setAttribute('aria-label',title);dialog.append(el('h2',title));for(const line of lines)dialog.append(el('p',line));const foot=el('footer'),cancel=el('button','Cancel'),save=el('button','Confirm & save');cancel.type=save.type='button';save.className='primary';cancel.onclick=()=>dialog.close();save.onclick=()=>{resolve(true);dialog.close();};dialog.onclose=()=>{resolve(false);dialog.remove();};foot.append(cancel,save);dialog.append(foot);document.body.append(dialog);dialog.showModal();});}
 function planFormField(label,type,value){const wrap=el('label',label),input=el(type==='textarea'?'textarea':'input');if(type!=='textarea')input.type=type;if(type==='checkbox'){input.checked=!!value;wrap.prepend(input);}else{input.value=value||'';wrap.append(input);}input.setAttribute('aria-label',label);return {wrap,input};}
-function exitCell(profile){const cell=el('td');cell.className='exit-column';if(profile.anticipatedExit){const icon=el('span');icon.className='exit-marker';const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');svg.setAttribute('viewBox','0 0 24 24');svg.setAttribute('aria-hidden','true');const path=document.createElementNS('http://www.w3.org/2000/svg','path');path.setAttribute('d','M10 3H4v18h6M14 8l5 4-5 4M8 12h11');svg.append(path);icon.append(svg);icon.title='Expected to leave server 1616; not confirmed.'+(profile.exitLabel?' '+profile.exitLabel+'.':'');icon.setAttribute('aria-label',icon.title);icon.tabIndex=0;cell.append(icon);}else cell.append(el('span','—'));return cell;}
+let hintSequence=0,activeHintHide=null;
+function attachPlayerHint(marker,heading,detail){
+ marker.classList.add('player-hint-trigger');marker.tabIndex=0;
+ marker.setAttribute('aria-label',heading+': '+detail);
+ let tip=null,hovered=false,focused=false,leaveTimer=null;
+ const hide=()=>{clearTimeout(leaveTimer);if(activeHintHide===hide)activeHintHide=null;if(tip){tip.remove();tip=null;}marker.removeAttribute('aria-describedby');window.removeEventListener('scroll',dismiss,true);window.removeEventListener('resize',dismiss);document.removeEventListener('keydown',escape);document.removeEventListener('pointerdown',outside,true);};
+ const dismiss=()=>{hovered=false;focused=false;hide();};
+ const escape=event=>{if(event.key==='Escape')dismiss();};
+ const outside=event=>{if(!marker.contains(event.target)&&!tip?.contains(event.target))dismiss();};
+ const leave=()=>{clearTimeout(leaveTimer);leaveTimer=setTimeout(()=>{if(!hovered&&!focused)hide();},120);};
+ const show=()=>{
+  clearTimeout(leaveTimer);if(tip)return;activeHintHide?.();activeHintHide=hide;tip=el('div');tip.className='player-hint';tip.id='player-hint-'+(++hintSequence);tip.setAttribute('role','tooltip');tip.append(el('strong',heading),el('span',detail));
+  (marker.closest('dialog')||document.body).append(tip);marker.setAttribute('aria-describedby',tip.id);
+  const box=marker.getBoundingClientRect(),size=tip.getBoundingClientRect(),gap=8;
+  const left=Math.max(gap,Math.min(box.left+box.width/2-size.width/2,window.innerWidth-size.width-gap));
+  const top=box.top-size.height-gap>=gap?box.top-size.height-gap:Math.min(box.bottom+gap,window.innerHeight-size.height-gap);
+  tip.style.left=left+'px';tip.style.top=Math.max(gap,top)+'px';
+  tip.onpointerenter=()=>{hovered=true;};tip.onpointerleave=()=>{hovered=false;leave();};
+  window.addEventListener('scroll',dismiss,true);window.addEventListener('resize',dismiss);document.addEventListener('keydown',escape);document.addEventListener('pointerdown',outside,true);
+ };
+ marker.onpointerenter=()=>{hovered=true;show();};marker.onpointerleave=event=>{hovered=!!tip?.contains(event.relatedTarget);leave();};
+ marker.onfocus=()=>{focused=true;show();};marker.onblur=()=>{focused=false;leave();};
+ marker.onclick=()=>{focused=true;show();};
+ return marker;
+}
+function exitCell(profile){const cell=el('td');cell.className='exit-column';if(profile.anticipatedExit){const icon=el('span');icon.className='exit-marker';const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');svg.setAttribute('viewBox','0 0 24 24');svg.setAttribute('aria-hidden','true');const path=document.createElementNS('http://www.w3.org/2000/svg','path');path.setAttribute('d','M10 3H4v18h6M14 8l5 4-5 4M8 12h11');svg.append(path);icon.append(svg);attachPlayerHint(icon,'Anticipated departure','Expected to leave server 1616; not confirmed.'+(profile.exitLabel?' '+profile.exitLabel+'.':''));cell.append(icon);}else cell.append(el('span','—'));return cell;}
 function drawServerPlans(body,profile,full){
  const intro=el('p','Anticipated plans only. These do not approve or confirm a transfer.');body.append(intro);
  const hard=(full.plans||[]).filter(p=>p.kind==='hard_save');const hardBox=el('section');hardBox.className='plan-card';hardBox.append(el('h3','Hard-save initiatives'));if(!hard.length)hardBox.append(el('p','No hard-save initiative memberships.'));for(const p of hard){hardBox.append(el('strong',p.name),el('p',`${p.active?'Member':'Removed'} · ${p.enabled?'Initiative on':'Initiative off'} · ${p.startDate||'No start date'} → ${p.endDate||'No end date'}`));}body.append(hardBox);
@@ -290,7 +315,7 @@ function drawDuelStrategy(results,week){
  edit();dialog.showModal();};
  call({action:'profile',profileOperation:'week-get',week}).then(value=>{if(!box.isConnected)return;strategy=value;render();}).catch(()=>{box.replaceChildren(el('p','Weekly strategy could not be loaded. Refresh the roster to retry.'));});
 }
-function hardSaveMarker(profile){const marker=el('span',profile.hardSave?'H':'—');marker.className=profile.hardSave?'hard-save-marker':'hard-save-empty';marker.title=profile.hardSave?'Hard-save orders: conserve resources.'+(profile.hardSaveLabel?' '+profile.hardSaveLabel+'.':''):'No hard save order recorded';if(profile.hardSave)marker.tabIndex=0;marker.setAttribute('aria-label',marker.title);return marker;}
+function hardSaveMarker(profile){const marker=el('span',profile.hardSave?'H':'—');marker.className=profile.hardSave?'hard-save-marker':'hard-save-empty';if(profile.hardSave)attachPlayerHint(marker,'Hard save','Conserve resources.'+(profile.hardSaveLabel?' '+profile.hardSaveLabel+'.':''));else marker.setAttribute('aria-label','No hard save order recorded');return marker;}
 function hardSaveCell(profile){const cell=el('td');cell.className='hard-save-column';cell.append(hardSaveMarker(profile));return cell;}
 const rosterExtras=[['Alliance','alliance'],['Server','server'],['Hero power','power'],['Kills','kills'],['Profession level','profession']];
 const viewStorageKey=metric=>'nova-roster-view-v1:'+String(user?.uid||user?.email||'signed-out')+':'+metric;
