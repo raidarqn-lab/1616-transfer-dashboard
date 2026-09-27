@@ -1,4 +1,4 @@
-import {renderTrainHistory} from './train-history.js';
+import {renderTrainHistory} from './train-history.js?v=history-20260927';
 const days=['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
 const awards=['VS Performance','Weekly Donations','Alliance Standout','Dice','Alliance Standout','R4 Rotation','R4 Rotation'];
 const e=(tag,text)=>{const n=document.createElement(tag);if(text!=null)n.textContent=text;return n;};

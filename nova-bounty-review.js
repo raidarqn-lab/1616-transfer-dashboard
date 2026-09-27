@@ -1,4 +1,4 @@
-import {loadTrainHistory} from './train-history.js';
+import {loadTrainHistory} from './train-history.js?v=history-20260927';
 import {renderReports} from './player-reports.js?v=report-polish-20260926';
 import {user} from './live-session.js';
 import {bountyConnection as config} from './nova-bounty-config.js';
