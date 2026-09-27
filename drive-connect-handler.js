@@ -4,7 +4,7 @@ export const DRIVE_ROOT='1kBZYPOeM1y2tRBrDodYFf7kyXWLS8LRC';
 const b64=bytes=>btoa(String.fromCharCode(...bytes)).replaceAll('+','-').replaceAll('/','_').replace(/=+$/,'');
 export const random=()=>b64(crypto.getRandomValues(new Uint8Array(32)));
 export const hash=async value=>b64(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(value))));
-export function createDriveConnect({clientId,redirect,staffIdentity,store,exchange,seal,accessToken,folder}){
+export function createDriveConnect({clientId,redirect,staffIdentity,store,exchange,seal,accessToken,folder,archiveSummary}){
  return async req=>{
   const headers={'Cache-Control':'no-store','Referrer-Policy':'no-referrer','X-Content-Type-Options':'nosniff'};
   const json=(status,data)=>new Response(JSON.stringify(data),{status,headers:{...headers,'Content-Type':'application/json'}});
@@ -32,6 +32,7 @@ export function createDriveConnect({clientId,redirect,staffIdentity,store,exchan
    while(true){const {done,value}=await reader.read();if(done)break;size+=value.length;if(size>4096){await reader.cancel();return json(413,{error:'Request too large.'});}chunks.push(value);}
    const bytes=new Uint8Array(size);let offset=0;for(const value of chunks){bytes.set(value,offset);offset+=value.length;}
    const body=JSON.parse(new TextDecoder().decode(bytes));const staffEmail=actor.email;
+   if(body.action==='archive-summary')return json(200,await archiveSummary(staffEmail));
    if(body.action==='status')return json(200,await store('status',{staffEmail}));
    if(body.action==='start'){
     const state=random(),verifier=random();await store('start',{staffEmail,stateHash:await hash(state),verifier});
