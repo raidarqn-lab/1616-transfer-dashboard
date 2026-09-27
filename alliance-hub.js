@@ -1,4 +1,4 @@
-import {setupMemberAdmin} from './member-admin.js?v=linked-members-20260927';
+import {setupMemberAdmin} from './member-admin.js?v=linked-members-v2-20260927';
 import {setupEventSchedule,renderEventSchedule,openEventEditor,eventSaved} from './event-schedule.js?v=events-organized-20260927';
 import {user} from './live-session.js';
 import {bountyConnection as config} from './nova-bounty-config.js';
