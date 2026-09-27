@@ -18,7 +18,10 @@ async function hubCall(body){
  const data=await response.json();if(!response.ok)throw Error(data.error||'Unable to complete the Alliance Hub request.');return data;
 }
 function setStatus(message,error=false){const node=$('hub-admin-status');node.textContent=message;node.classList.toggle('error',error);document.querySelectorAll('.admin-dialog-status').forEach(n=>{n.textContent=message;n.classList.toggle('error',error);});}
+function signInUrl(){return './sign-in.html?returnTo='+encodeURIComponent(location.pathname+location.search+location.hash);}
+function showSignIn(){const box=$('hub-access-status');box.className='hub-sign-in';box.innerHTML='<h1>Welcome to the Alliance Hub</h1><p>Sign in with your leadership Google account to continue.</p><a class="hub-sign-in-button">Sign in to Alliance Hub →</a><small>You’ll return to this page after signing in.</small>';box.querySelector('a').href=signInUrl();$('hub-identity').textContent='Not signed in';$('hub-role-name').textContent='Sign-in required';nav.forEach(button=>button.hidden=true);}
 function show(view){
+ if(!user){location.href=signInUrl();return;}
  if(view==='admin'&&!access?.accountsManage){if(!user)location.href='./sign-in.html';return;}
  sections.forEach(section=>section.hidden=section.dataset.section!==(view==='roster'?'records':view));
  nav.forEach(button=>button.classList.toggle('active',button.dataset.hubView===view));
@@ -70,7 +73,7 @@ async function saveContent(event){event.preventDefault();const form=event.curren
 $('event-editor').onsubmit=saveContent;$('announcement-editor').onsubmit=saveContent;
 
 setupTrains({call:hubCall});
-(async()=>{try{access=await hubCall({action:'hub-access'});$('hub-identity').textContent=access.displayName||'Leadership';$('hub-master-name').textContent=access.displayName||'Leadership';$('hub-role-name').textContent=access.role==='master'?'Master administrator':'Alliance leader';document.querySelector('[data-hub-view="admin"]').hidden=!access.accountsManage;show(location.hash.slice(1)||'bounties');}catch(error){$('hub-access-status').textContent=error.message;sections.forEach(section=>section.hidden=true);}})();
+(async()=>{try{access=await hubCall({action:'hub-access'});$('hub-identity').textContent=access.displayName||'Leadership';$('hub-master-name').textContent=access.displayName||'Leadership';$('hub-role-name').textContent=access.role==='master'?'Master administrator':'Alliance leader';document.querySelector('[data-hub-view="admin"]').hidden=!access.accountsManage;show(location.hash.slice(1)||'bounties');}catch(error){$('hub-access-status').textContent=error.message;sections.forEach(section=>section.hidden=true);if(!user)showSignIn();}})();
 
 const eventTypeSelect=document.querySelector('#event-editor [name="category"]');
 const locationEventTypes=new Set(["Marshall's Guard (MG)",'City Capture','Trading Post','Trading Post Capture','Stronghold Capture','Trading Post Opens']);

@@ -5,6 +5,11 @@ const signOutButton = document.getElementById('sign-out');
 const status = document.getElementById('status');
 const identity = document.getElementById('identity');
 const signedIn = document.getElementById('signed-in');
+// Only return to known workspaces on this origin; never trust an external redirect.
+let returnTarget=null;
+try{const requested=new URLSearchParams(location.search).get('returnTo');if(requested){const target=new URL(requested,location.href);if(target.origin===location.origin&&['/alliance-hub.html','/live.html'].includes(target.pathname))returnTarget=target.pathname+target.search+target.hash;}}catch{}
+if(returnTarget){document.querySelector('h1').textContent='Sign in to continue';document.querySelector('.panel > p').textContent='Use your leadership Google account. We’ll return you to your workspace after sign-in.';}
+
 function report(message, error = false) {
   status.textContent = message;
   status.classList.toggle('status-error', error);
@@ -36,6 +41,7 @@ if (!['http:', 'https:'].includes(location.protocol)) {
     const provider = new sdk.GoogleAuthProvider();
     provider.setCustomParameters({ prompt: 'select_account' });
     sdk.onAuthStateChanged(auth, user => {
+      if(user&&returnTarget){location.replace(returnTarget);return;}
       signedIn.hidden = !user;
       document.getElementById('open-portal').hidden = !user;
       button.hidden = !!user;
