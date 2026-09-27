@@ -1,3 +1,4 @@
+import {setupMemberHandoff} from './member-handoff.js?v=20260927';
 import {setupLeaderInvitations} from './leader-invitations.js?v=individual-20260927';
 import {setupMemberRecovery} from './member-recovery.js?v=recovery-form-20260927';
 import {setupMemberAdmin} from './member-admin.js?v=linked-members-v2-20260927';
@@ -135,6 +136,7 @@ function refineAdminWorkflows(){
 }
 refineAdminWorkflows();
 setupLeaderInvitations({call:hubCall});
+setupMemberHandoff({call:hubCall});
 
 setupEventSchedule({reload:loadContent,edit:fillContent,save:hubCall,name:()=>access?.displayName||'Leadership'});
 
