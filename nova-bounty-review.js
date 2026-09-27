@@ -408,8 +408,8 @@ async function openBatch(batch){
 async function load(){
  try{
   const rows=await call({action:'review-list'}),profiles=await Promise.all(rows.map(row=>call({action:'profile',playerKey:row.playerKey}).catch(()=>null)));$('queue').replaceChildren();$('queue-count').textContent=rows.length;
-  rows.forEach((row,index)=>{row.profileName=profiles[index]?.name||row.playerKey;const button=el('button');button.className='r4-queue-item';button.dataset.batch=row.id;button.append(el('span','Pending review'),el('strong',row.bounty),el('small',`${row.gameDate} · ${row.fileCount} screenshots · ${row.profileName}`),el('code',row.id));button.onclick=()=>openBatch(row);$('queue').append(button);});
-  status(`${rows.length} live submission${rows.length===1?'':'s'} awaiting review.`);if(rows.length===1&&!active)await openBatch(rows[0]);
+  rows.forEach((row,index)=>{row.profileName=profiles[index]?.name||'Member';const button=el('button');button.className='r4-queue-item';button.dataset.batch=row.id;button.append(el('span','Pending review'),el('strong',row.bounty),el('small',`${row.gameDate} · ${row.fileCount} screenshots · ${row.profileName}`));button.onclick=()=>openBatch(row);$('queue').append(button);});
+  status(`${rows.length} live submission${rows.length===1?'':'s'} awaiting review.`);if(!rows.length){$('queue').append(el('p','No submissions are awaiting review.'));}
  }catch(error){status(error.message);}
 }
 
