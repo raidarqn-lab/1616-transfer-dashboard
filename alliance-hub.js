@@ -1,4 +1,4 @@
-import {setupTrains} from './train-dashboard.js?v=settings-20260927';
+import {setupTrains} from './train-dashboard.js?v=attendance-20260927';
 import {setupMemberHandoff} from './member-handoff.js?v=20260927';
 import {setupLeaderInvitations} from './leader-invitations.js?v=individual-20260927';
 import {setupMemberRecovery} from './member-recovery.js?v=recovery-form-20260927';

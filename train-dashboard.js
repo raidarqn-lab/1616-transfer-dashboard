@@ -1,4 +1,4 @@
-import {renderTrainHistory} from './train-history.js?v=cooldown-20260927';
+import {renderTrainHistory} from './train-history.js?v=attendance-20260927';
 const days=['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
 const awards=['VS Performance','Weekly Donations','Alliance Standout','Dice','Alliance Standout','R4 Rotation','R4 Rotation'];
 const e=(tag,text)=>{const n=document.createElement(tag);if(text!=null)n.textContent=text;return n;};
@@ -40,7 +40,7 @@ export function setupTrains({call}){
  card.append(select('Backup',[['','No backup'],...data.players.map(p=>[p.key,p.name])],row.backupKey,v=>row.backupKey=v));
  const reasonLabel=e('label','Award reason · visible to members'),reason=e('textarea');reason.rows=2;reason.maxLength=1000;reason.value=row.reason||'';reason.placeholder=row.award==='Alliance Standout'?'What did this player contribute?':'Why this player is receiving the train';reason.oninput=()=>{row.reason=reason.value;dirty=true;};reasonLabel.append(reason);card.append(reasonLabel);
  card.append(select('Attendance',[['scheduled','Scheduled'],['completed','Completed'],['excused','Excused'],['no-show','No-show']],row.status,v=>row.status=v));list.append(card);}
- body.append(e('p','Unassigned days publish as “To be announced”. Complete attendance after the train. Changing a conductor is preserved in the audit history. Thursday’s bounty winner is selected by leadership until reward eligibility is confirmed.'));
+ body.append(e('p','Unassigned days publish as “To be announced”. After the week ends, assigned trains count as completed unless attendance was changed. Excused and no-show records stay unchanged. Changing a conductor is preserved in the audit history. Thursday’s bounty winner is selected by leadership until reward eligibility is confirmed.'));
  }
  function playerLink(p){return button(p.name,()=>window.dispatchEvent(new CustomEvent('nova-train-player',{detail:p})));}
  function suggest(){const used=draft.rows.filter(r=>r.playerKey);const notes=[];for(const row of draft.rows){if(row.playerKey)continue;const pool=data.players.filter(p=>eligible(p,shift(week,row.day),used,data.history.filter(h=>!h.date.startsWith(week)&&!(h.date>=week&&h.date<=shift(week,6))),data.cooldownDays??14));let ranked=[];

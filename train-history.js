@@ -23,7 +23,7 @@ export function renderTrainHistory(root,rows,onPlayer){
    const conductor=cell('Conductor');if(r.playerKey&&onPlayer){const link=el('button',r.name||'Player profile');link.type='button';link.className='th-player-link';link.setAttribute('aria-label','Open '+(r.name||'player')+' profile');link.onclick=()=>onPlayer({key:r.playerKey,name:r.name});conductor.append(link);}else conductor.append(el('strong',r.name||'Unassigned'));if(r.backupName)conductor.append(el('small',`Backup · ${r.backupName}`));
    cell('Award').append(el('span',r.award||'—'));
    const notes=cell('Recognition / notes');notes.append(el('p',r.reason||'—'));if(r.author)notes.append(el('small',`Recorded by ${r.author}`));
-   const status=cell('Status'),pill=el('span',({'scheduled':'Scheduled','completed':'Completed','excused':'Excused','no-show':'No-show'})[r.status]||'Not recorded');pill.className='th-status';pill.dataset.status=r.status||'';status.append(pill);tbody.append(tr);
+   const status=cell('Status'),pill=el('span',({'scheduled':'Scheduled','completed':'Completed','excused':'Excused','no-show':'No-show'})[r.status]||'Not recorded');pill.className='th-status';pill.dataset.status=r.status||'';status.append(pill);if(r.attendanceSource==='week-end assumption')status.append(el('small','Confirmed at week end'));tbody.append(tr);
   }
   table.append(tbody);section.append(table);view.append(section);
  }
