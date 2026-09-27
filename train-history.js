@@ -4,7 +4,7 @@ if(!document.querySelector('link[data-train-history]')){const link=document.crea
 const dateOf=value=>{const d=new Date(`${value}T00:00:00Z`);return Number.isNaN(d.getTime())?null:d;};
 const format=(d,options)=>d.toLocaleDateString('en-US',{timeZone:'UTC',...options});
 function weekOf(value){const d=dateOf(value);if(!d)return '';d.setUTCDate(d.getUTCDate()-(d.getUTCDay()+6)%7);return d.toISOString().slice(0,10);}
-export function renderTrainHistory(root,rows){
+export function renderTrainHistory(root,rows,onPlayer){
  const view=el('div');view.className='train-history';root.append(view);
  if(!rows.length){view.append(el('p','No published train assignments recorded yet.'));return;}
  const groups=new Map();for(const r of rows){const key=weekOf(r.date);if(!groups.has(key))groups.set(key,[]);groups.get(key).push(r);}
@@ -20,7 +20,7 @@ export function renderTrainHistory(root,rows){
   for(const r of entries.sort((a,b)=>(a.date||'').localeCompare(b.date||''))){
    const tr=el('tr');const cell=(label)=>{const td=el('td');td.dataset.label=label;tr.append(td);return td;};
    const date=dateOf(r.date),day=cell('Day');day.append(el('strong',date?format(date,{weekday:'short'}):'—'),el('small',date?format(date,{month:'short',day:'numeric'}):'Date not recorded'));
-   const conductor=cell('Conductor');conductor.append(el('strong',r.name||'Unassigned'));if(r.backupName)conductor.append(el('small',`Backup · ${r.backupName}`));
+   const conductor=cell('Conductor');if(r.playerKey&&onPlayer){const link=el('button',r.name||'Player profile');link.type='button';link.className='th-player-link';link.setAttribute('aria-label','Open '+(r.name||'player')+' profile');link.onclick=()=>onPlayer({key:r.playerKey,name:r.name});conductor.append(link);}else conductor.append(el('strong',r.name||'Unassigned'));if(r.backupName)conductor.append(el('small',`Backup · ${r.backupName}`));
    cell('Award').append(el('span',r.award||'—'));
    const notes=cell('Recognition / notes');notes.append(el('p',r.reason||'—'));if(r.author)notes.append(el('small',`Recorded by ${r.author}`));
    const status=cell('Status'),pill=el('span',({'scheduled':'Scheduled','completed':'Completed','excused':'Excused','no-show':'No-show'})[r.status]||'Not recorded');pill.className='th-status';pill.dataset.status=r.status||'';status.append(pill);tbody.append(tr);

@@ -1,9 +1,14 @@
-import {renderTrainHistory} from './train-history.js?v=history-20260927';
+import {renderTrainHistory} from './train-history.js?v=cooldown-20260927';
 const days=['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
 const awards=['VS Performance','Weekly Donations','Alliance Standout','Dice','Alliance Standout','R4 Rotation','R4 Rotation'];
 const e=(tag,text)=>{const n=document.createElement(tag);if(text!=null)n.textContent=text;return n;};
 export const shift=(date,n)=>{const d=new Date(date+'T00:00:00Z');d.setUTCDate(d.getUTCDate()+n);return d.toISOString().slice(0,10);};
 export function eligible(player,date,rows=[],history=[]){return !history.some(r=>r.playerKey===player.key&&['completed','scheduled'].includes(r.status)&&Math.abs((new Date(date)-new Date(r.date))/86400000)<14)&&!rows.some(r=>r.playerKey===player.key);}
+export function cooldownInfo(key,date,history=[]){
+ const conflicts=history.filter(r=>r.playerKey===key&&['scheduled','completed'].includes(r.status)&&Math.abs((new Date(date)-new Date(r.date))/86400000)<14).sort((a,b)=>b.date.localeCompare(a.date));
+ if(!conflicts.length)return null;
+ const r=conflicts[0];return {date:r.date,until:shift(r.date,14),future:r.date>date};
+}
 export function rankCandidates(players,metric,mode){return players.filter(p=>p[metric]!=null&&(metric!=='vs'||mode!=='hold'||Number(p.vs)>=43200000)).sort((a,b)=>metric==='vs'&&mode==='hold'?a.vs-b.vs:b[metric]-a[metric]);}
 export function setupTrains({call}){
  const root=document.querySelector('[data-section=trains]');let week=monday(),data={},draft,dirty=false,loading=0;
@@ -15,14 +20,24 @@ export function setupTrains({call}){
  async function navigate(w){if(dirty&&!confirm('Discard unsaved train changes?')){date.value=week;return;}week=w;date.value=w;await load();}
  async function load(){const id=++loading;draft=null;body.replaceChildren();message.textContent='Loading train schedule…';try{const result=await call({action:'train-load',week});if(id!==loading)return;data=result;draft=data.draft||{mode:'hold',rows:days.map((_,day)=>({day,award:awards[day],playerKey:'',backupKey:'',reason:'',status:'scheduled'}))};dirty=false;message.textContent='Rewards from '+shift(week,-7)+' to '+shift(week,-2)+' · 14-day cooldown for everyone';paint();}catch(err){message.textContent=err.message;}}
  function paint(){body.replaceChildren();for(const b of tabs.children)b.classList.toggle('active',b.textContent===tab);if(!draft)return;
- if(tab==='History'){renderTrainHistory(body,data.history||[]);return;}
+ if(tab==='History'){renderTrainHistory(body,data.history||[],p=>window.dispatchEvent(new CustomEvent('nova-train-player',{detail:p})));return;}
  if(tab==='Candidates'){body.append(e('p','Confirmed previous-week scores. Missing data remains blank; hold-week VS must be at least 43,200,000. Cooldowns are checked against the selected train date.'));const search=e('input');search.type='search';search.placeholder='Search players';body.append(search);const out=e('div');body.append(out);const draw=()=>{out.replaceChildren();const table=e('table');table.className='train-table';const head=e('tr');['Player','VS total','Weekly donations','Last completed train'].forEach(t=>head.append(e('th',t)));table.append(head);for(const p of data.players.filter(p=>p.name.toLowerCase().includes(search.value.toLowerCase()))){const tr=e('tr');const td=e('td');td.append(playerLink(p));tr.append(td);[p.vs,p.donations].forEach(v=>tr.append(e('td',v==null?'Not recorded':Number(v).toLocaleString())));tr.append(e('td',p.lastTrain||'Not recorded'));table.append(tr);}out.append(table);};search.oninput=draw;draw();return;}
  const bar=e('div');bar.className='train-controls';bar.append(select('Previous week’s strategy',[['hold','Hold / save · closest at or above 43.2M'],['win','Win · highest weekly VS'],['manual','Leadership review']],draft.mode,v=>{draft.mode=v;}));bar.append(button('Suggest assignments',suggest),button('Save draft',()=>save(false)),button('Review & publish',()=>save(true)));body.append(bar,e('p',data.published?'A published schedule is visible to members. Draft edits stay private until published.':'Draft · not yet published to members.'));
+ const prior=(data.history||[]).filter(h=>h.date<week||h.date>shift(week,6));
+ const reservations=draft.rows.filter(r=>r.playerKey).map(r=>({...r,date:shift(week,r.day)}));
+ const cooling=data.players.map(p=>({p,c:cooldownInfo(p.key,week,prior)})).filter(x=>x.c&&!x.c.future);
+ const panel=e('details');panel.className='train-cooldown-panel';panel.open=true;panel.append(e('summary',`${cooling.length} players on cooldown at the start of this week`));panel.append(e('p','14 days between trains. Each conductor menu checks its own date and this week’s assignments.'));
+ const chips=e('div');chips.className='train-cooldown-list';for(const {p,c} of cooling){const chip=e('div');chip.append(playerLink(p),e('span',`Available ${c.until}`));chips.append(chip);}if(!cooling.length)chips.append(e('span','No active cooldowns from earlier weeks.'));panel.append(chips);body.append(panel);
  const list=e('div');list.className='train-week';body.append(list);
  for(const row of draft.rows){const card=e('article');card.className='train-day';const heading=e('header');heading.append(e('strong',days[row.day]),e('small',shift(week,row.day)));card.append(heading);
  if(row.day===3)card.append(select('Wild Card',[['Dice','Dice'],['Top Bounty Hunter','Top Bounty Hunter'],['Custom Award','Custom Award']],row.award,v=>row.award=v));else card.append(e('span',row.award));
- const available=data.players.filter(p=>row.day<5||p.rank==='R4'||p.key===row.playerKey);card.append(select('Conductor',[['','Choose player'],...available.map(p=>[p.key,p.name])],row.playerKey,v=>{row.playerKey=v;row.name=data.players.find(p=>p.key===v)?.name||'';}));
- card.append(select('Backup',[['','No backup'],...data.players.filter(p=>['R4','R5'].includes(p.rank)).map(p=>[p.key,p.name])],row.backupKey,v=>row.backupKey=v));
+ const available=data.players.filter(p=>row.day<5||p.rank==='R4'||p.key===row.playerKey);
+ const trainDate=shift(week,row.day),checks=[...prior,...reservations.filter(r=>r.day!==row.day)];
+ const state=p=>cooldownInfo(p.key,trainDate,checks);
+ const conductor=select('Conductor',[['','Choose player'],...available.map(p=>{const c=state(p);return [p.key,p.name+(c?c.future?' — Reserved '+c.date:' — Cooldown until '+c.until:' — Available')];})],row.playerKey,v=>{row.playerKey=v;row.name=data.players.find(p=>p.key===v)?.name||'';dirty=true;paint();});
+ for(const option of conductor.querySelectorAll('option')){if(option.value&&state({key:option.value})&&option.value!==row.playerKey)option.disabled=true;}
+ const selected=row.playerKey&&state({key:row.playerKey});const hint=e('small',selected?(selected.future?'Conflicts with train on '+selected.date:'On cooldown · available '+selected.until):row.playerKey?'✓ Available for this train':'Cooldown players are marked and unavailable');hint.className='train-cooldown-hint'+(selected?' is-blocked':'');conductor.append(hint);card.append(conductor);
+ card.append(select('Backup',[['','No backup'],...data.players.map(p=>[p.key,p.name])],row.backupKey,v=>row.backupKey=v));
  const reasonLabel=e('label','Award reason · visible to members'),reason=e('textarea');reason.rows=2;reason.maxLength=1000;reason.value=row.reason||'';reason.placeholder=row.award==='Alliance Standout'?'What did this player contribute?':'Why this player is receiving the train';reason.oninput=()=>{row.reason=reason.value;dirty=true;};reasonLabel.append(reason);card.append(reasonLabel);
  card.append(select('Attendance',[['scheduled','Scheduled'],['completed','Completed'],['excused','Excused'],['no-show','No-show']],row.status,v=>row.status=v));list.append(card);}
  body.append(e('p','Unassigned days publish as “To be announced”. Complete attendance after the train. Changing a conductor is preserved in the audit history. Thursday’s bounty winner is selected by leadership until reward eligibility is confirmed.'));
