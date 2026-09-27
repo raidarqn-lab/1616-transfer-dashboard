@@ -22,7 +22,7 @@ function show(view){
  if(view==='events'||view==='announcements')loadContent();
 }
 nav.forEach(button=>button.onclick=()=>show(button.dataset.hubView));
-$('hub-collapse').onclick=()=>document.body.classList.toggle('hub-collapsed');
+$('hub-collapse').onclick=()=>{const collapsed=document.body.classList.toggle('hub-collapsed');$('hub-collapse').setAttribute('aria-expanded',String(!collapsed));$('hub-collapse').setAttribute('aria-label',collapsed?'Expand sidebar':'Collapse sidebar');$('hub-collapse').title=collapsed?'Expand sidebar':'Collapse sidebar';};
 
 function staffRow(item){
  const tr=document.createElement('tr');
