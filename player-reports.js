@@ -1,4 +1,4 @@
-import {downloadReport,reportLabels} from './report-export.js?v=exports-20260926';
+import {downloadReport,reportLabels} from './report-export.js?v=report-polish-20260926';
 const el=(tag,text)=>{const n=document.createElement(tag);if(text!==undefined)n.textContent=text;return n;};
 const day=86400000,iso=d=>d.toISOString().slice(0,10),monday=value=>{const d=new Date(value+'T00:00:00Z');d.setUTCDate(d.getUTCDate()-(d.getUTCDay()+6)%7);return iso(d);};
 const fmt=n=>Number(n).toLocaleString();
