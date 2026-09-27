@@ -1,6 +1,6 @@
 import {user} from './live-session.js';
 import {bountyConnection as config} from './nova-bounty-config.js';
-import {renderReports} from './player-reports.js?v=custom-reports-final-20260926';
+import {renderReports} from './player-reports.js?v=exports-20260926';
 const el=(tag,text)=>{const n=document.createElement(tag);if(text!==undefined)n.textContent=text;return n;};
 const labels=[['vs','Alliance Duel'],['donations','Alliance Donations'],['desert_storm','Desert Storm'],['canyon_storm','Canyon Storm'],['bounties','Bounties'],['hr','Human Resources'],['server_plans','Server Plans'],['reports','Reports']];
 async function load(key){if(!user)throw Error('Sign in to view player records.');const response=await fetch(config.endpoint,{method:'POST',headers:{'Content-Type':'application/json',apikey:config.anonKey,'X-Portal-Token':await user.getIdToken()},body:JSON.stringify({action:'profile',playerKey:String(key),includeActivity:true}),signal:AbortSignal.timeout(30000)});const result=await response.json();if(!response.ok)throw Error(result.error||'Unable to load player records.');return result;}
