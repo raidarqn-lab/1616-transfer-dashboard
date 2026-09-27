@@ -1,3 +1,4 @@
+import {setupMemberRecovery} from './member-recovery.js?v=recovery-form-20260927';
 import {setupMemberAdmin} from './member-admin.js?v=linked-members-v2-20260927';
 import {setupEventSchedule,renderEventSchedule,openEventEditor,eventSaved} from './event-schedule.js?v=events-organized-20260927';
 import {user} from './live-session.js';
@@ -46,7 +47,6 @@ $('hub-save-access').onclick=async()=>{
 };
 $('hub-revoke').onclick=async()=>{if(!selectedEmail)return;const restore=$('hub-revoke').dataset.restore==='true';if(!confirm(`${restore?'Restore':'Revoke'} Alliance Hub access for ${staff.find(x=>x.email===selectedEmail)?.displayName||'this leader'}?`))return;try{await hubCall({action:restore?'hub-staff-restore':'hub-staff-revoke',email:selectedEmail});await loadStaff();setStatus(`${restore?'Restored':'Revoked'} access for ${staff.find(x=>x.email===selectedEmail)?.displayName||'this leader'}.`);}catch(error){setStatus(error.message,true);}};
 $('hub-reset-username').onclick=async()=>{const id=$('hub-member-id').value,username=$('hub-member-username').value.trim();if(!id||!username)return;try{await hubCall({action:'hub-member-rename',accountId:id,username});setStatus('Member username updated and existing sessions revoked.');}catch(error){setStatus(error.message,true);}};
-$('hub-reset-password').onclick=async()=>{const id=$('hub-member-id').value;if(!id)return;const reason=prompt('Enter the reason for this credential reset (stored in the audit log):');if(!reason)return;try{const result=await hubCall({action:'hub-member-reset',accountId:id,reason});$('hub-reset-code').textContent=result.resetCode||'';$('hub-reset-output').hidden=false;setStatus('Private reset code created. Share it directly with this member; no email is sent. It expires in one hour.');}catch(error){setStatus(error.message,true);}};
 $('hub-member-revoke').onclick=async()=>{const id=$('hub-member-id').value;if(!id)return;if(!confirm('Revoke this member account and all active sessions?'))return;try{await hubCall({action:'hub-member-revoke',accountId:id});setStatus('Member access revoked and sessions closed.');}catch(error){setStatus(error.message,true);}};
 
 function eventLocationLabel(payload={}){return ['x','y','level'].filter(key=>payload[key]!==null&&payload[key]!==undefined&&payload[key]!=='').map(key=>` · ${key==='level'?'Lv':key.toUpperCase()} ${escapeHtml(payload[key])}`).join('');}
@@ -122,3 +122,5 @@ refineAdminWorkflows();
 setupEventSchedule({reload:loadContent,edit:fillContent,save:hubCall,name:()=>access?.displayName||'Leadership'});
 
 setupMemberAdmin({call:hubCall,setStatus});
+
+setupMemberRecovery({call:hubCall});
