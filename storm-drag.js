@@ -3,7 +3,7 @@ export function moveParticipant(plan,phase,key,target){
  const member=plan.members.find(m=>m.key===key);
  if(!member||member.role!=='participant')return 'Only participants can be assigned. Move reserves into the team first.';
  if(!['opening','later'].includes(phase))return 'Choose a battle phase.';
- const allowed=['hospital-1','hospital-2','hospital-3','hospital-4','refinery-1','refinery-2','science','info',...(phase==='later'?['silo','arsenal','factory']:[])];
+ const allowed=['hospital-1','hospital-2','hospital-3','hospital-4','refinery-1','refinery-2','science','info','silo','arsenal','factory'];
  if(target&&!allowed.includes(target))return 'This building is not available in this phase.';
  const assignments=plan.assignments[phase];
  if(target&&(assignments[target]||[]).filter(k=>k!==key).length>=4)return 'This building already has four players. Move someone out first.';

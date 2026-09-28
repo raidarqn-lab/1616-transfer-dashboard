@@ -1,16 +1,37 @@
-import {availableBuildings,esc} from './storm-core.js';
+import {availableBuildings,esc} from './storm-core.js?v=plan-files-20260928';
 export async function exportPlan(plan,time,format='png'){
  const popup=format==='pdf'?window.open('','_blank'):null;
  if(format==='pdf'&&!popup)throw Error('Allow the print window, then try again.');
  try{
  const img=new Image();img.src=new URL('./desert-storm-map-readable.png',import.meta.url).href;await img.decode();
- const canvas=document.createElement('canvas'),c=canvas.getContext('2d');canvas.width=1800;
- const lines=[];const add=(text,size=28,color='#e8f6f9')=>{c.font=`${size>=34?'bold ':''}${size}px sans-serif`;let line='';for(const word of String(text).split(/\s+/)){if(c.measureText(line+' '+word).width>1630&&line){lines.push({text:line,size,color});line=word;}else line+=(line?' ':'')+word;}lines.push({text:line,size,color});};
- for(const phase of ['opening','later']){add(phase==='opening'?'OPENING PHASE':'AFTER 10 MINUTES',38,'#78e2d6');for(const [id,label] of availableBuildings(phase)){const names=(plan.assignments?.[phase]?.[id]||[]).map(k=>plan.members.find(m=>m.key===k)?.name||'Unknown player');add(label+': '+(names.join(' · ')||'Unassigned'));}add('');}
- add('RESERVES',34,'#78e2d6');add(plan.members.filter(m=>m.role==='reserve').map(m=>m.name).join(' · ')||'None listed');if(plan.notes){add('INSTRUCTIONS',34,'#78e2d6');for(const line of plan.notes.split('\n'))add(line);}
- const mapH=Math.round(1680*img.height/img.width);canvas.height=240+mapH+lines.reduce((n,l)=>n+l.size+18,0)+90;
- c.fillStyle='#092531';c.fillRect(0,0,canvas.width,canvas.height);c.fillStyle='#78e2d6';c.font='bold 24px sans-serif';c.fillText('NOVA SAPPHIRE · DESERT STORM',60,52);c.fillStyle='white';c.font='bold 42px sans-serif';c.fillText(plan.title+' · Team '+plan.team,60,112,1680);c.font='28px sans-serif';c.fillText('Server time: '+time,60,160);c.drawImage(img,60,200,1680,mapH);let y=250+mapH;for(const l of lines){c.fillStyle=l.color;c.font=`${l.size>=34?'bold ':''}${l.size}px sans-serif`;c.fillText(l.text,70,y);y+=l.size+18;}
- if(format==='pdf'){popup.document.title='Desert Storm battle plan';popup.document.body.innerHTML=`<style>body{font:15px/1.5 system-ui;color:#102f3d;margin:24px}h1,h2{color:#135665}img{width:100%;display:block}.phase{break-before:page}li{margin:12px 0;break-inside:avoid}p{white-space:pre-wrap}@page{size:A4 portrait;margin:15mm}</style><h1>${esc(plan.title)} · Team ${esc(plan.team)}</h1><p>Server time: ${esc(time)}</p><img src="${img.src}" alt="Desert Storm battlefield">${['opening','later'].map(phase=>`<section class="phase"><h2>${phase==='opening'?'Opening phase':'After 10 minutes'}</h2><ul>${availableBuildings(phase).map(([id,label])=>`<li><strong>${esc(label)}</strong><br>${esc((plan.assignments?.[phase]?.[id]||[]).map(k=>plan.members.find(m=>m.key===k)?.name||'Unknown player').join(' · ')||'Unassigned')}</li>`).join('')}</ul></section>`).join('')}<h2>Reserves</h2><p>${esc(plan.members.filter(m=>m.role==='reserve').map(m=>m.name).join(' · ')||'None listed')}</p><h2>Instructions</h2><p>${esc(plan.notes||'—')}</p>`;await popup.document.querySelector('img').decode();popup.print();}
- else{const blob=await new Promise(r=>canvas.toBlob(r,'image/png'));const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='nova-desert-storm-team-'+plan.team+'.png';a.click();setTimeout(()=>URL.revokeObjectURL(url),30000);}
+ const pages=['opening'].map(phase=>{
+ const canvas=document.createElement('canvas');canvas.width=3200;canvas.height=2050;const c=canvas.getContext('2d');
+ c.fillStyle='#092531';c.fillRect(0,0,3200,1900);
+ const text=(s,x,y,size=30,color='#eef9fc',max=3000)=>{c.font=`${size>=36?'bold ':''}${size}px sans-serif`;c.fillStyle=color;c.fillText(s,x,y,max)};
+ text('NOVA SAPPHIRE · DESERT STORM',45,52,28,'#78e2d6');text(plan.title+' · DS Group '+plan.team,45,115,44);
+ text('Server time: '+time+' · '+'Building assignments',45,162,28);
+ text('Prepared by '+(plan.createdByName||'Leadership')+' · '+(plan.createdAt?.slice(0,10)||'Date not recorded'),45,205,24);
+ const mx=450,my=250,mw=2700,mh=mw*img.height/img.width;c.drawImage(img,mx,my,mw,mh);
+ text('SUBSTITUTES',35,290,34,'#78e2d6',390);let sy=345;
+ for(const m of plan.members.filter(m=>m.role==='reserve')){text(m.name,35,sy,29,'#eef9fc',390);sy+=55;}
+ if(!plan.members.some(m=>m.role==='reserve'))text('None listed',35,345,26);
+ text('UNASSIGNED',35,970,32,'#78e2d6',390);let uy=1015;
+ for(const m of plan.members.filter(m=>m.role==='participant'&&!Object.values(plan.assignments[phase]||{}).flat().includes(m.key))){text(m.name,35,uy,24,'#eef9fc',390);uy+=37;}
+ for(const [id,label,x,y] of availableBuildings(phase)){
+ const names=(plan.assignments[phase]?.[id]||[]).map(k=>(()=>{const m=plan.members.find(m=>m.key===k);return (m?.duty==='anchor'?'A · ':'S · ')+(m?.name||'Player')})());
+ const px=mx+mw*x/100,py=my+mh*(y+4)/100,w=280,h=names.length?40+names.length*32:40;
+ c.fillStyle='#092531f2';c.fillRect(px-w/2,py,w,h);c.strokeStyle='#78e2d6';c.strokeRect(px-w/2,py,w,h);
+ text(names.length?label:'Unassigned',px-w/2+10,py+27,23,'#78e2d6',w-20);
+ names.forEach((n,i)=>text(n,px-w/2+10,py+59+i*32,25,'#ffffff',w-20));
+ }
+ text('ANCHOR (A): stays to secure the assigned building.',45,1950,30,'#78e2d6');text('SUPPORT (S): may move once the building is secure.',45,2000,30,'#eef9fc');return canvas;
+ });
+ if(format==='pdf'){
+ popup.document.title=plan.title;popup.document.body.innerHTML=`<style>@page{size:A3 landscape;margin:8mm}body{margin:0;font:16px system-ui}img{width:100%;display:block;break-after:page}p{white-space:pre-wrap}</style>${pages.map(p=>`<img src="${p.toDataURL('image/png')}" alt="Battle assignments and substitutes">`).join('')}<h2>Instructions</h2><p>${esc(plan.notes||'No additional instructions.')}</p>`;
+ await Promise.all([...popup.document.images].map(i=>i.decode()));popup.print();
+ }else{
+ const out=document.createElement('canvas');out.width=3200;const notes=(plan.notes||'').match(/.{1,130}(?:\s|$)|.{1,130}/g)||[];out.height=pages.length*2050+(notes.length?100+notes.length*40:0);const c=out.getContext('2d');pages.forEach((p,i)=>c.drawImage(p,0,i*2050));if(notes.length){c.fillStyle='#092531';c.fillRect(0,2050,3200,out.height-2050);c.fillStyle='#eef9fc';c.font='30px sans-serif';c.fillText('INSTRUCTIONS',45,2100);notes.forEach((line,i)=>c.fillText(line,45,2150+i*40,3100));}
+ const blob=await new Promise(r=>out.toBlob(r,'image/png')),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=(plan.title||'Desert Storm').replace(/[^\p{L}\p{N} _-]/gu,'').slice(0,100)+'-DS-'+plan.team+'.png';a.click();setTimeout(()=>URL.revokeObjectURL(url),30000);
+ }
  }catch(e){popup?.close();throw e;}
 }
