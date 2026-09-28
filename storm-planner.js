@@ -2,7 +2,7 @@ import {createPenaltyManager} from './storm-penalties.js?v=20260928';
 import {participation} from './storm-participation.js?v=20260928';
 import {createCoreManager,coreProblems} from './storm-core-roster.js?v=20260928';
 import {loadStormHistory} from './storm-profile.js?v=rotation-20260928';
-import {moveParticipant,mountDrag} from './storm-drag.js?v=core-20260928';
+import {moveParticipant,mountDrag} from './storm-drag.js?v=drop-release-20260928';
 import {exportPlan} from './storm-export.js';
 import {buildings,availableBuildings,esc,issues,assignmentText,battleMail,mapHtml} from './storm-core.js?v=map-20260928';
 import {serverToUtc,serverValue,serverDate} from './shop-calendar-core.js';
