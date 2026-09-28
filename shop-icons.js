@@ -11,7 +11,7 @@ const paths={
  bounty:'<path d="M10 6h28v36H10zM16 13h16m-16 23h16"/><circle cx="24" cy="24" r="7"/><path d="M24 14v4m0 12v4M14 24h4m12 0h4"/>',
  growth:'<path d="M10 39V27h7v12m7 0V19h7v20m7 0V10M8 19 20 7m-8 0h8v8"/>',
  market:'<path d="M8 19h32v23H8zM5 19l5-12h28l5 12M18 42V29h12v13M16 7l-3 12m19-12 3 12M5 19q5 7 10 0 5 7 10 0 5 7 10 0 4 5 8 0"/>',
- overlord:'<path d="m8 13 8 6 8-12 8 12 8-6-4 21H12zM13 40h22M18 28h12"/>',
+ overlord:'<path d="M14 10Q24 1 34 10l3 7q7-1 6 6l-5 6q-1 13-14 14Q11 42 10 29l-5-6q-1-7 6-6zM12 23l3-7 9 4 9-4 3 7M16 24h3m10 0h3M16 33q0-6 8-6t8 6v2q-8 6-16 0zM21 31h1m4 0h1M20 36h8"/>',
  training:'<path d="M9 15v18m6-24v30m18-30v30m6-24v18M15 24h18M5 19v10m38-10v10"/>',
  energy:'<path d="m27 4-18 24h14l-2 16 18-25H25z"/>',
  roulette:'<circle cx="24" cy="25" r="17"/><circle cx="24" cy="25" r="4"/><path d="M24 8v13m0 8v13M7 25h13m8 0h13M12 13l9 9m6 6 9 9M12 37l9-9m6-6 9-9M21 3h6l-3 6z"/>',
