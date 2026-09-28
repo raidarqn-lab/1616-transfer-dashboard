@@ -1,4 +1,4 @@
-import {availableBuildings,esc} from './storm-core.js?v=plan-files-20260928';
+import {availableBuildings,mapRails,esc} from './storm-core.js?v=playbook-20260928';
 export async function exportPlan(plan,time,format='png'){
  const popup=format==='pdf'?window.open('','_blank'):null;
  if(format==='pdf'&&!popup)throw Error('Allow the print window, then try again.');
@@ -6,23 +6,24 @@ export async function exportPlan(plan,time,format='png'){
  const img=new Image();img.src=new URL('./desert-storm-map-readable.png',import.meta.url).href;await img.decode();
  const pages=['opening'].map(phase=>{
  const canvas=document.createElement('canvas');canvas.width=3200;canvas.height=2050;const c=canvas.getContext('2d');
- c.fillStyle='#092531';c.fillRect(0,0,3200,1900);
+ c.fillStyle='#092531';c.fillRect(0,0,3200,2050);
  const text=(s,x,y,size=30,color='#eef9fc',max=3000)=>{c.font=`${size>=36?'bold ':''}${size}px sans-serif`;c.fillStyle=color;c.fillText(s,x,y,max)};
  text('NOVA SAPPHIRE · DESERT STORM',45,52,28,'#78e2d6');text(plan.title+' · DS Group '+plan.team,45,115,44);
  text('Server time: '+time+' · '+'Building assignments',45,162,28);
  text('Prepared by '+(plan.createdByName||'Leadership')+' · '+(plan.createdAt?.slice(0,10)||'Date not recorded'),45,205,24);
- const mx=450,my=250,mw=2700,mh=mw*img.height/img.width;c.drawImage(img,mx,my,mw,mh);
- text('SUBSTITUTES',35,290,34,'#78e2d6',390);let sy=345;
- for(const m of plan.members.filter(m=>m.role==='reserve')){text(m.name,35,sy,29,'#eef9fc',390);sy+=55;}
- if(!plan.members.some(m=>m.role==='reserve'))text('None listed',35,345,26);
- text('UNASSIGNED',35,970,32,'#78e2d6',390);let uy=1015;
- for(const m of plan.members.filter(m=>m.role==='participant'&&!Object.values(plan.assignments[phase]||{}).flat().includes(m.key))){text(m.name,35,uy,24,'#eef9fc',390);uy+=37;}
- for(const [id,label,x,y] of availableBuildings(phase)){
- const names=(plan.assignments[phase]?.[id]||[]).map(k=>(()=>{const m=plan.members.find(m=>m.key===k);return (m?.duty==='anchor'?'A · ':'S · ')+(m?.name||'Player')})());
- const px=mx+mw*x/100,py=my+mh*(y+4)/100,w=280,h=names.length?40+names.length*32:40;
- c.fillStyle='#092531f2';c.fillRect(px-w/2,py,w,h);c.strokeStyle='#78e2d6';c.strokeRect(px-w/2,py,w,h);
- text(names.length?label:'Unassigned',px-w/2+10,py+27,23,'#78e2d6',w-20);
- names.forEach((n,i)=>text(n,px-w/2+10,py+59+i*32,25,'#ffffff',w-20));
+ const mx=820,my=450,mw=1500,mh=mw*img.height/img.width;c.drawImage(img,mx,my,mw,mh);
+ text('SUBSTITUTES',35,290,32,'#78e2d6',330);let sy=345;
+ for(const m of plan.members.filter(m=>m.role==='reserve')){text(m.name,35,sy,26,'#eef9fc',330);sy+=55;}
+ if(!plan.members.some(m=>m.role==='reserve'))text('None listed',35,345,24);
+ text('UNASSIGNED',35,970,29,'#78e2d6',330);let uy=1015;
+ for(const m of plan.members.filter(m=>m.role==='participant'&&!Object.values(plan.assignments[phase]||{}).flat().includes(m.key))){text(m.name,35,uy,23,'#eef9fc',330);uy+=37;}
+ for(const [side,rail] of mapRails.entries())for(const [row,id] of rail.entries()){
+ const [,label,x,y]=availableBuildings(phase).find(b=>b[0]===id),names=(plan.assignments[phase]?.[id]||[]).map(k=>{const m=plan.members.find(m=>m.key===k);return (m?.duty==='anchor'?'A · ':'S · ')+(m?.name||'Player');});
+ const px=side?2700:390,py=285+row*250,w=365,h=190,bx=mx+mw*x/100,by=my+mh*y/100;
+ c.strokeStyle='#78a49b';c.lineWidth=2;c.beginPath();c.moveTo(side?px:px+w,py+h/2);c.lineTo(bx,by);c.stroke();c.fillStyle='#78e2d6';c.beginPath();c.arc(bx,by,6,0,Math.PI*2);c.fill();
+ c.fillStyle='#143b45';c.fillRect(px,py,w,h);text(label,px+14,py+35,27,'#78e2d6',w-28);
+ if(!names.length)text('Awaiting assignment',px+14,py+79,24,'#b6cdd3',w-28);
+ names.forEach((n,i)=>text(n,px+14,py+77+i*32,25,'#ffffff',w-28));
  }
  text('ANCHOR (A): stays to secure the assigned building.',45,1950,30,'#78e2d6');text('SUPPORT (S): may move once the building is secure.',45,2000,30,'#eef9fc');return canvas;
  });
