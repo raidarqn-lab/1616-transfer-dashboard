@@ -1,4 +1,5 @@
-import {setupShopCalendar} from './shop-calendar.js?v=shop-20260928';
+import {setupStorm} from './storm-planner.js?v=20260928';
+import {setupShopCalendar} from './shop-calendar.js?v=shop-inline-20260928';
 import {setupTrains} from './train-dashboard.js?v=attendance-20260927';
 import {setupMemberHandoff} from './member-handoff.js?v=20260927';
 import {setupLeaderInvitations} from './leader-invitations.js?v=individual-20260927';
@@ -11,6 +12,7 @@ import {bountyConnection as config} from './nova-bounty-config.js';
 const $=id=>document.getElementById(id);
 const duelNav=document.createElement('button');duelNav.type='button';duelNav.dataset.hubView='vs';duelNav.setAttribute('aria-label','Alliance Duel / VS');duelNav.title='Alliance Duel / VS';duelNav.innerHTML='<svg aria-hidden="true" viewBox="0 0 24 24"><path d="m5 3 16 16-2 2L3 5V3h2Zm14 0L3 19l2 2L21 5V3h-2Z" fill="currentColor"/></svg><span>Alliance Duel / VS</span>';document.querySelector('[data-hub-view="roster"]').after(duelNav);
 setupShopCalendar({call:hubCall});
+setupStorm({call:hubCall});
 const sections=[...document.querySelectorAll('.hub-section')];
 const nav=[...document.querySelectorAll('[data-hub-view]')];
 let access=null,staff=[],selectedEmail='',content=[];
@@ -30,6 +32,7 @@ function show(view){
  nav.forEach(button=>button.classList.toggle('active',button.dataset.hubView===view));
  history.replaceState(null,'','#'+view);document.title=`Alliance Hub · ${view[0].toUpperCase()+view.slice(1)}`;
  if(['records','roster','vs'].includes(view))window.dispatchEvent(new CustomEvent('nova-records-open',{detail:{roster:view!=='records',duel:view==='vs'}}));
+ if(view==='storm')window.dispatchEvent(new Event('nova-storm-open'));
  if(view==='trains')window.dispatchEvent(new Event('nova-trains-open'));
  if(view==='shop')window.dispatchEvent(new Event('nova-shop-open'));
  if(view==='admin'){loadStaff();window.dispatchEvent(new Event('nova-initiatives-open'));}
@@ -67,7 +70,7 @@ $('hub-member-revoke').onclick=async()=>{const id=$('hub-member-id').value;if(!i
 function eventLocationLabel(payload={}){return ['x','y','level'].filter(key=>payload[key]!==null&&payload[key]!==undefined&&payload[key]!=='').map(key=>` · ${key==='level'?'Lv':key.toUpperCase()} ${escapeHtml(payload[key])}`).join('');}
 function contentCard(item){const button=document.createElement('button');button.type='button';button.className='r4-queue-item';button.innerHTML=`<span>${escapeHtml(item.status)}</span><strong>${escapeHtml(item.title)}</strong><small>${escapeHtml(item.alliance||'All Sapphire members')}${item.kind==='event'?eventLocationLabel(item.payload):''} · revision ${item.revision}</small>`;button.onclick=()=>fillContent(item);return button;}
 function paintContent(){
- const events=content.filter(item=>item.kind==='event'&&!item.payload?.shopEvent),announcements=content.filter(item=>item.kind==='announcement');
+ const events=content.filter(item=>item.kind==='event'&&!item.payload?.shopEvent&&!item.payload?.stormPlan),announcements=content.filter(item=>item.kind==='announcement');
  renderEventSchedule(events);$('event-count').textContent=events.filter(item=>item.status==='published').length;$('announcement-count').textContent=announcements.filter(item=>item.status==='published').length;
  for(const [id,items] of [['announcement-list',announcements]]){const out=$(id);out.classList.toggle('hub-empty',!items.length);out.replaceChildren();if(!items.length)out.textContent='No content yet.';else items.forEach(item=>out.append(contentCard(item)));}
 }

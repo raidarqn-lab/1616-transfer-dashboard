@@ -1,3 +1,4 @@
+import {loadStormHistory} from './storm-profile.js?v=20260928';
 import {loadTrainHistory} from './train-history.js?v=history-20260927';
 import {renderReports} from './player-reports.js?v=report-polish-20260926';
 import {user} from './live-session.js';
@@ -259,6 +260,7 @@ async function showDirectoryProfile(profile,initialTab='all'){
  const facts=(label,values)=>{const section=el('section');section.className='player-info-card';section.append(el('h3',label));const list=el('dl');for(const [key,value] of values){const pair=el('div');pair.append(el('dt',key),el('dd',value===undefined||value===null||value===''?'Not recorded':String(value)));list.append(pair);}section.append(list);return section;};
  const empty=(title,description)=>{const box=el('div');box.className='player-empty';box.append(el('h3',title),el('p',description));body.append(box);};
  const draw=key=>{body.classList.remove('hr-workspace','participation-reports');body.replaceChildren();for(const button of tabs.children)button.setAttribute('aria-selected',String(button.dataset.key===key));const name=choices.find(c=>c[0]===key)[1];body.append(el('h2',name));
+ if(key==='desert_storm')loadStormHistory(body,call,profile.key);
  if(key==='trains'){loadTrainHistory(body,call,profile.key);return;}
  if(key==='reports'){renderReports(body,full);return;}
  if(key==='server_plans'){drawServerPlans(body,profile,full);return;}
