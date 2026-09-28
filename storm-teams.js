@@ -11,7 +11,7 @@ export function openTeamBoard({plan,record,items,players,core,penalties,call,aut
  if(hasUnsaved)changed.add(current);boards[current]=structuredClone(plan);records[current]=record;
  const fresh=()=>({version:1,assignmentMode:'anchor-support',title:'Desert Storm · Group '+other,team:other,start:plan.start||'',notes:'',members:core.seed(other).filter(m=>!penalties.active(m.key,date||undefined)),assignments:{opening:{},later:{}}});
  const setOther=x=>{records[other]=x||null;boards[other]=x?structuredClone(x.payload.stormPlan):fresh();};setOther(candidates.length===1?candidates[0]:null);
- const poolSize=Math.max(8,Math.min(20,Math.floor((window.innerHeight-330)/38)));
+ const poolSize=Math.max(8,Math.min(20,Math.floor((window.innerHeight-470)/40)));
  const recentNote=key=>{const day=boards[current].start?serverValue(boards[current].start).slice(0,10):serverValue(new Date().toISOString()).slice(0,10);const history=items.filter(x=>x.startsAt&&x.payload?.stormPlan&&!x.payload.stormPlan.deletedAt).map(x=>({date:serverValue(x.startsAt).slice(0,10),team:x.payload.stormPlan.team,members:x.payload.stormPlan.members,status:x.status,publishedAt:x.publishedAt}));const info=participation(key,day,history,penalties.entries);return info.bench?'<small class="ds-pool-note bench">Penalty bench</small>':info.recent==='missed'?'<small class="ds-pool-note due">'+(info.older==='missed'?'Missed 2 recorded weeks':'Missed last recorded week')+'</small>':info.recent==='unknown'?'<small class="ds-pool-note">History incomplete</small>':'';};
  const status=text=>{message=text;const node=dialog.querySelector('[data-team-status]');if(node)node.textContent=text;};
  const locate=key=>['A','B'].find(t=>boards[t].members.some(m=>m.key===key));
