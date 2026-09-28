@@ -273,7 +273,7 @@ async function showDirectoryProfile(profile,initialTab='all'){
  if(draft&&selected>=0){const attach=el('button','Use this player for the selected OCR row');attach.className='primary directory-attach';attach.onclick=()=>{const row=draft.rows[selected];row.playerKey=profile.key;row.playerName=profile.name;row.playerAlliance=profile.alliance||'';resetConfirmations(row,'playerChecked','allianceChecked');markChanged();renderRows();selectRow(selected);status(`${profile.name} attached as an unconfirmed match. Confirm the player and alliance after checking the evidence.`);};out.append(attach);}
 }
 
-let recordsPage=0,recordsQuery='',rosterOnly=false,directoryRequestId=0;
+let recordsPage=0,recordsQuery='',rosterOnly=false,duelOnly=false,directoryRequestId=0;
 let rosterMetric='vs';
 // Short-lived, memory-only cache; explicit Search always refreshes live data.
 const directoryCache=new Map(),directoryPending=new Map();
@@ -342,7 +342,7 @@ function finishRosterTable(table,players,results,prefs){const heads=Array.from(t
 function drawRoster(players,results){
  const allPlayers=players,prefs=rosterPreferences();
  const controls=el('div');controls.className='roster-controls';
- for(const [metric,label] of [['vs','Alliance Duel / VS'],['donations','Alliance Donations']]){const b=el('button',label);b.className=metric===rosterMetric?'active':'';b.onclick=()=>{rosterMetric=metric;results.replaceChildren();drawRoster(allPlayers,results);};controls.append(b);}
+ for(const [metric,label] of (duelOnly?[['vs','Alliance Duel / VS']]:[['vs','Alliance Duel / VS'],['donations','Alliance Donations']])){const b=el('button',label);b.className=metric===rosterMetric?'active':'';b.onclick=()=>{rosterMetric=metric;results.replaceChildren();drawRoster(allPlayers,results);};controls.append(b);}
  const label=el('label','Week of '),date=el('input');date.type='date';date.value=rosterWeek;date.onchange=()=>{if(date.value){rosterWeek=mondayOf(date.value+'T00:00:00Z');searchDirectory();}};label.append(date);controls.append(label);const reports=el('button','Player reports');reports.type='button';reports.onclick=()=>{let picker=results.querySelector('.roster-report-picker');if(picker){picker.remove();return;}picker=el('div');picker.className='roster-report-picker';const select=el('select');select.setAttribute('aria-label','Player for report');for(const p of allPlayers){const option=el('option',p.name);option.value=p.key;select.append(option);}const open=el('button','Open report');open.onclick=()=>showDirectoryProfile(allPlayers.find(p=>String(p.key)===select.value),'reports');picker.append(el('span','Choose a player to chart their actual scores'),select,open);controls.after(picker);};controls.append(reports);results.append(controls);players=allPlayers.filter(p=>rosterMatches(p,prefs.filter));
  if(rosterMetric==='donations'){
   results.append(el('p','Weekly donation minimum: 35,000 points (5,000 × 7). Submit the weekly ranking screenshot before reset. Green: at or above target · Red: below target · —: not confirmed.'));
@@ -378,7 +378,7 @@ async function searchDirectory(event){
  try{const prefs=recordPreferences(),request={action:'player-search',query:recordsQuery,browse:true,page:recordsPage,alliance:rosterOnly?'NvSP':null,server:'',sort:rosterOnly?'name':prefs.sort,week:rosterWeek,...(!rosterOnly?{directoryView:true,pageSize:prefs.pageSize,filter:prefs.filter}:{})};const key=JSON.stringify(request);if(renderedDirectoryKey!==key){results.replaceChildren();renderedDirectoryKey='';}else $('directory-status').textContent='Refreshing player records…';const data=await loadDirectory(request,!!event);if(requestId!==directoryRequestId)return;results.replaceChildren();renderedDirectoryKey=key;document.querySelector('.records-toolbar')?.setAttribute('hidden','');if(rosterOnly){results.classList.add('roster-results');results.classList.remove('all-players-results');$('directory-status').textContent=`${data.length} NvSP players`;drawRoster(data,results);if($('records-page'))$('records-page').parentElement.hidden=true;return;}results.classList.remove('roster-results');results.classList.add('all-players-results');if(!Array.isArray(data.players))throw new Error('Directory update is not available yet. Please refresh shortly.');const total=Number(data.totalCount)||0,pages=Math.max(1,Math.ceil(total/prefs.pageSize));if(recordsPage>=pages){recordsPage=pages-1;return searchDirectory();}$('directory-status').textContent=`${total.toLocaleString()} matching players`;drawRecords(data.players,total,results,prefs);
  }catch(error){if(requestId===directoryRequestId)$('directory-status').textContent=error.message;}finally{if(requestId===directoryRequestId)button.disabled=false;}
 }
-if($('records-next')){window.addEventListener('nova-records-open',event=>{rosterOnly=!!event.detail?.roster;recordsPage=0;$('directory-title').textContent=rosterOnly?'NvSP Roster':'All Players';searchDirectory();});}
+if($('records-next')){window.addEventListener('nova-records-open',event=>{rosterOnly=!!event.detail?.roster;duelOnly=!!event.detail?.duel;if(duelOnly)rosterMetric='vs';recordsPage=0;$('directory-title').textContent=duelOnly?'Alliance Duel / Versus (VS)':rosterOnly?'NvSP Roster':'All Players';searchDirectory();});}
 
 function selectRow(index){
  selected=index;const row=draft.rows[index],editor=$('editor');renderRows();editor.replaceChildren();
@@ -472,3 +472,4 @@ function renderAdminIdentities(root,rows){root.replaceChildren(el('h2','Entry au
 window.addEventListener('nova-initiatives-open',loadAdminIdentities);window.addEventListener('hashchange',loadAdminIdentities);loadAdminIdentities();
 
 window.addEventListener('nova-train-player',event=>showDirectoryProfile(event.detail,'trains'));
+
