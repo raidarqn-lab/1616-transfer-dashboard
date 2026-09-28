@@ -1,5 +1,5 @@
 import './site-tutorial.js?v=20260928';
-import {setupStorm} from './storm-planner.js?v=drag-20260928';
+import {setupStorm} from './storm-planner.js?v=groups-20260928';
 import {setupShopCalendar} from './shop-calendar.js?v=shop-inline-20260928';
 import {setupTrains} from './train-dashboard.js?v=attendance-20260927';
 import {setupMemberHandoff} from './member-handoff.js?v=20260927';
