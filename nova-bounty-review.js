@@ -1,4 +1,4 @@
-import {loadStormHistory} from './storm-profile.js?v=20260928';
+import {loadStormHistory} from './storm-profile.js?v=core-20260928';
 import {loadTrainHistory} from './train-history.js?v=history-20260927';
 import {renderReports} from './player-reports.js?v=report-polish-20260926';
 import {user} from './live-session.js';
