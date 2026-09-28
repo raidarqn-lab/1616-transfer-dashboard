@@ -8,6 +8,7 @@ import {user} from './live-session.js';
 import {bountyConnection as config} from './nova-bounty-config.js';
 
 const $=id=>document.getElementById(id);
+const duelNav=document.createElement('button');duelNav.type='button';duelNav.dataset.hubView='vs';duelNav.setAttribute('aria-label','Alliance Duel / VS');duelNav.title='Alliance Duel / VS';duelNav.innerHTML='<svg aria-hidden="true" viewBox="0 0 24 24"><path d="m5 3 16 16-2 2L3 5V3h2Zm14 0L3 19l2 2L21 5V3h-2Z" fill="currentColor"/></svg><span>Alliance Duel / VS</span>';document.querySelector('[data-hub-view="roster"]').after(duelNav);
 const sections=[...document.querySelectorAll('.hub-section')];
 const nav=[...document.querySelectorAll('[data-hub-view]')];
 let access=null,staff=[],selectedEmail='',content=[];
@@ -23,10 +24,10 @@ function showSignIn(){const box=$('hub-access-status');box.className='hub-sign-i
 function show(view){
  if(!user){location.href=signInUrl();return;}
  if(view==='admin'&&!access?.accountsManage){if(!user)location.href='./sign-in.html';return;}
- sections.forEach(section=>section.hidden=section.dataset.section!==(view==='roster'?'records':view));
+ sections.forEach(section=>section.hidden=section.dataset.section!==(['roster','vs'].includes(view)?'records':view));
  nav.forEach(button=>button.classList.toggle('active',button.dataset.hubView===view));
  history.replaceState(null,'','#'+view);document.title=`Alliance Hub · ${view[0].toUpperCase()+view.slice(1)}`;
- if(view==='records'||view==='roster')window.dispatchEvent(new CustomEvent('nova-records-open',{detail:{roster:view==='roster'}}));
+ if(['records','roster','vs'].includes(view))window.dispatchEvent(new CustomEvent('nova-records-open',{detail:{roster:view!=='records',duel:view==='vs'}}));
  if(view==='trains')window.dispatchEvent(new Event('nova-trains-open'));
  if(view==='admin'){loadStaff();window.dispatchEvent(new Event('nova-initiatives-open'));}
  if(view==='events'||view==='announcements')loadContent();
@@ -165,3 +166,4 @@ function trainSettingsForm(){
  form.onsubmit=async event=>{event.preventDefault();const days=Number($('train-cooldown-days').value);if(!Number.isInteger(days)||days<0||days>365)return;if(!confirm('Change the train cooldown to '+days+' days for all schedules?'))return;$('train-settings-save').disabled=true;try{const result=await hubCall({action:'train-save',settings:{cooldownDays:days,revision:trainSettingsRevision}});trainSettingsRevision=result.settingsRevision;$('train-settings-status').textContent='Saved · '+days+'-day cooldown';window.dispatchEvent(new CustomEvent('nova-train-settings',{detail:days}));}catch(error){$('train-settings-status').textContent=error.message;}finally{$('train-settings-save').disabled=false;}};return form;
 }
 async function loadTrainSettings(){if(!$('train-settings-status'))return;$('train-settings-status').textContent='Loading settings…';$('train-settings-save').disabled=true;try{const result=await hubCall({action:'train-load',week:'2026-09-21'});trainSettingsRevision=result.settingsRevision;$('train-cooldown-days').value=result.cooldownDays??14;$('train-settings-status').textContent='Current cooldown: '+(result.cooldownDays??14)+' days';$('train-settings-save').disabled=false;}catch(error){$('train-settings-status').textContent=error.message;}}
+
