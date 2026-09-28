@@ -1,7 +1,7 @@
 import './site-tutorial.js?v=20260928';
-import {setupStorm} from './storm-planner.js?v=core-20260928';
+import {setupStorm} from './storm-planner.js?v=rotation-20260928';
 import {setupShopCalendar} from './shop-calendar.js?v=shop-inline-20260928';
-import {setupTrains} from './train-dashboard.js?v=attendance-20260927';
+import {setupTrains} from './train-dashboard.js?v=blitz-20260928';
 import {setupMemberHandoff} from './member-handoff.js?v=20260927';
 import {setupLeaderInvitations} from './leader-invitations.js?v=individual-20260927';
 import {setupMemberRecovery} from './member-recovery.js?v=recovery-form-20260927';
@@ -71,7 +71,7 @@ $('hub-member-revoke').onclick=async()=>{const id=$('hub-member-id').value;if(!i
 function eventLocationLabel(payload={}){return ['x','y','level'].filter(key=>payload[key]!==null&&payload[key]!==undefined&&payload[key]!=='').map(key=>` · ${key==='level'?'Lv':key.toUpperCase()} ${escapeHtml(payload[key])}`).join('');}
 function contentCard(item){const button=document.createElement('button');button.type='button';button.className='r4-queue-item';button.innerHTML=`<span>${escapeHtml(item.status)}</span><strong>${escapeHtml(item.title)}</strong><small>${escapeHtml(item.alliance||'All Sapphire members')}${item.kind==='event'?eventLocationLabel(item.payload):''} · revision ${item.revision}</small>`;button.onclick=()=>fillContent(item);return button;}
 function paintContent(){
- const events=content.filter(item=>item.kind==='event'&&!item.payload?.shopEvent&&!item.payload?.stormPlan&&!item.payload?.dsCore),announcements=content.filter(item=>item.kind==='announcement');
+ const events=content.filter(item=>item.kind==='event'&&!item.payload?.shopEvent&&!item.payload?.stormPlan&&!item.payload?.dsCore&&!item.payload?.dsPenalties),announcements=content.filter(item=>item.kind==='announcement');
  renderEventSchedule(events);$('event-count').textContent=events.filter(item=>item.status==='published').length;$('announcement-count').textContent=announcements.filter(item=>item.status==='published').length;
  for(const [id,items] of [['announcement-list',announcements]]){const out=$(id);out.classList.toggle('hub-empty',!items.length);out.replaceChildren();if(!items.length)out.textContent='No content yet.';else items.forEach(item=>out.append(contentCard(item)));}
 }

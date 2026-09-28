@@ -30,7 +30,7 @@ export function setupTrains({call}){
  const chips=e('div');chips.className='train-cooldown-list';for(const {p,c} of cooling){const chip=e('div');chip.append(playerLink(p),e('span',`Available ${c.until}`));chips.append(chip);}if(!cooling.length)chips.append(e('span','No active cooldowns from earlier weeks.'));panel.append(chips);body.append(panel);
  const list=e('div');list.className='train-week';body.append(list);
  for(const row of draft.rows){const card=e('article');card.className='train-day';const heading=e('header');heading.append(e('strong',days[row.day]),e('small',shift(week,row.day)));card.append(heading);
- if(row.day===3)card.append(select('Wild Card',[['Dice','Dice'],['Top Bounty Hunter','Top Bounty Hunter'],['Custom Award','Custom Award']],row.award,v=>row.award=v));else card.append(e('span',row.award));
+ if(row.day===3)card.append(select('Wild Card',[['Dice','Dice'],['Top Bounty Hunter','Top Bounty Blitz contributor'],['Custom Award','Custom Award']],row.award,v=>row.award=v));else card.append(e('span',row.award));
  const available=data.players.filter(p=>row.day<5||p.rank==='R4'||p.key===row.playerKey);
  const trainDate=shift(week,row.day),checks=[...prior,...reservations.filter(r=>r.day!==row.day)];
  const state=p=>cooldownInfo(p.key,trainDate,checks,data.cooldownDays??14);
