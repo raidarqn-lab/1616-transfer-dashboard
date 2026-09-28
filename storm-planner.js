@@ -1,14 +1,14 @@
-import {openTeamBoard} from './storm-teams.js?v=rotation-20260928';
+import {openTeamBoard} from './storm-teams.js?v=rotation-v2-20260928';
 import {createPenaltyManager} from './storm-penalties.js?v=20260928';
 import {participation} from './storm-participation.js?v=20260928';
 import {createCoreManager,coreProblems} from './storm-core-roster.js?v=20260928';
-import {loadStormHistory} from './storm-profile.js?v=rotation-20260928';
-import {moveParticipant,moveMapMember,mountDrag} from './storm-drag.js?v=rotation-20260928';
-import {exportPlan} from './storm-export.js?v=rotation-20260928';
-import {buildings,availableBuildings,esc,issues,assignmentText,battleMail,mapHtml,connectMap,dutyIcon,roleLegend,substituteZone} from './storm-core.js?v=rotation-20260928';
+import {loadStormHistory} from './storm-profile.js?v=rotation-v2-20260928';
+import {moveParticipant,moveMapMember,mountDrag} from './storm-drag.js?v=rotation-v2-20260928';
+import {exportPlan} from './storm-export.js?v=rotation-v2-20260928';
+import {buildings,availableBuildings,esc,issues,assignmentText,battleMail,mapHtml,connectMap,dutyIcon,roleLegend,substituteZone} from './storm-core.js?v=rotation-v2-20260928';
 import {serverToUtc,serverValue,serverDate} from './shop-calendar-core.js';
 export function setupStorm({call}){
- const css=document.createElement('link');css.rel='stylesheet';css.href='./storm-rotation.css?v=rotation-20260928';document.head.append(css);
+ const css=document.createElement('link');css.rel='stylesheet';css.href='./storm-rotation.css?v=rotation-v2-20260928';document.head.append(css);
  const nav=document.createElement('button');nav.dataset.hubView='storm';nav.innerHTML='<svg aria-hidden="true" viewBox="0 0 24 24"><path fill="currentColor" d="m12 2 9 4v6c0 6-9 10-9 10S3 18 3 12V6Zm0 4-6 2v4c0 3 4 6 6 7 2-1 6-4 6-7V8Z"/></svg><span>Desert Storm</span>';document.querySelector('[data-hub-view="vs"]').after(nav);
  const root=document.createElement('section');root.className='hub-section ds';root.dataset.section='storm';root.hidden=true;document.querySelector('main>footer').before(root);
  let items=[],players=[],record=null,plan=null,tab='setup',phase='opening',dirty=false,busy=false,filter='active',message='',search='',group='all',selectedBuilding='hospital-1',memberPage=0,rosterPage=0,nextDuty='support',inspectorOpen=false;
