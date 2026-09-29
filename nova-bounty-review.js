@@ -421,7 +421,14 @@ function selectRow(index){
   try{
    const found=await call({action:'player-search',query:input.value});if(!results.isConnected)return;const suggestions=input.value===row.name?(candidateCache.get(candidateKey(row))||[]):[];const players=[...new Map([...suggestions,...found].map(p=>[p.key,p])).values()];results.replaceChildren();
    if(!players.length){results.append(el('p','No exact search results. Try the distinctive part of the name; OCR can confuse letters and symbols.'));const simplified=input.value.normalize('NFKC').replace(/[^\p{L}\p{N}\s]/gu,' ').split(/\s+/).filter(part=>part.length>2).join(' ').trim();if(simplified&&simplified!==input.value.trim()){const retry=el('button','Search “'+simplified+'”');retry.type='button';retry.onclick=event=>{event.stopPropagation();input.value=simplified;runSearch();};results.append(retry);}}
-   for(const profile of players){const button=el('button');button.type='button';button.className='r4-match-result';button.append(el('strong',profile.name),el('span',(profile.alliance||'Alliance unknown')+' · Server '+(profile.server||'unknown')+(profile.strength?' · '+profile.strength:'')),el('b','Use this player'));button.onclick=event=>{event.preventDefault();event.stopPropagation();profileCache.set(profile.key,profile);row.playerKey=profile.key;row.playerName=profile.name;row.playerAlliance=profile.alliance||'';resetConfirmations(row,'playerChecked','allianceChecked');markChanged();dialog.close();renderRows();status('Matched to '+profile.name+'. Check the screenshot alliance and score, then confirm the row. Save draft to keep this match.');};results.append(button);}
+   for(const profile of players){
+    const card=el('article');card.className='r4-match-card';
+    const identity=el('div');identity.className='r4-match-identity';identity.append(el('strong',profile.name),el('span',(profile.alliance||'Alliance unknown')+' · Server '+(profile.server||'unknown')+(profile.strength?' · '+profile.strength:'')));
+    const actions=el('div');actions.className='r4-match-card-actions';
+    const view=el('button','View profile');view.type='button';view.setAttribute('aria-label','View profile: '+profile.name);view.onclick=event=>{event.preventDefault();event.stopPropagation();showDirectoryProfile({...profile});};
+    const use=el('button','Use this player');use.type='button';use.className='r4-use-player';use.setAttribute('aria-label','Use this player: '+profile.name);use.onclick=event=>{event.preventDefault();event.stopPropagation();profileCache.set(profile.key,profile);row.playerKey=profile.key;row.playerName=profile.name;row.playerAlliance=profile.alliance||'';resetConfirmations(row,'playerChecked','allianceChecked');markChanged();dialog.close();renderRows();status('Matched to '+profile.name+'. Check the screenshot alliance and score, then confirm the row. Save draft to keep this match.');};
+    actions.append(view,use);card.append(identity,actions);results.append(card);
+   }
   }catch(error){status(error.message);results.replaceChildren();}finally{find.disabled=false;}
  };
  find.onclick=runSearch;input.onkeydown=event=>{if(event.key==='Enter'){event.preventDefault();runSearch();}};

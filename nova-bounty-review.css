@@ -109,3 +109,6 @@ dialog h3{font-size:13px;color:var(--cyan);margin-top:22px}#selected-instruction
 .r4-columns{grid-template-columns:minmax(190px,.5fr) minmax(605px,1.5fr)}
 .r4-inline-actions{min-width:0}.r4-inline-actions button{padding:7px;font-size:10px}
 @media(max-width:1150px){.r4-columns{grid-template-columns:1fr}.r4-original{max-height:360px}.r4-original img{max-height:350px;width:auto}.r4-evidence-brief{display:none}.r4-pages{max-height:90px}}
+.r4-match-card{display:grid;gap:12px;padding:15px;background:#102f3d;border:1px solid #2c5665;border-radius:10px}
+.r4-match-identity{display:grid;gap:5px;min-width:0}.r4-match-identity strong{color:#f0faff;overflow-wrap:anywhere}.r4-match-identity span{font-size:12px;color:#b4ced7;line-height:1.5}
+.r4-match-card-actions{display:flex;gap:8px;flex-wrap:wrap}.r4-match-card-actions button{font-size:12px}.r4-match-card-actions .r4-use-player{margin-left:auto;background:#16545a;border-color:#368c91;color:#bafff6}
