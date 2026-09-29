@@ -409,12 +409,15 @@ async function openBatch(batch){
   renderPages();renderRows();renderSummary();evidence(currentPage);status('Live submission loaded. Yellow dots need review; green checks appear only after the data is confirmed.');
  }catch(error){status(error.message);}
 }
+let queueLoading=false;
 async function load(){
+ if(queueLoading)return;queueLoading=true;$('refresh').disabled=true;$('queue-count').textContent='…';status('Loading submissions for R4 review…');
  try{
   const rows=await call({action:'review-list'}),profiles=await Promise.all(rows.map(row=>call({action:'profile',playerKey:row.playerKey}).catch(()=>null)));$('queue').replaceChildren();$('queue-count').textContent=rows.length;
   rows.forEach((row,index)=>{row.profileName=profiles[index]?.name||'Member';const button=el('button');button.className='r4-queue-item';button.dataset.batch=row.id;button.append(el('span','Pending review'),el('strong',row.bounty),el('small',`${row.gameDate} · ${row.fileCount} screenshots · ${row.profileName}`));button.onclick=()=>openBatch(row);$('queue').append(button);});
   status(`${rows.length} live submission${rows.length===1?'':'s'} awaiting review.`);if(!rows.length){$('queue').append(el('p','No submissions are awaiting review.'));}
- }catch(error){status(error.message);}
+ }catch(error){$('queue-count').textContent='unavailable';$('queue').replaceChildren(el('p','The review queue could not be loaded. This does not mean there are no submissions.'));status('Unable to load submissions. Click Refresh queue to retry. If this continues, sign in again. Saved screenshots are not affected.');}
+ finally{queueLoading=false;$('refresh').disabled=false;}
 }
 
 async function saveDraft(){if(!validReward())throw Error('Enter whole bounty points from 0 to 10,000.');draft=await call({action:'save-review',batchId:active.id,revision:draft.revision,rows:draft.rows,rewardPoints:rewardPoints(),rewardRevision:draft.rewardRevision??0});draft.rows=draft.rows.map(normalizeRow);dirty=false;renderRows();return draft;}
