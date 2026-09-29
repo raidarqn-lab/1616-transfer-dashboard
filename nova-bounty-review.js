@@ -105,26 +105,29 @@ function editable(label,value,onchange,type='text'){
  input.onchange=()=>{onchange(input.value);markChanged();renderRows();};wrapper.append(input);return wrapper;
 }
 function renderRows(){
- const tbody=$('rows');tbody.replaceChildren();if(!draft)return;
+ const tbody=$('rows'),editor=$('editor');if(editor&&tbody.contains(editor)){tbody.closest('.r4-data').append(editor);editor.hidden=true;}tbody.replaceChildren();if(!draft)return;
  const query=$('filter').value.toLowerCase();let visible=0;
  draft.rows.forEach((row,index)=>{
   if(row.page!==currentPage)return;
   if(query&&!`${row.name} ${row.alliance} ${row.rank} ${row.playerName} ${row.playerAlliance} ${row.playerKey}`.toLowerCase().includes(query))return;
   visible++;
   const tr=el('tr');tr.className=`${rowConfirmed(row)?'confirmed':'pending'}${index===selected?' selected':''}${row.excluded?' excluded-row':''}`;tr.onclick=()=>selectRow(index);
-  const rank=el('td');rank.className='r4-rank-cell';const rankInput=el('input');rankInput.type='number';rankInput.min='1';rankInput.value=row.rank||'';rankInput.placeholder='Check';rankInput.setAttribute('aria-label','Screenshot rank for '+row.name);rankInput.style.width='72px';rankInput.onclick=e=>e.stopPropagation();rankInput.onchange=()=>{row.rank=Number(rankInput.value)||0;dirty=true;renderRows();};rank.append(rankInput);const data=el('td'),grid=el('div');grid.className='r4-row-grid';
+  const data=el('td'),grid=el('div');grid.className='r4-row-grid';
   const identity=el('div');identity.className='r4-row-identity';identity.append(el('strong',row.playerName||row.name||'Unnamed player'),el('span',row.playerAlliance||row.alliance||'Alliance missing'));identity.querySelector('span').className='r4-alliance';
   const name=editable('Suggested player',row.name,value=>{row.name=value;resetConfirmations(row,'playerChecked');});name.className='r4-search-label';
   const alliance=editable('Screenshot alliance',row.alliance,value=>{row.alliance=value;resetConfirmations(row,'allianceChecked');});alliance.className='r4-alliance-label';
   const score=editable('Suggested score',formatScore(row.score),value=>{row.score=value.replace(/,/g,'');resetConfirmations(row,'scoreChecked');});score.className='r4-score-label';
   const state=el('div',row.excluded?'Excluded from review':rowConfirmed(row)?'✓ Confirmed':'● Awaiting R4 confirmation');state.className=`match-state${rowConfirmed(row)?' confirmed':''}`;state.dataset.ready='';
-  const actions=el('div');actions.className='r4-row-actions';const search=el('button','Search player');search.onclick=event=>{event.stopPropagation();selectRow(index);};const clear=el('button','Clear match');clear.onclick=event=>{event.stopPropagation();row.playerKey='';row.playerName='';row.playerAlliance='';resetConfirmations(row,'playerChecked','allianceChecked');markChanged();selectRow(index);};actions.append(search,clear);
+  const actions=el('div');actions.className='r4-row-actions';const search=el('button',row.playerKey?'Change player':'Match player');search.onclick=event=>{event.stopPropagation();selectRow(index);};const clear=el('button','Clear match');clear.onclick=event=>{event.stopPropagation();row.playerKey='';row.playerName='';row.playerAlliance='';resetConfirmations(row,'playerChecked','allianceChecked');markChanged();selectRow(index);};actions.append(search);if(row.playerKey)actions.append(clear);
   const checks=el('div');checks.className='r4-row-checks';checks.setAttribute('role','group');checks.setAttribute('aria-label','Field checks for '+(row.playerName||row.name));checks.append(checkbox('playerChecked','Player checked',row,index),checkbox('allianceChecked','Alliance checked',row,index),checkbox('scoreChecked','Score checked',row,index));
   const confirmRow=el('button',rowConfirmed(row)?'✓ Row confirmed':'Confirm row');confirmRow.type='button';confirmRow.className='primary r4-confirm-row';
-  const issue=row.excluded?'This row is excluded.':!row.playerKey?'Link a player using Search player first.':!Number.isInteger(row.rank)||row.rank<1||row.rank>10000?'Enter the screenshot rank first.':!/^\d{1,12}$/.test(row.score)?'Enter a valid score first.':!clean(row.alliance)?'Enter the screenshot alliance first.':'';
+  const issue=row.excluded?'This row is excluded.':!row.playerKey?'Match this name to a player to continue.':!Number.isInteger(row.rank)||row.rank<1||row.rank>10000?'Screenshot position missing — add it under More details.':!/^\d{1,12}$/.test(row.score)?'Enter a valid score first.':!clean(row.alliance)?'Enter the screenshot alliance first.':'';
   confirmRow.disabled=!!issue||rowConfirmed(row);confirmRow.onclick=event=>{event.stopPropagation();row.playerChecked=true;row.allianceChecked=true;row.scoreChecked=true;markChanged();renderRows();status('Row confirmed in this draft. Save review draft to keep your checks.');};actions.append(confirmRow);
   if(issue){state.textContent=issue;confirmRow.title=issue;}
-  grid.append(identity,name,alliance,score,checks,state,actions);data.append(grid);tr.append(rank,data);tbody.append(tr);
+  const details=el('details');details.className='r4-row-details';details.onclick=event=>event.stopPropagation();details.append(el('summary','More details'));
+  const position=editable('Screenshot position',row.rank||'',value=>{row.rank=Number(value)||0;resetConfirmations(row,'scoreChecked');});position.querySelector('input').type='number';position.querySelector('input').min='1';details.append(name,position,el('small','Leaderboard position from the original screenshot.'));
+  const exclude=el('button',row.excluded?'Include row':'Exclude duplicate / pinned row');exclude.type='button';exclude.onclick=event=>{event.stopPropagation();row.excluded=!row.excluded;markChanged();renderRows();};details.append(exclude);
+  identity.append(el('small',row.playerKey?'Linked player':'Needs a player match'));grid.append(identity,alliance,score,state,actions,details);data.append(grid);tr.append(data);tbody.append(tr);
  });
  if(!visible){const tr=el('tr');tr.className='empty-row';const td=el('td',pageRows().length?'No rows match this filter.':'No suggestions for this screenshot yet. Generate suggestions or add a row.');td.colSpan=2;tr.append(td);tbody.append(tr);}
  renderSummary();
@@ -389,7 +392,7 @@ if($('records-next')){window.addEventListener('nova-records-open',event=>{roster
 
 function selectRow(index){
  selected=index;const row=draft.rows[index],editor=$('editor');renderRows();editor.replaceChildren();
- const heading=el('h3',`Match rank ${row.rank}: ${row.name||'Unnamed player'}`),line=el('div');line.className='search-line';const label=el('label','Find player by name, alliance, server or ID'),input=el('input');input.value=row.name;label.append(input);const find=el('button','Search transfer directory'),results=el('div');results.className='search-results';line.append(label,find);editor.append(heading,line,results);
+ const heading=el('h3',`Match player: ${row.name||'Unnamed player'}`),line=el('div');line.className='search-line';const label=el('label','Find player by name, alliance, server or ID'),input=el('input');input.value=row.name;label.append(input);const find=el('button','Search transfer directory'),results=el('div');results.className='search-results';line.append(label,find);editor.append(heading,line,results);const close=el('button','Close search');close.onclick=()=>{editor.hidden=true;};editor.prepend(close);editor.hidden=false;editor.onclick=event=>event.stopPropagation();const selectedRow=$('rows').querySelector('tr.selected td');if(selectedRow)selectedRow.append(editor);
  const runSearch=async()=>{
   find.disabled=true;results.replaceChildren(el('p','Searching the private transfer directory…'));
   try{
