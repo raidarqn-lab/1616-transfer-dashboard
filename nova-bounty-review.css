@@ -61,4 +61,4 @@ dialog h3{font-size:13px;color:var(--cyan);margin-top:22px}#selected-instruction
 .r4-data th:first-child,.r4-data td.r4-rank-cell{width:84px;min-width:84px;box-sizing:border-box}
 @media(max-width:600px){.r4-data .r4-row-actions .r4-confirm-row{margin-left:0;width:100%}}
 
-.r4-data td.r4-rank-cell input{width:60px!important;max-width:100%;box-sizing:border-box}.r4-data .r4-row-actions .r4-confirm-row:disabled{background:#192a34;color:#a6b6c0;border-color:#415563;opacity:1}
+.r4-data td.r4-rank-cell input{width:60px!important;min-width:0;max-width:100%;box-sizing:border-box}.r4-data .r4-row-actions .r4-confirm-row:disabled{background:#192a34;color:#a6b6c0;border-color:#415563;opacity:1}
