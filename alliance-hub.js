@@ -1,3 +1,4 @@
+import {createWebsiteProfile} from './website-profile.js?v=avatars-20260928';
 import './site-tutorial.js?v=20260928';
 import {setupStorm} from './storm-planner.js?v=rotation-v2-20260928';
 import {setupShopCalendar} from './shop-calendar.js?v=shop-inline-20260928';
@@ -84,7 +85,7 @@ $('announcement-view').onchange=event=>{announcementView=event.target.value;pain
 $('event-editor').onsubmit=saveContent;$('announcement-editor').onsubmit=saveContent;
 
 setupTrains({call:hubCall});
-(async()=>{try{access=await hubCall({action:'hub-access'});$('hub-identity').textContent=access.displayName||'Leadership';$('hub-master-name').textContent=access.displayName||'Leadership';$('hub-role-name').textContent=access.role==='master'?'Master administrator':'Alliance leader';document.querySelector('[data-hub-view="admin"]').hidden=!access.accountsManage;show(location.hash.slice(1)||'bounties');}catch(error){$('hub-access-status').textContent=error.message;sections.forEach(section=>section.hidden=true);if(!user)showSignIn();}})();
+(async()=>{try{access=await hubCall({action:'hub-access'});$('hub-identity').textContent=access.displayName||'Leadership';createWebsiteProfile({request:async(action,image)=>{const r=await fetch(config.endpoint.replace('/nova-bounty','/nova-avatar'),{method:'POST',headers:{'Content-Type':'application/json',apikey:config.anonKey,'X-Portal-Token':await user.getIdToken()},body:JSON.stringify({action,image}),signal:AbortSignal.timeout(20000)});const data=await r.json();if(!r.ok)throw Error(data.error);return data;}}).mount({target:$('hub-identity').parentElement,name:access.displayName||'Leadership',key:user.uid});$('hub-master-name').textContent=access.displayName||'Leadership';$('hub-role-name').textContent=access.role==='master'?'Master administrator':'Alliance leader';document.querySelector('[data-hub-view="admin"]').hidden=!access.accountsManage;show(location.hash.slice(1)||'bounties');}catch(error){$('hub-access-status').textContent=error.message;sections.forEach(section=>section.hidden=true);if(!user)showSignIn();}})();
 
 const eventTypeSelect=document.querySelector('#event-editor [name="category"]');
 const locationEventTypes=new Set(["Marshall's Guard (MG)",'City Capture','Trading Post','Trading Post Capture','Stronghold Capture','Trading Post Opens']);
