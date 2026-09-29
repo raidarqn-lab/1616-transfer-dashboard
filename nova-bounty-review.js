@@ -94,7 +94,18 @@ function renderPages(){
   button.onclick=()=>selectPage(page);pages.append(button);
  }
 }
-function selectPage(page){currentPage=page;selected=-1;renderPages();renderRows();renderSummary();evidence(page);$('editor').replaceChildren(el('p','Select a suggested row to search and inspect the private transfer profile.'));}
+const candidateCache=new Map();let matchingRequest=0;
+function candidateKey(row){return JSON.stringify([active?.id,row.name,row.alliance,row.score,row.rank]);}
+async function suggestPageMatches(){
+ if(!active||!draft)return;const request=++matchingRequest,batch=active,page=currentPage,rows=pageRows().filter(r=>!r.playerKey&&!r.excluded);if(!rows.length)return;
+ const pending=rows.filter(row=>!candidateCache.has(candidateKey(row)));if(!pending.length){renderRows();return;}
+ $('extract-status').textContent='Comparing this page with saved names, aliases, alliances and same-event results…';
+ try{for(let offset=0;offset<pending.length;offset+=10){const chunk=pending.slice(offset,offset+10),keys=chunk.map(candidateKey);const data=await call({action:'player-search',batchId:batch.id,matchRows:chunk.map(({name,alliance,score,rank})=>({name,alliance,score,rank}))});if(request!==matchingRequest||active!==batch||currentPage!==page)return;if(!Array.isArray(data.rows))throw Error('Matching service is not available yet.');for(const item of data.rows)candidateCache.set(keys[item.index],item.candidates||[]);}
+ renderRows();$('extract-status').textContent='Directory suggestions ready. Select the correct player; matches remain unconfirmed until reviewed.';
+ }catch(error){if(request===matchingRequest)$('extract-status').textContent='Could not load directory suggestions: '+error.message+' Manual search is still available.';}
+}
+function attachCandidate(row,profile){profileCache.set(profile.key,profile);row.playerKey=profile.key;row.playerName=profile.name;row.playerAlliance=profile.alliance||'';resetConfirmations(row,'playerChecked','allianceChecked');markChanged();renderRows();status('Linked '+profile.name+'. Check the score and screenshot alliance, then confirm and save draft.');}
+function selectPage(page){currentPage=page;selected=-1;renderPages();renderRows();renderSummary();evidence(page);suggestPageMatches();$('editor').replaceChildren(el('p','Select a suggested row to search and inspect the private transfer profile.'));}
 
 function checkbox(key,label,row,index){
  const wrapper=el('label'),input=el('input');wrapper.className='r4-row-confirm';input.type='checkbox';input.checked=!!row[key];
@@ -128,7 +139,9 @@ function renderRows(){
   const position=editable('Screenshot position',row.rank||'',value=>{row.rank=Number(value)||0;resetConfirmations(row,'scoreChecked');});position.querySelector('input').type='number';position.querySelector('input').min='1';details.append(name,position,el('small','Leaderboard position from the original screenshot.'));
   const exclude=el('button',row.excluded?'Include row':'Exclude duplicate / pinned row');exclude.type='button';exclude.onclick=event=>{event.stopPropagation();row.excluded=!row.excluded;markChanged();renderRows();};details.append(exclude);
   identity.append(el('small',row.playerKey?'✓ Linked to '+row.playerName+' · Current alliance: '+(row.playerAlliance||'Not recorded'):'Needs a player match'));if(row.playerKey&&row.playerAlliance){const useAlliance=el('button','Use '+row.playerAlliance);useAlliance.type='button';useAlliance.className='r4-use-alliance';useAlliance.onclick=event=>{event.stopPropagation();row.alliance=row.playerAlliance;resetConfirmations(row,'allianceChecked');markChanged();renderRows();};alliance.append(useAlliance);}
-  details.append(el('small','Read from screenshot: '+row.name+' · '+row.alliance));grid.append(identity,alliance,score,state,actions,details);data.append(grid);tr.append(data);tbody.append(tr);
+  details.append(el('small','Read from screenshot: '+row.name+' · '+row.alliance));grid.append(identity,alliance,score,state,actions,details);
+  if(!row.playerKey&&!row.excluded){const candidates=candidateCache.get(candidateKey(row));if(candidates){const panel=el('div');panel.className='r4-candidates';panel.append(el('strong',candidates.length?'Suggested from your player records':'No close match in saved player records'));
+  for(const profile of candidates){const pick=el('button');pick.type='button';pick.className='r4-match-result';pick.append(el('strong',profile.name),el('span',(profile.alliance||'No alliance')+' · '+(profile.server||'Server unknown')),el('b','Use player'));const reasons=[profile.strength,profile.matchedName!==profile.name?'Known name: '+profile.matchedName:'',profile.allianceMatch?'Alliance matches':'Alliance differs / unknown',profile.scoreMatch?'Same-event score matches':'',profile.rankMatch?'Same-event rank matches':'',profile.eventConflict?'⚠ Existing event result conflicts':''].filter(Boolean);pick.append(el('small',reasons.join(' · ')));pick.onclick=event=>{event.stopPropagation();attachCandidate(row,profile);};panel.append(pick);}grid.append(panel);}}data.append(grid);tr.append(data);tbody.append(tr);
  });
  if(!visible){const tr=el('tr');tr.className='empty-row';const td=el('td',pageRows().length?'No rows match this filter.':'No suggestions for this screenshot yet. Generate suggestions or add a row.');td.colSpan=2;tr.append(td);tbody.append(tr);}
  renderSummary();
@@ -415,7 +428,7 @@ async function openBatch(batch){
   $('batch-title').textContent='Daily all-player leaderboard';$('batch-meta').textContent=`${batch.gameDate} · ${batch.fileCount} uploaded screenshots · Submitted by ${batch.profileName||batch.playerKey}`;
   $('evidence-title').textContent=`${batch.bounty} · ${batch.gameDate}`;$('evidence-meta').textContent=`${batch.fileCount} screenshots · ${batch.profileName||batch.playerKey}`;$('evidence-code').textContent=batch.bounty;
   document.querySelectorAll('.r4-queue-item').forEach(button=>button.classList.toggle('active',button.dataset.batch===batch.id));
-  renderPages();renderRows();renderSummary();evidence(currentPage);status('Live submission loaded. Yellow dots need review; green checks appear only after the data is confirmed.');
+  renderPages();renderRows();renderSummary();evidence(currentPage);suggestPageMatches();status('Live submission loaded. Yellow dots need review; green checks appear only after the data is confirmed.');
  }catch(error){status(error.message);}
 }
 let queueLoading=false;
@@ -447,7 +460,7 @@ $('extract').onclick=async()=>{
   $('extract-status').textContent=suggestions.length?`OCR complete: ${suggestions.length} unconfirmed rows from ${batch.fileCount} screenshots.${emptyPages.length?' No rows detected on pages '+emptyPages.join(', ')+'. Check those originals manually.':''} Check names, alliances and scores, then Save draft. Nothing is approved automatically.`:'OCR finished but could not detect leaderboard rows. Your existing draft has been kept. Check the screenshot layout or add rows manually.';
  }
  catch(error){$('extract-status').textContent=`OCR stopped on screenshot ${readingPage||1} of ${batch.fileCount}. ${suggestions.length} rows were read${suggestions.length?' and remain in this draft; save them before leaving':''}. ${error.message} Nothing was confirmed or awarded.`;}
- finally{try{await ocr?.terminate();}catch{}extracting=false;$('extract').disabled=false;}
+ finally{try{await ocr?.terminate();}catch{}extracting=false;$('extract').disabled=false;if(suggestions.length)suggestPageMatches();}
 };
 function showPreview(){
  const report=issues(draft.rows),out=$('preview-content');out.replaceChildren(el('div','FINAL REVIEW'),el('h2','Approval preview'),el('p',`${active.bounty}: ${report.included.length} included score rows. ${draft.rows.length-report.included.length} excluded.`),el('p',`${report.unmatched} unmatched, ${report.pending} awaiting confirmation, ${report.duplicates} duplicate conflicts.`),el('p',`Bounty reward: ${validReward()?rewardPoints():'Invalid'} points for the submitter. Suggested default: 10. This preview does not award points.`));
