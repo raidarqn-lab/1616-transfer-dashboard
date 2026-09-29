@@ -98,7 +98,7 @@ function selectPage(page){currentPage=page;selected=-1;renderPages();renderRows(
 
 function checkbox(key,label,row,index){
  const wrapper=el('label'),input=el('input');wrapper.className='r4-row-confirm';input.type='checkbox';input.checked=!!row[key];
- input.onclick=event=>event.stopPropagation();input.onchange=()=>{row[key]=input.checked;markChanged();renderRows();};wrapper.append(input,document.createTextNode(label));return wrapper;
+ wrapper.onclick=event=>event.stopPropagation();input.onclick=event=>event.stopPropagation();input.onchange=()=>{row[key]=input.checked;markChanged();renderRows();};wrapper.append(input,document.createTextNode(label));return wrapper;
 }
 function editable(label,value,onchange,type='text'){
  const wrapper=el('label',label),input=el('input');input.type=type;input.value=value??'';input.onclick=event=>event.stopPropagation();
@@ -119,7 +119,12 @@ function renderRows(){
   const score=editable('Suggested score',formatScore(row.score),value=>{row.score=value.replace(/,/g,'');resetConfirmations(row,'scoreChecked');});score.className='r4-score-label';
   const state=el('div',row.excluded?'Excluded from review':rowConfirmed(row)?'✓ Confirmed':'● Awaiting R4 confirmation');state.className=`match-state${rowConfirmed(row)?' confirmed':''}`;state.dataset.ready='';
   const actions=el('div');actions.className='r4-row-actions';const search=el('button','Search player');search.onclick=event=>{event.stopPropagation();selectRow(index);};const clear=el('button','Clear match');clear.onclick=event=>{event.stopPropagation();row.playerKey='';row.playerName='';row.playerAlliance='';resetConfirmations(row,'playerChecked','allianceChecked');markChanged();selectRow(index);};actions.append(search,clear);
-  grid.append(identity,name,alliance,score,checkbox('playerChecked','Confirm player',row,index),checkbox('allianceChecked','Confirm alliance',row,index),checkbox('scoreChecked','Confirm score',row,index),state,actions);data.append(grid);tr.append(rank,data);tbody.append(tr);
+  const checks=el('div');checks.className='r4-row-checks';checks.setAttribute('role','group');checks.setAttribute('aria-label','Field checks for '+(row.playerName||row.name));checks.append(checkbox('playerChecked','Player checked',row,index),checkbox('allianceChecked','Alliance checked',row,index),checkbox('scoreChecked','Score checked',row,index));
+  const confirmRow=el('button',rowConfirmed(row)?'✓ Row confirmed':'Confirm row');confirmRow.type='button';confirmRow.className='primary r4-confirm-row';
+  const issue=row.excluded?'This row is excluded.':!row.playerKey?'Link a player using Search player first.':!Number.isInteger(row.rank)||row.rank<1||row.rank>10000?'Enter the screenshot rank first.':!/^\d{1,12}$/.test(row.score)?'Enter a valid score first.':!clean(row.alliance)?'Enter the screenshot alliance first.':'';
+  confirmRow.disabled=!!issue||rowConfirmed(row);confirmRow.onclick=event=>{event.stopPropagation();row.playerChecked=true;row.allianceChecked=true;row.scoreChecked=true;markChanged();renderRows();status('Row confirmed in this draft. Save review draft to keep your checks.');};actions.append(confirmRow);
+  if(issue){state.textContent=issue;confirmRow.title=issue;}
+  grid.append(identity,name,alliance,score,checks,state,actions);data.append(grid);tr.append(rank,data);tbody.append(tr);
  });
  if(!visible){const tr=el('tr');tr.className='empty-row';const td=el('td',pageRows().length?'No rows match this filter.':'No suggestions for this screenshot yet. Generate suggestions or add a row.');td.colSpan=2;tr.append(td);tbody.append(tr);}
  renderSummary();
