@@ -416,11 +416,22 @@ function showCreateContact(row,editor){
 function selectRow(index){
  selected=index;const row=draft.rows[index],editor=$('editor');renderRows();editor.replaceChildren();const dialog=el('dialog');dialog.className='r4-match-dialog';dialog.setAttribute('aria-label','Find or create player');document.body.append(dialog);dialog.append(editor);dialog.onclose=()=>{editor.hidden=true;document.querySelector('.r4-data').append(editor);dialog.remove();};
  const heading=el('h3',`Match player: ${row.name||'Unnamed player'}`),line=el('div');line.className='search-line';const label=el('label','Find player by name or previous name'),input=el('input');input.value=row.name;label.append(input);const find=el('button','Search All Contacts'),results=el('div');results.className='search-results';line.append(label,find);editor.append(heading,line,results);const create=el('button','＋ Create new player');create.type='button';create.className='r4-create-contact';create.onclick=()=>{heading.hidden=true;line.hidden=true;results.hidden=true;create.hidden=true;showCreateContact(row,editor);};editor.append(create);const close=el('button','Close search');close.onclick=()=>dialog.close();editor.prepend(close);editor.hidden=false;editor.onclick=event=>event.stopPropagation();dialog.showModal();
+ let searchVersion=0;
  const runSearch=async()=>{
+  const version=++searchVersion,query=input.value.trim(),batchId=active.id;
   find.disabled=true;results.replaceChildren(el('p','Searching All Contacts…'));
   try{
-   const found=await call({action:'player-search',query:input.value});if(!results.isConnected)return;const suggestions=input.value===row.name?(candidateCache.get(candidateKey(row))||[]):[];const players=[...new Map([...suggestions,...found].map(p=>[p.key,p])).values()];results.replaceChildren();
-   if(!players.length){results.append(el('p','No exact search results. Try the distinctive part of the name; OCR can confuse letters and symbols.'));const simplified=input.value.normalize('NFKC').replace(/[^\p{L}\p{N}\s]/gu,' ').split(/\s+/).filter(part=>part.length>2).join(' ').trim();if(simplified&&simplified!==input.value.trim()){const retry=el('button','Search “'+simplified+'”');retry.type='button';retry.onclick=event=>{event.stopPropagation();input.value=simplified;runSearch();};results.append(retry);}}
+   const [directory,matching]=await Promise.allSettled([
+    call({action:'player-search',query}),
+    call({action:'player-search',batchId,matchRows:[{name:query,alliance:row.alliance,score:row.score,rank:row.rank}]})
+   ]);
+   if(version!==searchVersion||!results.isConnected||!dialog.open)return;
+   const found=directory.status==='fulfilled'&&Array.isArray(directory.value)?directory.value:[];
+   const suggestions=matching.status==='fulfilled'&&Array.isArray(matching.value.rows)?matching.value.rows[0]?.candidates||[]:[];
+   const players=[...new Map([...found,...suggestions].map(p=>[p.key,p])).values()];results.replaceChildren();
+   if(matching.status==='rejected'||!Array.isArray(matching.value?.rows))results.append(el('p','Similar-name suggestions could not load. Search again to retry; any exact results are shown below.'));
+   if(directory.status==='rejected')results.append(el('p','Exact directory search could not load. Any similar-name suggestions are shown below.'));
+   if(!players.length){results.append(el('p','No matching contacts found. Try a shorter part of the name or a previous name.'));const simplified=input.value.normalize('NFKC').replace(/[^\p{L}\p{N}\s]/gu,' ').split(/\s+/).filter(part=>part.length>2).join(' ').trim();if(simplified&&simplified!==input.value.trim()){const retry=el('button','Search “'+simplified+'”');retry.type='button';retry.onclick=event=>{event.stopPropagation();input.value=simplified;runSearch();};results.append(retry);}}
    for(const profile of players){
     const card=el('article');card.className='r4-match-card';
     const identity=el('div');identity.className='r4-match-identity';identity.append(el('strong',profile.name),el('span',(profile.alliance||'Alliance unknown')+' · Server '+(profile.server||'unknown')+(profile.strength?' · '+profile.strength:'')));
@@ -429,7 +440,7 @@ function selectRow(index){
     const use=el('button','Use this player');use.type='button';use.className='r4-use-player';use.setAttribute('aria-label','Use this player: '+profile.name);use.onclick=event=>{event.preventDefault();event.stopPropagation();profileCache.set(profile.key,profile);row.playerKey=profile.key;row.playerName=profile.name;row.playerAlliance=profile.alliance||'';resetConfirmations(row,'playerChecked','allianceChecked');markChanged();dialog.close();renderRows();status('Matched to '+profile.name+'. Check the screenshot alliance and score, then confirm the row. Save draft to keep this match.');};
     actions.append(view,use);card.append(identity,actions);results.append(card);
    }
-  }catch(error){status(error.message);results.replaceChildren();}finally{find.disabled=false;}
+  }catch(error){if(version===searchVersion&&dialog.open)results.replaceChildren(el('p','Search could not finish. Please retry.'));}finally{if(version===searchVersion)find.disabled=false;}
  };
  find.onclick=runSearch;input.onkeydown=event=>{if(event.key==='Enter'){event.preventDefault();runSearch();}};
  runSearch();
