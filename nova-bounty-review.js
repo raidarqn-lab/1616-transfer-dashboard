@@ -294,7 +294,7 @@ async function showDirectoryProfile(profile,initialTab='all'){
  for(const [key,label] of choices){const button=el('button',label);button.type='button';button.dataset.key=key;button.setAttribute('role','tab');button.onclick=()=>draw(key);tabs.append(button);}draw(initialTab);
  }catch(error){body.replaceChildren(el('h2','Unable to load player record'),el('p',error.message));}
 
- if(draft&&selected>=0){const attach=el('button','Use this player for the selected OCR row');attach.className='primary directory-attach';attach.onclick=()=>{const row=draft.rows[selected];row.playerKey=profile.key;row.playerName=profile.name;row.playerAlliance=profile.alliance||'';resetConfirmations(row,'playerChecked','allianceChecked');markChanged();renderRows();selectRow(selected);status(`${profile.name} attached as an unconfirmed match. Confirm the player and alliance after checking the evidence.`);};out.append(attach);}
+ if(draft&&selected>=0){const attach=el('button','Use this player for the selected OCR row');attach.className='primary directory-attach';attach.onclick=()=>{const row=draft.rows[selected];row.playerKey=profile.key;row.playerName=profile.name;row.playerAlliance=profile.alliance||'';resetConfirmations(row,'playerChecked','allianceChecked');markChanged();out.close();document.querySelector('.r4-match-dialog')?.close();renderRows();status(`${profile.name} attached as an unconfirmed match. Confirm the player and alliance after checking the evidence.`);};out.append(attach);}
 }
 
 let recordsPage=0,recordsQuery='',rosterOnly=false,duelOnly=false,directoryRequestId=0;
