@@ -103,3 +103,9 @@ dialog h3{font-size:13px;color:var(--cyan);margin-top:22px}#selected-instruction
 .r4-match-dialog .r4-new-contact button[type=submit]{background:#18c9ce;color:#03212b;font-weight:800}
 .r4-match-dialog [hidden]{display:none!important}
 @media(max-width:600px){.r4-match-dialog .search-line{display:grid}.r4-match-dialog #editor{padding:18px}.r4-match-dialog .r4-new-contact{grid-template-columns:1fr}.r4-match-dialog .r4-new-contact>*{grid-column:1}}
+#workspace .score-panel{display:none}
+.r4-single-row,.r4-single-head{grid-template-columns:minmax(110px,.85fr) minmax(135px,1.15fr) 120px 150px;min-width:545px;gap:8px}
+.r4-data .r4-single-table{min-width:565px;width:100%}
+.r4-columns{grid-template-columns:minmax(190px,.5fr) minmax(605px,1.5fr)}
+.r4-inline-actions{min-width:0}.r4-inline-actions button{padding:7px;font-size:10px}
+@media(max-width:1150px){.r4-columns{grid-template-columns:1fr}.r4-original{max-height:360px}.r4-original img{max-height:350px;width:auto}.r4-evidence-brief{display:none}.r4-pages{max-height:90px}}
