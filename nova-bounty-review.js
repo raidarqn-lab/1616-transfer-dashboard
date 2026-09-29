@@ -119,32 +119,27 @@ function renderRows(){
  const tbody=$('rows'),editor=$('editor');if(editor&&tbody.contains(editor)){tbody.closest('.r4-data').append(editor);editor.hidden=true;}tbody.replaceChildren();if(!draft)return;
  const query=$('filter').value.toLowerCase();let visible=0;
  draft.rows.forEach((row,index)=>{
-  if(row.page!==currentPage)return;
-  if(query&&!`${row.name} ${row.alliance} ${row.rank} ${row.playerName} ${row.playerAlliance} ${row.playerKey}`.toLowerCase().includes(query))return;
-  visible++;
-  const tr=el('tr');tr.className=`${rowConfirmed(row)?'confirmed':'pending'}${index===selected?' selected':''}${row.excluded?' excluded-row':''}`;tr.onclick=()=>selectRow(index);
-  const data=el('td'),grid=el('div');grid.className='r4-row-grid';
-  const identity=el('div');identity.className='r4-row-identity';identity.append(el('strong',row.playerName||row.name||'Unnamed player'),el('span',row.playerAlliance||row.alliance||'Alliance missing'));identity.querySelector('span').className='r4-alliance';
-  const name=editable('Suggested player',row.name,value=>{row.name=value;resetConfirmations(row,'playerChecked');});name.className='r4-search-label';
-  const alliance=editable('Screenshot alliance',row.alliance,value=>{row.alliance=value;resetConfirmations(row,'allianceChecked');});alliance.className='r4-alliance-label';
-  const score=editable('Suggested score',formatScore(row.score),value=>{row.score=value.replace(/,/g,'');resetConfirmations(row,'scoreChecked');});score.className='r4-score-label';
-  const state=el('div',row.excluded?'Excluded from review':rowConfirmed(row)?'✓ Confirmed':'● Awaiting R4 confirmation');state.className=`match-state${rowConfirmed(row)?' confirmed':''}`;state.dataset.ready='';
-  const actions=el('div');actions.className='r4-row-actions';const search=el('button',row.playerKey?'Change player':'Match player');search.onclick=event=>{event.stopPropagation();selectRow(index);};const clear=el('button','Clear match');clear.onclick=event=>{event.stopPropagation();row.playerKey='';row.playerName='';row.playerAlliance='';resetConfirmations(row,'playerChecked','allianceChecked');markChanged();selectRow(index);};actions.append(search);if(row.playerKey)actions.append(clear);
-  const checks=el('div');checks.className='r4-row-checks';checks.setAttribute('role','group');checks.setAttribute('aria-label','Field checks for '+(row.playerName||row.name));checks.append(checkbox('playerChecked','Player checked',row,index),checkbox('allianceChecked','Alliance checked',row,index),checkbox('scoreChecked','Score checked',row,index));
-  const confirmRow=el('button',rowConfirmed(row)?'✓ Row confirmed':'Confirm row');confirmRow.type='button';confirmRow.className='primary r4-confirm-row';
-  const issue=row.excluded?'This row is excluded.':!row.playerKey?'Match this name to a player to continue.':!Number.isInteger(row.rank)||row.rank<1||row.rank>10000?'Screenshot position missing — add it under More details.':!/^\d{1,12}$/.test(row.score)?'Enter a valid score first.':!clean(row.alliance)?'Enter the screenshot alliance first.':'';
-  confirmRow.disabled=!!issue||rowConfirmed(row);confirmRow.onclick=event=>{event.stopPropagation();row.playerChecked=true;row.allianceChecked=true;row.scoreChecked=true;markChanged();renderRows();status('Row confirmed in this draft. Save review draft to keep your checks.');};actions.append(confirmRow);
-  if(issue){state.textContent=issue;confirmRow.title=issue;}
-  const details=el('details');details.className='r4-row-details';details.onclick=event=>event.stopPropagation();details.append(el('summary','More details'));
-  const position=editable('Screenshot position',row.rank||'',value=>{row.rank=Number(value)||0;resetConfirmations(row,'scoreChecked');});position.querySelector('input').type='number';position.querySelector('input').min='1';details.append(name,position,el('small','Leaderboard position from the original screenshot.'));
-  const exclude=el('button',row.excluded?'Include row':'Exclude duplicate / pinned row');exclude.type='button';exclude.onclick=event=>{event.stopPropagation();row.excluded=!row.excluded;markChanged();renderRows();};details.append(exclude);
-  identity.append(el('small',row.playerKey?'✓ Linked to '+row.playerName+' · Current alliance: '+(row.playerAlliance||'Not recorded'):'Needs a player match'));if(row.playerKey&&row.playerAlliance){const useAlliance=el('button','Use '+row.playerAlliance);useAlliance.type='button';useAlliance.className='r4-use-alliance';useAlliance.onclick=event=>{event.stopPropagation();row.alliance=row.playerAlliance;resetConfirmations(row,'allianceChecked');markChanged();renderRows();};alliance.append(useAlliance);}
-  details.append(el('small','Read from screenshot: '+row.name+' · '+row.alliance));grid.append(identity,alliance,score,state,actions,details);
-  if(!row.playerKey&&!row.excluded){const candidates=candidateCache.get(candidateKey(row));if(candidates){const panel=el('div');panel.className='r4-candidates';panel.append(el('strong',candidates.length?'Suggested from your player records':'No close match in saved player records'));
-  for(const profile of candidates){const pick=el('button');pick.type='button';pick.className='r4-match-result';pick.append(el('strong',profile.name),el('span',(profile.alliance||'No alliance')+' · '+(profile.server||'Server unknown')),el('b','Use player'));const reasons=[profile.strength,profile.matchedName!==profile.name?'Known name: '+profile.matchedName:'',profile.allianceMatch?'Alliance matches':'Alliance differs / unknown',profile.scoreMatch?'Same-event score matches':'',profile.rankMatch?'Same-event rank matches':'',profile.eventConflict?'⚠ Existing event result conflicts':''].filter(Boolean);pick.append(el('small',reasons.join(' · ')));pick.onclick=event=>{event.stopPropagation();attachCandidate(row,profile);};panel.append(pick);}grid.append(panel);}}data.append(grid);tr.append(data);tbody.append(tr);
+ if(row.page!==currentPage||query&&!`${row.name} ${row.alliance} ${row.playerName}`.toLowerCase().includes(query))return;visible++;
+ const tr=el('tr');tr.className=`${rowConfirmed(row)?'confirmed':'pending'}${index===selected?' selected':''}${row.excluded?' excluded-row':''}`;
+ const data=el('td'),line=el('div');line.className='r4-single-row';
+ const alliance=editable('Screenshot alliance',row.alliance,value=>{row.alliance=value;resetConfirmations(row,'allianceChecked');});alliance.className='r4-inline-field';
+ const player=el('button',row.playerName||row.name||'Unnamed player');player.type='button';player.className='r4-inline-player';player.title=row.playerKey?'Linked player — click to change':'Click to match this player';player.onclick=()=>selectRow(index);
+ const score=editable('Suggested score',formatScore(row.score),value=>{row.score=value.replace(/,/g,'');resetConfirmations(row,'scoreChecked');});score.className='r4-inline-field r4-inline-score';
+ const actions=el('div');actions.className='r4-inline-actions';
+ const issue=row.excluded?'Excluded row':!row.playerKey?'Match the player first':!Number.isInteger(row.rank)||row.rank<1||row.rank>10000?'Screenshot position missing — open Details':!/^\d{1,12}$/.test(row.score)?'Correct the score':!clean(row.alliance)?'Correct the alliance':'';
+ const confirm=el('button',rowConfirmed(row)?'✓ Confirmed':'Confirm');confirm.type='button';confirm.disabled=!!issue||rowConfirmed(row);confirm.title=issue||'Confirm player, alliance and score';confirm.onclick=()=>{row.playerChecked=row.allianceChecked=row.scoreChecked=true;markChanged();renderRows();};
+ const more=el('button','Details');more.type='button';more.setAttribute('aria-expanded','false');
+ const details=el('div');details.className='r4-inline-details';details.hidden=true;more.onclick=()=>{details.hidden=!details.hidden;more.setAttribute('aria-expanded',String(!details.hidden));};
+ details.append(el('p',issue||'Player, alliance and score are ready to confirm.'));
+ details.append(el('p','Screenshot name: '+row.name+(row.playerKey?' · Linked to '+row.playerName+' · Current alliance: '+row.playerAlliance:'')));
+ const position=editable('Screenshot position',row.rank||'',value=>{row.rank=Number(value)||0;resetConfirmations(row,'scoreChecked');});position.querySelector('input').type='number';position.querySelector('input').min='1';details.append(position);
+ const editName=editable('Screenshot name',row.name,value=>{row.name=value;resetConfirmations(row,'playerChecked');});details.append(editName);
+ if(row.playerKey&&row.playerAlliance){const use=el('button','Use saved alliance: '+row.playerAlliance);use.type='button';use.onclick=()=>{row.alliance=row.playerAlliance;resetConfirmations(row,'allianceChecked');markChanged();renderRows();};details.append(use);}
+ const exclude=el('button',row.excluded?'Include row':'Exclude duplicate / pinned row');exclude.type='button';exclude.onclick=()=>{row.excluded=!row.excluded;markChanged();renderRows();};details.append(exclude);
+ if(!row.playerKey){const candidates=candidateCache.get(candidateKey(row))||[];for(const profile of candidates){const pick=el('button','Use '+profile.name+' · '+profile.alliance+' · '+profile.strength);pick.type='button';pick.onclick=()=>attachCandidate(row,profile);details.append(pick);}}
+ actions.append(confirm,more);line.append(alliance,player,score,actions);data.append(line,details);tr.append(data);tbody.append(tr);
  });
- if(!visible){const tr=el('tr');tr.className='empty-row';const td=el('td',pageRows().length?'No rows match this filter.':'No suggestions for this screenshot yet. Generate suggestions or add a row.');td.colSpan=2;tr.append(td);tbody.append(tr);}
- renderSummary();
+ if(!visible){const tr=el('tr'),td=el('td','No rows on this page match.');tr.append(td);tbody.append(tr);}renderSummary();
 }
 
 function profileLine(label,value){const p=el('p');p.append(el('strong',`${label}: `),document.createTextNode(clean(value)||'Unknown'));return p;}
