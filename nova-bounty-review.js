@@ -3,7 +3,7 @@ import {loadTrainHistory} from './train-history.js?v=history-20260927';
 import {renderReports} from './player-reports.js?v=report-polish-20260926';
 import {user} from './live-session.js';
 import {bountyConnection as config} from './nova-bounty-config.js';
-import {createLeaderboardOcr} from './nova-bounty-ocr.js?v=20260925b';
+import {createLeaderboardOcr} from './nova-bounty-ocr.js?v=tsv-fix-20260928';
 
 const $=id=>document.getElementById(id);
 const el=(tag,text)=>{const node=document.createElement(tag);if(text!==undefined)node.textContent=text;return node;};
@@ -32,7 +32,7 @@ function normalizeRow(row){
  const migrated=!!row.checked;
  return {...row,rank:Number(row.rank)||0,page:Number(row.page)||1,score:clean(row.score),name:clean(row.name),alliance:clean(row.alliance),playerAlliance:clean(row.playerAlliance),playerName:clean(row.playerName),playerKey:clean(row.playerKey),playerChecked:row.playerChecked??migrated,allianceChecked:row.allianceChecked??false,scoreChecked:row.scoreChecked??migrated,excluded:!!row.excluded};
 }
-function rowConfirmed(row){return !!(row.playerKey&&row.playerChecked&&row.allianceChecked&&row.scoreChecked);}
+function rowConfirmed(row){return !!(Number.isInteger(row.rank)&&row.rank>0&&row.playerKey&&row.playerChecked&&row.allianceChecked&&row.scoreChecked);}
 function pageRows(page=currentPage){return (draft?.rows||[]).filter(row=>row.page===page);}
 function pageConfirmed(page){const rows=pageRows(page).filter(row=>!row.excluded);return rows.length>0&&rows.every(rowConfirmed);}
 function issues(rows){
@@ -112,7 +112,7 @@ function renderRows(){
   if(query&&!`${row.name} ${row.alliance} ${row.rank} ${row.playerName} ${row.playerAlliance} ${row.playerKey}`.toLowerCase().includes(query))return;
   visible++;
   const tr=el('tr');tr.className=`${rowConfirmed(row)?'confirmed':'pending'}${index===selected?' selected':''}${row.excluded?' excluded-row':''}`;tr.onclick=()=>selectRow(index);
-  const rank=el('td',String(row.rank));rank.className='r4-rank-cell';const data=el('td'),grid=el('div');grid.className='r4-row-grid';
+  const rank=el('td');rank.className='r4-rank-cell';const rankInput=el('input');rankInput.type='number';rankInput.min='1';rankInput.value=row.rank||'';rankInput.placeholder='Check';rankInput.setAttribute('aria-label','Screenshot rank for '+row.name);rankInput.style.width='72px';rankInput.onclick=e=>e.stopPropagation();rankInput.onchange=()=>{row.rank=Number(rankInput.value)||0;dirty=true;renderRows();};rank.append(rankInput);const data=el('td'),grid=el('div');grid.className='r4-row-grid';
   const identity=el('div');identity.className='r4-row-identity';identity.append(el('strong',row.playerName||row.name||'Unnamed player'),el('span',row.playerAlliance||row.alliance||'Alliance missing'));identity.querySelector('span').className='r4-alliance';
   const name=editable('Suggested player',row.name,value=>{row.name=value;resetConfirmations(row,'playerChecked');});name.className='r4-search-label';
   const alliance=editable('Screenshot alliance',row.alliance,value=>{row.alliance=value;resetConfirmations(row,'allianceChecked');});alliance.className='r4-alliance-label';
@@ -425,17 +425,20 @@ $('bounty-points').oninput=()=>{dirty=true;renderSummary();};
 $('save').onclick=async()=>{try{$('save').disabled=true;await saveDraft();status('Private R4 review draft saved. Scores and rewards remain unpublished.');}catch(error){status(error.message);}finally{$('save').disabled=false;}};
 $('extract').onclick=async()=>{
  if(extracting||!active)return;if(draft.rows.length&&!confirm('Replace the current draft rows with new screenshot suggestions? Unsaved matching work will be lost.'))return;
- extracting=true;$('extract').disabled=true;const suggestions=[];let ocr;$('extract-status').textContent='Loading private browser OCR…';
+ extracting=true;$('extract').disabled=true;const suggestions=[];let ocr,readingPage=0;const batch=active,reviewDraft=draft,emptyPages=[];$('extract-status').textContent='Loading OCR engine and language files. The first run may take longer…';
  try{
-  ocr=await createLeaderboardOcr((stage,percent)=>{$('extract-status').textContent=`Preparing OCR: ${stage}${percent?` ${percent}%`:''}`;});
-  for(let page=1;page<=active.fileCount;page++){
-   $('extract-status').textContent=`Reading screenshot ${page} of ${active.fileCount} locally…`;
-   for(const row of await ocr.read(await evidenceUrl(page),page))suggestions.push(normalizeRow(row));
+  ocr=await createLeaderboardOcr((stage,percent)=>{$('extract-status').textContent=readingPage?`Reading screenshot ${readingPage} of ${batch.fileCount} · ${stage} ${percent}% · ${suggestions.length} rows found`:`Preparing OCR · ${stage} ${percent}%`;});
+  for(let page=1;page<=batch.fileCount;page++){
+   if(active!==batch||draft!==reviewDraft)throw Error('The selected submission changed. Return to this submission to continue.');
+   readingPage=page;$('extract-status').textContent=`Reading screenshot ${page} of ${batch.fileCount} · ${suggestions.length} rows found…`;
+   const rows=await ocr.read(await evidenceUrl(page),page);if(!rows.length)emptyPages.push(page);
+   suggestions.push(...rows.map(normalizeRow));
+   if(suggestions.length){reviewDraft.rows=[...suggestions];dirty=true;selected=-1;renderPages();renderRows();renderSummary();}
   }
-  draft.rows=suggestions;dirty=true;selected=-1;renderPages();renderRows();$('extract-status').textContent=`OCR generated ${suggestions.length} unconfirmed suggestions from ${active.fileCount} screenshots. Search Supabase for incorrect names, confirm every field, then save the draft.`;
+  $('extract-status').textContent=suggestions.length?`OCR complete: ${suggestions.length} unconfirmed rows from ${batch.fileCount} screenshots.${emptyPages.length?' No rows detected on pages '+emptyPages.join(', ')+'. Check those originals manually.':''} Check names, alliances and scores, then Save draft. Nothing is approved automatically.`:'OCR finished but could not detect leaderboard rows. Your existing draft has been kept. Check the screenshot layout or add rows manually.';
  }
- catch(error){$('extract-status').textContent=`OCR stopped after ${suggestions.length} suggestions. ${error.message} Nothing was confirmed or awarded.`;}
- finally{await ocr?.terminate();extracting=false;$('extract').disabled=false;}
+ catch(error){$('extract-status').textContent=`OCR stopped on screenshot ${readingPage||1} of ${batch.fileCount}. ${suggestions.length} rows were read${suggestions.length?' and remain in this draft; save them before leaving':''}. ${error.message} Nothing was confirmed or awarded.`;}
+ finally{try{await ocr?.terminate();}catch{}extracting=false;$('extract').disabled=false;}
 };
 function showPreview(){
  const report=issues(draft.rows),out=$('preview-content');out.replaceChildren(el('div','FINAL REVIEW'),el('h2','Approval preview'),el('p',`${active.bounty}: ${report.included.length} included score rows. ${draft.rows.length-report.included.length} excluded.`),el('p',`${report.unmatched} unmatched, ${report.pending} awaiting confirmation, ${report.duplicates} duplicate conflicts.`),el('p',`Bounty reward: ${validReward()?rewardPoints():'Invalid'} points for the submitter. Suggested default: 10. This preview does not award points.`));

@@ -5,8 +5,9 @@ const digits=value=>clean(value).replace(/[^0-9]/g,'');
 
 function wordsFromTsv(tsv){
  const lines=String(tsv||'').trim().split(/\r?\n/);if(lines.length<2)return [];
- const headers=lines[0].split('\t');
- return lines.slice(1).map(line=>{const values=line.split('\t'),row=Object.fromEntries(headers.map((key,index)=>[key,values[index]??'']));return {...row,left:Number(row.left),top:Number(row.top),width:Number(row.width),height:Number(row.height),conf:Number(row.conf)};}).filter(word=>word.level==='5'&&clean(word.text)&&Number.isFinite(word.left)&&Number.isFinite(word.top));
+ const hasHeader=lines[0].startsWith('level\t');
+ const headers=hasHeader?lines[0].split('\t'):['level','page_num','block_num','par_num','line_num','word_num','left','top','width','height','conf','text'];
+ return lines.slice(hasHeader?1:0).map(line=>{const values=line.split('\t'),row=Object.fromEntries(headers.map((key,index)=>[key,values[index]??'']));return {...row,left:Number(row.left),top:Number(row.top),width:Number(row.width),height:Number(row.height),conf:Number(row.conf)};}).filter(word=>word.level==='5'&&clean(word.text)&&Number.isFinite(word.left)&&Number.isFinite(word.top));
 }
 
 function groupLines(words){
@@ -22,12 +23,12 @@ export function parseLeaderboardTsv(tsv,{page=1,width,height}){
   const inSlot=words.filter(word=>{const y=word.top+word.height/2;return y>=top&&y<bottom;});
   const rankText=groupLines(inSlot.filter(word=>word.left+word.width/2<width*.19)).map(line=>digits(line.text)).find(value=>value&&Number(value)>0&&Number(value)<10000);
   const scoreText=groupLines(inSlot.filter(word=>word.left+word.width/2>width*.72)).map(line=>digits(line.text)).filter(value=>value.length>=4).sort((a,b)=>b.length-a.length)[0];
-  const middle=groupLines(inSlot.filter(word=>{const x=word.left+word.width/2;return x>width*.30&&x<width*.72;})).filter(line=>line.text.length>0);
+  const middle=groupLines(inSlot.filter(word=>{const x=word.left+word.width/2;return x>width*.325&&x<width*.72;})).filter(line=>line.text.length>0);
   const allianceIndex=middle.findIndex(line=>/\[[^\]]{1,12}\]|\b(?:NvSP|UNIi)\b/i.test(line.text));
   const allianceLine=allianceIndex>=0?middle[allianceIndex]:middle.length>1?middle.at(-1):null;
   const nameLine=middle.find((line,index)=>index!==allianceIndex&&line!==allianceLine);
-  if(!rankText||!scoreText||!nameLine)continue;
-  rows.push({rank:Number(rankText),name:clean(nameLine.text),alliance:clean(allianceLine?.text||''),score:scoreText,page,playerKey:'',playerName:'',playerAlliance:'',playerChecked:false,allianceChecked:false,scoreChecked:false,excluded:false,ocrConfidence:Math.round(Math.min(nameLine.confidence,allianceLine?.confidence??nameLine.confidence))});
+  if(!scoreText||!nameLine)continue;
+  rows.push({rank:Number(rankText)||0,name:clean(nameLine.text),alliance:clean(allianceLine?.text||''),score:scoreText,page,playerKey:'',playerName:'',playerAlliance:'',playerChecked:false,allianceChecked:false,scoreChecked:false,excluded:false,ocrConfidence:Math.round(Math.min(nameLine.confidence,allianceLine?.confidence??nameLine.confidence))});
  }
  return rows;
 }
@@ -37,7 +38,7 @@ function cropLeaderboard(image){
  canvas.width=image.naturalWidth;canvas.height=bottom-top;
  const context=canvas.getContext('2d',{willReadFrequently:true});context.drawImage(image,0,top,image.naturalWidth,canvas.height,0,0,canvas.width,canvas.height);
  const pixels=context.getImageData(0,0,canvas.width,canvas.height);
- for(let i=0;i<pixels.data.length;i+=4){const gray=.299*pixels.data[i]+.587*pixels.data[i+1]+.114*pixels.data[i+2];const value=gray<145?0:gray>205?255:Math.round((gray-145)*255/60);pixels.data[i]=pixels.data[i+1]=pixels.data[i+2]=value;}
+ for(let i=0;i<pixels.data.length;i+=4){const gray=.299*pixels.data[i]+.587*pixels.data[i+1]+.114*pixels.data[i+2];const value=(i/4)%canvas.width<canvas.width*.19?(gray>240?0:255):gray<145?0:gray>205?255:Math.round((gray-145)*255/60);pixels.data[i]=pixels.data[i+1]=pixels.data[i+2]=value;}
  context.putImageData(pixels,0,0);return canvas;
 }
 
