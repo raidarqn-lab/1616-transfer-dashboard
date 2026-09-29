@@ -57,9 +57,10 @@ function markChanged(){dirty=true;renderSummary();renderPages();}
 function resetConfirmations(row,...keys){for(const key of keys)row[key]=false;}
 function formatScore(value){const number=Number(String(value).replace(/,/g,''));return Number.isFinite(number)?number.toLocaleString():clean(value);}
 
+function alliancesReady(){return !!draft?.rows?.length&&draft.rows.filter(r=>!r.excluded).every(r=>r.allianceSet&&clean(r.alliance));}
 function renderSetAlliances(){
- const area=$('batch-alliance');area.replaceChildren();area.append(el('span','Alliances in this screenshot set'));
- const groups=allianceGroups(draft.rows);for(const group of groups){const wrap=el('div');wrap.className='r4-set-alliance';const label=el('strong',group.label+' · '+group.rows.length+' rows'),edit=el('button','Edit alliance');edit.type='button';wrap.append(label,edit);edit.onclick=()=>{const input=el('input');input.value=group.label;input.setAttribute('aria-label','Alliance name for '+group.label);input.maxLength=100;const apply=el('button','Apply to all '+group.rows.length+' rows'),cancel=el('button','Cancel');apply.type=cancel.type='button';apply.onclick=()=>{try{const count=correctAlliance(draft.rows,group.key,input.value);candidateCache.clear();markChanged();renderRows();suggestPageMatches();status('Alliance updated on '+count+' rows across this submission. Save draft to keep the change. Player profiles were not changed.');}catch(error){status(error.message);}};cancel.onclick=renderSetAlliances;wrap.replaceChildren(input,apply,cancel);input.focus();};area.append(wrap);}
+ const area=$('batch-alliance');area.replaceChildren();area.append(el('span','Step 1 · Confirm the participating alliances'));
+ const groups=allianceGroups(draft.rows.filter(r=>!r.excluded));for(const group of groups){const wrap=el('div');wrap.className='r4-set-alliance';const label=el('strong',group.label+' · '+group.rows.length+' rows'),edit=el('button','Edit alliance');edit.type='button';const confirmed=group.rows.every(r=>r.allianceSet),confirmGroup=el('button',confirmed?'✓ Alliance confirmed':'Confirm alliance');confirmGroup.type='button';confirmGroup.disabled=confirmed||group.key==='unknown';confirmGroup.onclick=()=>{for(const r of group.rows){r.alliance=group.label;r.allianceSet=true;}candidateCache.clear();markChanged();renderRows();suggestPageMatches();status(alliancesReady()?'Alliances confirmed. Match players within their alliance, then save your review draft.':'Confirm the remaining alliance before matching players.');};wrap.append(label,confirmGroup,edit);edit.onclick=()=>{const input=el('input');input.value=group.label;input.setAttribute('aria-label','Alliance name for '+group.label);input.maxLength=100;const apply=el('button','Apply to all '+group.rows.length+' rows'),cancel=el('button','Cancel');apply.type=cancel.type='button';apply.onclick=()=>{try{for(const r of group.rows)r.allianceSet=false;const count=correctAlliance(draft.rows,group.key,input.value);candidateCache.clear();markChanged();renderRows();suggestPageMatches();status('Alliance updated on '+count+' rows across this submission. Save draft to keep the change. Player profiles were not changed.');}catch(error){status(error.message);}};cancel.onclick=renderSetAlliances;wrap.replaceChildren(input,apply,cancel);input.focus();};area.append(wrap);}
  if(groups.length>2)area.append(el('small','More than two alliance labels were detected. Correct the extra groups to one of the two participating alliances.'));
 }
 function renderSummary(){
@@ -69,7 +70,7 @@ function renderSummary(){
  $('coverage').textContent=`${active.fileCount} uploaded files · ${draft.rows.length} leaderboard rows found · ${reviewed} pages fully confirmed · ${report.duplicates} possible overlaps or duplicate conflicts.`;
  $('page-progress').textContent=`${reviewed} / ${active.fileCount} screenshots reviewed`;
  $('save').textContent=dirty?'Save review draft':'Draft saved';
- renderSetAlliances();
+ renderSetAlliances();$('confirm-page').disabled=!alliancesReady();if(!alliancesReady())$('extract-status').textContent='Confirm the participating alliances above before matching players.';
  const confirmed=pageConfirmed(currentPage),indicator=$('page-state');
  indicator.className=`review-indicator ${confirmed?'approved':'pending'}`;
  indicator.firstChild.nodeValue=confirmed?'✓':'●';
@@ -102,10 +103,10 @@ function renderPages(){
 const candidateCache=new Map();let matchingRequest=0;
 function candidateKey(row){return JSON.stringify([active?.id,row.name,row.alliance,row.score,row.rank]);}
 async function suggestPageMatches(){
- if(!active||!draft)return;const request=++matchingRequest,batch=active,page=currentPage,rows=pageRows().filter(r=>!r.playerKey&&!r.excluded);if(!rows.length)return;
+ if(!active||!draft||!alliancesReady())return;const request=++matchingRequest,batch=active,page=currentPage,rows=pageRows().filter(r=>!r.playerKey&&!r.excluded);if(!rows.length)return;
  const pending=rows.filter(row=>!candidateCache.has(candidateKey(row)));if(!pending.length){renderRows();return;}
  $('extract-status').textContent='Comparing this page with saved names, aliases, alliances and same-event results…';
- try{for(let offset=0;offset<pending.length;offset+=10){const chunk=pending.slice(offset,offset+10),keys=chunk.map(candidateKey);const data=await call({action:'player-search',batchId:batch.id,matchRows:chunk.map(({name,alliance,score,rank})=>({name,alliance,score,rank}))});if(request!==matchingRequest||active!==batch||currentPage!==page)return;if(!Array.isArray(data.rows))throw Error('Matching service is not available yet.');for(const item of data.rows)candidateCache.set(keys[item.index],item.candidates||[]);}
+ try{for(let offset=0;offset<pending.length;offset+=10){const chunk=pending.slice(offset,offset+10),keys=chunk.map(candidateKey);const data=await call({action:'player-search',batchId:batch.id,allianceScope:true,matchRows:chunk.map(({name,alliance,score,rank})=>({name,alliance,score,rank}))});if(request!==matchingRequest||active!==batch||currentPage!==page)return;if(!Array.isArray(data.rows))throw Error('Matching service is not available yet.');for(const item of data.rows)candidateCache.set(keys[item.index],item.candidates||[]);}
  renderRows();$('extract-status').textContent='Directory suggestions ready. Select the correct player; matches remain unconfirmed until reviewed.';
  }catch(error){if(request===matchingRequest)$('extract-status').textContent='Could not load directory suggestions: '+error.message+' Manual search is still available.';}
 }
@@ -128,7 +129,7 @@ function renderRows(){
  const tr=el('tr');tr.className=`${rowConfirmed(row)?'confirmed':'pending'}${index===selected?' selected':''}${row.excluded?' excluded-row':''}`;
  const data=el('td'),line=el('div');line.className='r4-single-row';
  const group=allianceGroups(draft.rows).find(g=>g.key===allianceGroup(row.alliance));const alliance=el('span',group?.label||row.alliance||'Not detected');alliance.className='r4-alliance-value';alliance.title='Detected: '+row.alliance+'. Edit this alliance for the whole set above.';
- const player=el('button');player.append(el('span',row.playerName||row.name||'Unnamed player'));const badge=el('span',rowConfirmed(row)?'✓ Confirmed':row.playerKey?'Change player':'⌕ Find or create player');badge.className=rowConfirmed(row)?'r4-confirmed-badge':'r4-match-prompt';player.append(badge);player.setAttribute('aria-label',(row.playerName||row.name)+' — '+(rowConfirmed(row)?'Confirmed; change match':row.playerKey?'Change match':'Match player'));player.type='button';player.className='r4-inline-player';player.title=row.playerKey?'Linked player — click to change':'Click to match this player';player.onclick=()=>selectRow(index);
+ const player=el('button');player.append(el('span',row.playerName||row.name||'Unnamed player'));const badge=el('span',rowConfirmed(row)?'✓ Confirmed':row.playerKey?'Change player':'⌕ Find or create player');badge.className=rowConfirmed(row)?'r4-confirmed-badge':'r4-match-prompt';player.append(badge);player.setAttribute('aria-label',(row.playerName||row.name)+' — '+(rowConfirmed(row)?'Confirmed; change match':row.playerKey?'Change match':'Match player'));player.type='button';player.className='r4-inline-player';player.title=row.playerKey?'Linked player — click to change':'Click to match this player';player.disabled=!alliancesReady();player.onclick=()=>selectRow(index);
  const score=editable('Suggested score',formatScore(row.score),value=>{row.score=value.replace(/,/g,'');resetConfirmations(row,'scoreChecked');});score.className='r4-inline-field r4-inline-score';
  const actions=el('div');actions.className='r4-inline-actions';
  const issue=row.excluded?'Excluded row':!row.playerKey?'Match the player first':!/^\d{1,12}$/.test(row.score)?'Correct the score':!clean(row.alliance)?'Correct the alliance':'';
@@ -414,8 +415,8 @@ function showCreateContact(row,editor){
  catch(error){feedback.textContent='Player not created: '+error.message;}finally{save.disabled=false;}};
 }
 function selectRow(index){
- selected=index;const row=draft.rows[index],editor=$('editor');renderRows();editor.replaceChildren();const dialog=el('dialog');dialog.className='r4-match-dialog';dialog.setAttribute('aria-label','Find or create player');document.body.append(dialog);dialog.append(editor);dialog.onclose=()=>{editor.hidden=true;document.querySelector('.r4-data').append(editor);dialog.remove();};
- const heading=el('h3',`Match player: ${row.name||'Unnamed player'}`),line=el('div');line.className='search-line';const label=el('label','Find player by name or previous name'),input=el('input');input.value=row.name;label.append(input);const find=el('button','Search All Contacts'),results=el('div');results.className='search-results';line.append(label,find);editor.append(heading,line,results);const create=el('button','＋ Create new player');create.type='button';create.className='r4-create-contact';create.onclick=()=>{heading.hidden=true;line.hidden=true;results.hidden=true;create.hidden=true;showCreateContact(row,editor);};editor.append(create);const close=el('button','Close search');close.onclick=()=>dialog.close();editor.prepend(close);editor.hidden=false;editor.onclick=event=>event.stopPropagation();dialog.showModal();
+ if(!alliancesReady()){status('First confirm the participating alliances at the top of this review.');$('batch-alliance').scrollIntoView({behavior:'smooth',block:'center'});return;}selected=index;const row=draft.rows[index],editor=$('editor');renderRows();editor.replaceChildren();const dialog=el('dialog');dialog.className='r4-match-dialog';dialog.setAttribute('aria-label','Find or create player');document.body.append(dialog);dialog.append(editor);dialog.onclose=()=>{editor.hidden=true;document.querySelector('.r4-data').append(editor);dialog.remove();};
+ const heading=el('h3',`Match player: ${row.name||'Unnamed player'}`),line=el('div');line.className='search-line';const label=el('label','Search '+row.alliance+' by player name or previous name'),input=el('input');input.value=row.name;label.append(input);const find=el('button','Search All Contacts'),results=el('div');results.className='search-results';line.append(label,find);editor.append(heading,line,results);const create=el('button','＋ Create new player');create.type='button';create.className='r4-create-contact';create.onclick=()=>{heading.hidden=true;line.hidden=true;results.hidden=true;create.hidden=true;showCreateContact(row,editor);};editor.append(create);const close=el('button','Close search');close.onclick=()=>dialog.close();editor.prepend(close);editor.hidden=false;editor.onclick=event=>event.stopPropagation();dialog.showModal();
  let searchVersion=0;
  const runSearch=async()=>{
   const version=++searchVersion,query=input.value.trim(),batchId=active.id;
@@ -423,12 +424,12 @@ function selectRow(index){
   try{
    const [directory,matching]=await Promise.allSettled([
     call({action:'player-search',query}),
-    call({action:'player-search',batchId,matchRows:[{name:query,alliance:row.alliance,score:row.score,rank:row.rank}]})
+    call({action:'player-search',batchId,allianceScope:true,matchRows:[{name:query,alliance:row.alliance,score:row.score,rank:row.rank}]})
    ]);
    if(version!==searchVersion||!results.isConnected||!dialog.open)return;
    const found=directory.status==='fulfilled'&&Array.isArray(directory.value)?directory.value:[];
    const suggestions=matching.status==='fulfilled'&&Array.isArray(matching.value.rows)?matching.value.rows[0]?.candidates||[]:[];
-   const players=[...new Map([...found,...suggestions].map(p=>[p.key,p])).values()];results.replaceChildren();
+   const players=[...new Map([...found,...suggestions].filter(p=>allianceGroup(p.alliance)===allianceGroup(row.alliance)).map(p=>[p.key,p])).values()];results.replaceChildren();
    if(matching.status==='rejected'||!Array.isArray(matching.value?.rows))results.append(el('p','Similar-name suggestions could not load. Search again to retry; any exact results are shown below.'));
    if(directory.status==='rejected')results.append(el('p','Exact directory search could not load. Any similar-name suggestions are shown below.'));
    if(!players.length){results.append(el('p','No matching contacts found. Try a shorter part of the name or a previous name.'));const simplified=input.value.normalize('NFKC').replace(/[^\p{L}\p{N}\s]/gu,' ').split(/\s+/).filter(part=>part.length>2).join(' ').trim();if(simplified&&simplified!==input.value.trim()){const retry=el('button','Search “'+simplified+'”');retry.type='button';retry.onclick=event=>{event.stopPropagation();input.value=simplified;runSearch();};results.append(retry);}}
@@ -513,7 +514,7 @@ $('reject-review').onclick=async()=>{
  catch(error){status(error.message);}finally{button.disabled=false;}
 };
 $('filter').oninput=renderRows;$('add').onclick=()=>{draft.rows.push(normalizeRow({rank:0,name:'New row',alliance:'',score:'0',page:currentPage,playerKey:'',excluded:false}));markChanged();selected=draft.rows.length-1;renderRows();selectRow(selected);};
-$('confirm-page').onclick=()=>{for(const row of pageRows()){if(row.excluded)continue;const group=allianceGroups(draft.rows).find(g=>g.key===allianceGroup(row.alliance));if(group&&group.key!=='unknown')row.alliance=group.label;row.playerChecked=!!row.playerKey;row.allianceChecked=!!clean(row.alliance);row.scoreChecked=/^\d{1,12}$/.test(row.score);}markChanged();renderRows();status(pageConfirmed()?'This screenshot page is fully confirmed. Save the review draft to keep the checks.':'Rows without a matched player, alliance or score remain yellow.');};
+$('confirm-page').onclick=()=>{if(!alliancesReady()){status('Confirm the participating alliances first.');return;}for(const row of pageRows()){if(row.excluded)continue;const group=allianceGroups(draft.rows).find(g=>g.key===allianceGroup(row.alliance));if(group&&group.key!=='unknown')row.alliance=group.label;row.playerChecked=!!row.playerKey;row.allianceChecked=!!clean(row.alliance);row.scoreChecked=/^\d{1,12}$/.test(row.score);}markChanged();renderRows();status(pageConfirmed()?'This screenshot page is fully confirmed. Save the review draft to keep the checks.':'Rows without a matched player, alliance or score remain yellow.');};
 $('clear-page').onclick=()=>{for(const row of pageRows()){row.playerChecked=false;row.allianceChecked=false;row.scoreChecked=false;}markChanged();renderRows();status('Confirmation checks cleared for this screenshot page.');};
 $('refresh').onclick=load;
 $('directory-search').onsubmit=searchDirectory;
