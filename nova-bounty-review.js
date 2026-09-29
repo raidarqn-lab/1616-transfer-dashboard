@@ -1,3 +1,4 @@
+import {allianceGroup,allianceGroups,correctAlliance} from './nova-review-alliances.js?v=set-20260929';
 import {loadStormHistory} from './storm-profile.js?v=rotation-20260928';
 import {loadTrainHistory} from './train-history.js?v=history-20260927';
 import {renderReports} from './player-reports.js?v=report-polish-20260926';
@@ -56,6 +57,11 @@ function markChanged(){dirty=true;renderSummary();renderPages();}
 function resetConfirmations(row,...keys){for(const key of keys)row[key]=false;}
 function formatScore(value){const number=Number(String(value).replace(/,/g,''));return Number.isFinite(number)?number.toLocaleString():clean(value);}
 
+function renderSetAlliances(){
+ const area=$('batch-alliance');area.replaceChildren();area.append(el('span','Alliances in this screenshot set'));
+ const groups=allianceGroups(draft.rows);for(const group of groups){const wrap=el('div');wrap.className='r4-set-alliance';const label=el('strong',group.label+' · '+group.rows.length+' rows'),edit=el('button','Edit alliance');edit.type='button';wrap.append(label,edit);edit.onclick=()=>{const input=el('input');input.value=group.label;input.setAttribute('aria-label','Alliance name for '+group.label);input.maxLength=100;const apply=el('button','Apply to all '+group.rows.length+' rows'),cancel=el('button','Cancel');apply.type=cancel.type='button';apply.onclick=()=>{try{const count=correctAlliance(draft.rows,group.key,input.value);candidateCache.clear();markChanged();renderRows();suggestPageMatches();status('Alliance updated on '+count+' rows across this submission. Save draft to keep the change. Player profiles were not changed.');}catch(error){status(error.message);}};cancel.onclick=renderSetAlliances;wrap.replaceChildren(input,apply,cancel);input.focus();};area.append(wrap);}
+ if(groups.length>2)area.append(el('small','More than two alliance labels were detected. Correct the extra groups to one of the two participating alliances.'));
+}
 function renderSummary(){
  if(!draft)return;
  const report=issues(draft.rows),reviewed=Array.from({length:active.fileCount},(_,index)=>index+1).filter(pageConfirmed).length;
@@ -63,8 +69,7 @@ function renderSummary(){
  $('coverage').textContent=`${active.fileCount} uploaded files · ${draft.rows.length} leaderboard rows found · ${reviewed} pages fully confirmed · ${report.duplicates} possible overlaps or duplicate conflicts.`;
  $('page-progress').textContent=`${reviewed} / ${active.fileCount} screenshots reviewed`;
  $('save').textContent=dirty?'Save review draft':'Draft saved';
- const alliances=[...new Set(draft.rows.map(row=>row.alliance).filter(Boolean))];
- $('batch-alliance').textContent=alliances.length?`Alliance names in evidence: ${alliances.join(' · ')}`:'Alliance names will appear after screenshot suggestions are generated.';
+ renderSetAlliances();
  const confirmed=pageConfirmed(currentPage),indicator=$('page-state');
  indicator.className=`review-indicator ${confirmed?'approved':'pending'}`;
  indicator.firstChild.nodeValue=confirmed?'✓':'●';
@@ -105,7 +110,7 @@ async function suggestPageMatches(){
  }catch(error){if(request===matchingRequest)$('extract-status').textContent='Could not load directory suggestions: '+error.message+' Manual search is still available.';}
 }
 function attachCandidate(row,profile){profileCache.set(profile.key,profile);row.playerKey=profile.key;row.playerName=profile.name;row.playerAlliance=profile.alliance||'';resetConfirmations(row,'playerChecked','allianceChecked');markChanged();renderRows();status('Linked '+profile.name+'. Check the score and screenshot alliance, then confirm and save draft.');}
-function selectPage(page){currentPage=page;selected=-1;renderPages();renderRows();renderSummary();evidence(page);suggestPageMatches();$('editor').replaceChildren(el('p','Select a suggested row to search and inspect the private transfer profile.'));}
+function selectPage(page){currentPage=page;selected=-1;renderPages();renderRows();renderSummary();evidence(page);suggestPageMatches();$('editor').replaceChildren(el('p','Select a player name to search All Contacts.'));}
 
 function checkbox(key,label,row,index){
  const wrapper=el('label'),input=el('input');wrapper.className='r4-row-confirm';input.type='checkbox';input.checked=!!row[key];
@@ -122,19 +127,19 @@ function renderRows(){
  if(row.page!==currentPage||query&&!`${row.name} ${row.alliance} ${row.playerName}`.toLowerCase().includes(query))return;visible++;
  const tr=el('tr');tr.className=`${rowConfirmed(row)?'confirmed':'pending'}${index===selected?' selected':''}${row.excluded?' excluded-row':''}`;
  const data=el('td'),line=el('div');line.className='r4-single-row';
- const alliance=editable('Screenshot alliance',row.alliance,value=>{row.alliance=value;resetConfirmations(row,'allianceChecked');});alliance.className='r4-inline-field';
+ const group=allianceGroups(draft.rows).find(g=>g.key===allianceGroup(row.alliance));const alliance=el('span',group?.label||row.alliance||'Not detected');alliance.className='r4-alliance-value';alliance.title='Detected: '+row.alliance+'. Edit this alliance for the whole set above.';
  const player=el('button',row.playerName||row.name||'Unnamed player');player.type='button';player.className='r4-inline-player';player.title=row.playerKey?'Linked player — click to change':'Click to match this player';player.onclick=()=>selectRow(index);
  const score=editable('Suggested score',formatScore(row.score),value=>{row.score=value.replace(/,/g,'');resetConfirmations(row,'scoreChecked');});score.className='r4-inline-field r4-inline-score';
  const actions=el('div');actions.className='r4-inline-actions';
  const issue=row.excluded?'Excluded row':!row.playerKey?'Match the player first':!Number.isInteger(row.rank)||row.rank<1||row.rank>10000?'Screenshot position missing — open Details':!/^\d{1,12}$/.test(row.score)?'Correct the score':!clean(row.alliance)?'Correct the alliance':'';
- const confirm=el('button',rowConfirmed(row)?'✓ Confirmed':'Confirm');confirm.type='button';confirm.disabled=!!issue||rowConfirmed(row);confirm.title=issue||'Confirm player, alliance and score';confirm.onclick=()=>{row.playerChecked=row.allianceChecked=row.scoreChecked=true;markChanged();renderRows();};
+ const confirm=el('button',rowConfirmed(row)?'✓ Confirmed':'Confirm');confirm.type='button';confirm.disabled=!!issue||rowConfirmed(row);confirm.title=issue||'Confirm player, alliance and score';confirm.onclick=()=>{if(group&&group.key!=='unknown')row.alliance=group.label;row.playerChecked=row.allianceChecked=row.scoreChecked=true;markChanged();renderRows();};
  const more=el('button','Details');more.type='button';more.setAttribute('aria-expanded','false');
  const details=el('div');details.className='r4-inline-details';details.hidden=true;more.onclick=()=>{details.hidden=!details.hidden;more.setAttribute('aria-expanded',String(!details.hidden));};
  details.append(el('p',issue||'Player, alliance and score are ready to confirm.'));
  details.append(el('p','Screenshot name: '+row.name+(row.playerKey?' · Linked to '+row.playerName+' · Current alliance: '+row.playerAlliance:'')));
  const position=editable('Screenshot position',row.rank||'',value=>{row.rank=Number(value)||0;resetConfirmations(row,'scoreChecked');});position.querySelector('input').type='number';position.querySelector('input').min='1';details.append(position);
  const editName=editable('Screenshot name',row.name,value=>{row.name=value;resetConfirmations(row,'playerChecked');});details.append(editName);
- if(row.playerKey&&row.playerAlliance){const use=el('button','Use saved alliance: '+row.playerAlliance);use.type='button';use.onclick=()=>{row.alliance=row.playerAlliance;resetConfirmations(row,'allianceChecked');markChanged();renderRows();};details.append(use);}
+
  const exclude=el('button',row.excluded?'Include row':'Exclude duplicate / pinned row');exclude.type='button';exclude.onclick=()=>{row.excluded=!row.excluded;markChanged();renderRows();};details.append(exclude);
  if(!row.playerKey){const candidates=candidateCache.get(candidateKey(row))||[];for(const profile of candidates){const pick=el('button','Use '+profile.name+' · '+profile.alliance+' · '+profile.strength);pick.type='button';pick.onclick=()=>attachCandidate(row,profile);details.append(pick);}}
  actions.append(confirm,more);line.append(alliance,player,score,actions);data.append(line,details);tr.append(data);tbody.append(tr);
@@ -401,9 +406,9 @@ if($('records-next')){window.addEventListener('nova-records-open',event=>{roster
 
 function selectRow(index){
  selected=index;const row=draft.rows[index],editor=$('editor');renderRows();editor.replaceChildren();
- const heading=el('h3',`Match player: ${row.name||'Unnamed player'}`),line=el('div');line.className='search-line';const label=el('label','Find player by name or previous name'),input=el('input');input.value=row.name;label.append(input);const find=el('button','Search transfer directory'),results=el('div');results.className='search-results';line.append(label,find);editor.append(heading,line,results);const close=el('button','Close search');close.onclick=()=>{editor.hidden=true;};editor.prepend(close);editor.hidden=false;editor.onclick=event=>event.stopPropagation();const selectedRow=$('rows').querySelector('tr.selected td');if(selectedRow)selectedRow.append(editor);
+ const heading=el('h3',`Match player: ${row.name||'Unnamed player'}`),line=el('div');line.className='search-line';const label=el('label','Find player by name or previous name'),input=el('input');input.value=row.name;label.append(input);const find=el('button','Search All Contacts'),results=el('div');results.className='search-results';line.append(label,find);editor.append(heading,line,results);const close=el('button','Close search');close.onclick=()=>{editor.hidden=true;};editor.prepend(close);editor.hidden=false;editor.onclick=event=>event.stopPropagation();const selectedRow=$('rows').querySelector('tr.selected td');if(selectedRow)selectedRow.append(editor);
  const runSearch=async()=>{
-  find.disabled=true;results.replaceChildren(el('p','Searching the private transfer directory…'));
+  find.disabled=true;results.replaceChildren(el('p','Searching All Contacts…'));
   try{
    const players=await call({action:'player-search',query:input.value});if(!results.isConnected)return;results.replaceChildren();
    if(!players.length){results.append(el('p','No exact search results. Try the distinctive part of the name; OCR can confuse letters and symbols.'));const simplified=input.value.normalize('NFKC').replace(/[^\p{L}\p{N}\s]/gu,' ').split(/\s+/).filter(part=>part.length>2).join(' ').trim();if(simplified&&simplified!==input.value.trim()){const retry=el('button','Search “'+simplified+'”');retry.type='button';retry.onclick=event=>{event.stopPropagation();input.value=simplified;runSearch();};results.append(retry);}}
@@ -412,7 +417,7 @@ function selectRow(index){
  };
  find.onclick=runSearch;input.onkeydown=event=>{if(event.key==='Enter'){event.preventDefault();runSearch();}};
  if(row.playerKey){const profile=profileCache.get(row.playerKey)||{};editor.append(renderProfile(row,profile));if(!profileCache.has(row.playerKey))call({action:'player-search',query:row.playerKey}).then(players=>{const found=players.find(item=>item.key===row.playerKey);if(found){profileCache.set(found.key,found);row.playerName=row.playerName||found.name;row.playerAlliance=row.playerAlliance||found.alliance||'';renderProfile(row,found);}}).catch(error=>status(error.message));}
- else{$('profile-heading').textContent=row.name||'Unmatched player';$('profile-preview').replaceChildren(el('p','Search the transfer directory and choose the correct private player profile.'));} runSearch();
+ else{$('profile-heading').textContent=row.name||'Unmatched player';$('profile-preview').replaceChildren(el('p','Search All Contacts and choose the correct player.'));} runSearch();
 }
 
 async function openBatch(batch){
@@ -482,7 +487,7 @@ $('reject-review').onclick=async()=>{
  catch(error){status(error.message);}finally{button.disabled=false;}
 };
 $('filter').oninput=renderRows;$('add').onclick=()=>{draft.rows.push(normalizeRow({rank:pageRows().length?Math.max(...pageRows().map(row=>row.rank))+1:1,name:'New row',alliance:'',score:'0',page:currentPage,playerKey:'',excluded:false}));markChanged();selected=draft.rows.length-1;renderRows();selectRow(selected);};
-$('confirm-page').onclick=()=>{for(const row of pageRows()){if(row.excluded)continue;row.playerChecked=!!row.playerKey;row.allianceChecked=!!(row.alliance&&row.playerAlliance);row.scoreChecked=!!clean(row.score);}markChanged();renderRows();status(pageConfirmed()?'This screenshot page is fully confirmed. Save the review draft to keep the checks.':'Rows without a matched player, alliance or score remain yellow.');};
+$('confirm-page').onclick=()=>{for(const row of pageRows()){if(row.excluded)continue;const group=allianceGroups(draft.rows).find(g=>g.key===allianceGroup(row.alliance));if(group&&group.key!=='unknown')row.alliance=group.label;row.playerChecked=!!row.playerKey;row.allianceChecked=!!(row.alliance&&row.playerAlliance);row.scoreChecked=!!clean(row.score);}markChanged();renderRows();status(pageConfirmed()?'This screenshot page is fully confirmed. Save the review draft to keep the checks.':'Rows without a matched player, alliance or score remain yellow.');};
 $('clear-page').onclick=()=>{for(const row of pageRows()){row.playerChecked=false;row.allianceChecked=false;row.scoreChecked=false;}markChanged();renderRows();status('Confirmation checks cleared for this screenshot page.');};
 $('refresh').onclick=load;
 $('directory-search').onsubmit=searchDirectory;
