@@ -16,7 +16,7 @@ function groupLines(words){
  return [...groups.values()].map(items=>{items.sort((a,b)=>a.left-b.left);return {text:clean(items.map(item=>item.text).join(' ')),left:Math.min(...items.map(item=>item.left)),top:Math.min(...items.map(item=>item.top)),right:Math.max(...items.map(item=>item.left+item.width)),bottom:Math.max(...items.map(item=>item.top+item.height)),confidence:items.reduce((sum,item)=>sum+Math.max(0,item.conf),0)/items.length};}).sort((a,b)=>a.top-b.top||a.left-b.left);
 }
 
-export function parseLeaderboardTsv(tsv,{page=1,width,height}){
+export function parseLeaderboardTsv(tsv,{page=1,width,height,includeSlots=false}){
  const words=wordsFromTsv(tsv),rows=[];
  for(let slot=0;slot<7;slot++){
   const top=height*slot/7,bottom=height*(slot+1)/7;
@@ -28,11 +28,24 @@ export function parseLeaderboardTsv(tsv,{page=1,width,height}){
   const allianceLine=allianceIndex>=0?middle[allianceIndex]:middle.length>1?middle.at(-1):null;
   const nameLine=middle.find((line,index)=>index!==allianceIndex&&line!==allianceLine);
   if(!scoreText||!nameLine)continue;
-  rows.push({rank:Number(rankText)||0,name:clean(nameLine.text),alliance:clean(allianceLine?.text||''),score:scoreText,page,playerKey:'',playerName:'',playerAlliance:'',playerChecked:false,allianceChecked:false,scoreChecked:false,excluded:false,ocrConfidence:Math.round(Math.min(nameLine.confidence,allianceLine?.confidence??nameLine.confidence))});
+  rows.push({...includeSlots?{slot}: {},rank:Number(rankText)||0,name:clean(nameLine.text),alliance:clean(allianceLine?.text||''),score:scoreText,page,playerKey:'',playerName:'',playerAlliance:'',playerChecked:false,allianceChecked:false,scoreChecked:false,excluded:false,ocrConfidence:Math.round(Math.min(nameLine.confidence,allianceLine?.confidence??nameLine.confidence))});
  }
  return rows;
 }
 
+export function recoverRanks(rows,observations){
+ const result=rows.map(row=>({...row,rank:row.rank||observations[row.slot]||0}));
+ // Infer only inside a complete, descending seven-row screenshot with two agreeing numeric anchors.
+ if(result.length!==7||result.some((r,i)=>r.slot!==i)||result.some((r,i)=>i&&Number(r.score)>Number(result[i-1].score)))return result;
+ const anchors=result.filter(r=>r.rank>0),bases=new Set(anchors.map(r=>r.rank-r.slot));
+ if(anchors.length>=2&&bases.size===1){const base=[...bases][0];if(base>0&&base+6<=10000)return result.map(r=>({...r,rank:r.rank||base+r.slot}));}
+ return result;
+}
+function rankCanvas(image){
+ const canvas=document.createElement('canvas'),top=Math.round(image.naturalHeight*.245),bottom=Math.round(image.naturalHeight*.805);canvas.width=Math.round(image.naturalWidth*.19)*2;canvas.height=(bottom-top)*2;
+ const ctx=canvas.getContext('2d',{willReadFrequently:true});ctx.drawImage(image,0,top,canvas.width/2,bottom-top,0,0,canvas.width,canvas.height);const data=ctx.getImageData(0,0,canvas.width,canvas.height);
+ for(let i=0;i<data.data.length;i+=4){const value=Math.min(data.data[i],data.data[i+1],data.data[i+2])>225?0:255;data.data[i]=data.data[i+1]=data.data[i+2]=value;}ctx.putImageData(data,0,0);return canvas;
+}
 function cropLeaderboard(image){
  const canvas=document.createElement('canvas'),top=Math.round(image.naturalHeight*.245),bottom=Math.round(image.naturalHeight*.805);
  canvas.width=image.naturalWidth;canvas.height=bottom-top;
@@ -51,7 +64,17 @@ export async function createLeaderboardOcr(onProgress=()=>{}){
  const worker=await createWorker(['eng','vie'],1,{logger:event=>{if(event?.status)onProgress(event.status,Math.round((event.progress||0)*100));}});
  await worker.setParameters({tessedit_pageseg_mode:PSM.SPARSE_TEXT,preserve_interword_spaces:'1',user_defined_dpi:'300'});
  return {
-  async read(url,page){const image=await loadImage(url),canvas=cropLeaderboard(image),result=await worker.recognize(canvas,{}, {tsv:true});return parseLeaderboardTsv(result.data.tsv,{page,width:canvas.width,height:canvas.height});},
+  async read(url,page){
+   const image=await loadImage(url),canvas=cropLeaderboard(image),result=await worker.recognize(canvas,{}, {tsv:true});let rows=parseLeaderboardTsv(result.data.tsv,{page,width:canvas.width,height:canvas.height,includeSlots:true});
+   if(rows.some(row=>!row.rank)){
+    onProgress('Reading leaderboard positions',0);const ranks=rankCanvas(image),observations={};
+    try{await worker.setParameters({tessedit_char_whitelist:'0123456789',tessedit_pageseg_mode:PSM.SPARSE_TEXT});const pass=await worker.recognize(ranks,{}, {tsv:true});
+     for(const word of wordsFromTsv(pass.data.tsv)){const n=Number(digits(word.text)),slot=Math.floor((word.top+word.height/2)/ranks.height*7);if(word.conf>=65&&n>0&&n<=10000&&slot>=0&&slot<7)observations[slot]=observations[slot]===undefined?n:0;}
+     rows=recoverRanks(rows,observations);
+    }finally{await worker.setParameters({tessedit_char_whitelist:'',tessedit_pageseg_mode:PSM.SPARSE_TEXT});}
+   }
+   return rows.map(({slot,...row})=>row);
+  },
   terminate:()=>worker.terminate()
  };
 }

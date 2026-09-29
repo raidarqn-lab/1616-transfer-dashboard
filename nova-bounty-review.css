@@ -76,3 +76,30 @@ dialog h3{font-size:13px;color:var(--cyan);margin-top:22px}#selected-instruction
 .r4-set-alliances{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}.r4-set-alliances>span,.r4-set-alliances>small{width:100%;font-size:11px;color:#99b3c3}.r4-set-alliance{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:7px 10px;border:1px solid #32505d;border-radius:6px;background:#102a34}.r4-set-alliance strong{font-size:12px}.r4-set-alliance button{font-size:11px;padding:5px 8px}.r4-set-alliance input{color:#deeff7;background:#0a1b25;border:1px solid #426678;border-radius:4px;padding:7px}.r4-alliance-value{font-size:12px;color:#a3ddd8;line-height:1.3;overflow-wrap:anywhere}
 
 .r4-inline-player{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.r4-match-prompt{font-size:10px;color:#76e7df;border-bottom:1px dashed #76e7df;white-space:nowrap}.r4-confirmed-badge{display:inline-flex;align-items:center;gap:4px;font-size:10px;color:#96efb5;background:#123c30;border:1px solid #387d5b;border-radius:12px;padding:3px 7px;white-space:nowrap}.r4-data #rows tr.confirmed{background:#103027!important;box-shadow:inset 4px 0 #6edd9b}.r4-create-contact{margin-top:12px;color:#80e9df;border:1px solid #387b83}.r4-new-contact{border-top:1px solid #3a5869;margin-top:14px;padding:14px 0;display:flex;flex-wrap:wrap;gap:12px}.r4-new-contact h3,.r4-new-contact p{width:100%;margin:0}.r4-new-contact label{display:grid;gap:5px;font-size:12px;flex:1;min-width:140px}.r4-new-contact input{width:100%;max-width:none;box-sizing:border-box}
+/* Screenshot review: explicit states and a focused matching workspace. */
+.r4-inline-actions{display:flex;flex-wrap:wrap;align-items:center;gap:6px;min-width:150px}
+.r4-row-state{flex-basis:100%;font-size:11px;font-weight:800;letter-spacing:.02em;color:#ffd878}
+.r4-row-state.is-ready{color:#8edfeb}.r4-row-state.is-confirmed{color:#8bf0b9}
+#rows tr.confirmed{border-left:4px solid #58dda0;background:rgba(35,128,91,.18)}
+#rows tr.confirmed .r4-inline-actions>button:first-of-type{background:#164d3b;color:#b8ffda;border-color:#3ba879;opacity:1}
+.r4-inline-player{min-width:0;text-align:left}.r4-inline-player>span:first-child{font-weight:750;overflow-wrap:anywhere}
+.r4-match-dialog{width:min(620px,calc(100vw - 32px));max-height:85vh;padding:0;border:1px solid #326576;border-radius:18px;background:#091f2b;color:#dfedf3;box-shadow:0 25px 90px #0009}
+.r4-match-dialog::backdrop{background:#001019b8;backdrop-filter:blur(3px)}
+.r4-match-dialog #editor{display:block;padding:24px;margin:0;border:0;background:transparent}
+.r4-match-dialog #editor>button:first-child{float:right;font-size:12px;padding:7px 12px}
+.r4-match-dialog h3{margin:8px 0 22px;font-size:20px;line-height:1.4;clear:both}
+.r4-match-dialog .search-line{display:flex;gap:10px;align-items:end;margin:0 0 16px}
+.r4-match-dialog .search-line label{flex:1;display:grid;gap:8px;font-size:12px;color:#a8c7d3}
+.r4-match-dialog input{width:100%;box-sizing:border-box;background:#061722;color:#ecf8fa;border:1px solid #396172;border-radius:9px;padding:11px;font:inherit}
+.r4-match-dialog button{border-radius:9px;padding:10px 14px;cursor:pointer}
+.r4-match-dialog .search-results{max-height:300px;overflow:auto;display:grid;gap:8px}
+.r4-match-dialog .r4-match-result{display:grid;width:100%;text-align:left;grid-template-columns:1fr auto;gap:5px 14px;padding:14px;background:#102f3d;border:1px solid #2c5665}
+.r4-match-dialog .r4-match-result strong{color:#f0faff}.r4-match-dialog .r4-match-result span{grid-column:1;font-size:12px;color:#b4ced7}.r4-match-dialog .r4-match-result b{grid-column:2;grid-row:1/3;align-self:center;color:#6ae6e2;font-size:12px}
+.r4-match-dialog .r4-create-contact{width:100%;margin-top:18px;background:transparent;border:1px dashed #537986;color:#a9e4eb}
+.r4-match-dialog .r4-new-contact{display:grid;grid-template-columns:1fr 1fr;gap:16px;padding:0;border:0;margin:0;background:none}
+.r4-match-dialog .r4-new-contact h3,.r4-match-dialog .r4-new-contact p,.r4-match-dialog .r4-new-contact label:first-of-type{grid-column:1/-1}
+.r4-match-dialog .r4-new-contact h3{margin:5px 0 0}.r4-match-dialog .r4-new-contact p{margin:0;color:#afc9d4;font-size:13px;line-height:1.6}
+.r4-match-dialog .r4-new-contact label{display:grid;gap:7px;font-size:12px;color:#a8c7d3}
+.r4-match-dialog .r4-new-contact button[type=submit]{background:#18c9ce;color:#03212b;font-weight:800}
+.r4-match-dialog [hidden]{display:none!important}
+@media(max-width:600px){.r4-match-dialog .search-line{display:grid}.r4-match-dialog #editor{padding:18px}.r4-match-dialog .r4-new-contact{grid-template-columns:1fr}.r4-match-dialog .r4-new-contact>*{grid-column:1}}
