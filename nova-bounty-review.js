@@ -70,7 +70,7 @@ function renderSummary(){
  $('coverage').textContent=`${active.fileCount} uploaded files · ${draft.rows.length} leaderboard rows found · ${reviewed} pages fully confirmed · ${report.duplicates} possible overlaps or duplicate conflicts.`;
  $('page-progress').textContent=`${reviewed} / ${active.fileCount} screenshots reviewed`;
  $('save').textContent=dirty?'Save review draft':'Draft saved';
- renderSetAlliances();$('confirm-page').disabled=!alliancesReady();if(!alliancesReady())$('extract-status').textContent='Confirm the participating alliances above before matching players.';
+ renderSetAlliances();const readyCount=pageRows().filter(r=>!r.excluded&&!rowConfirmed(r)&&/^\d{1,12}$/.test(r.score)&&(r.playerKey||(candidateCache.get(candidateKey(r))||[]).length)).length;$('confirm-page').disabled=!alliancesReady()||!readyCount;$('confirm-page').textContent=readyCount?'Review & confirm page ('+readyCount+')':pageConfirmed()?'✓ Page confirmed':'No rows ready to confirm';if(!alliancesReady())$('extract-status').textContent='Confirm the participating alliances above before matching players.';
  const confirmed=pageConfirmed(currentPage),indicator=$('page-state');
  indicator.className=`review-indicator ${confirmed?'approved':'pending'}`;
  indicator.firstChild.nodeValue=confirmed?'✓':'●';
@@ -527,7 +527,19 @@ $('reject-review').onclick=async()=>{
  catch(error){status(error.message);}finally{button.disabled=false;}
 };
 $('filter').oninput=renderRows;$('add').onclick=()=>{draft.rows.push(normalizeRow({rank:0,name:'New row',alliance:'',score:'0',page:currentPage,playerKey:'',excluded:false}));markChanged();selected=draft.rows.length-1;renderRows();selectRow(selected);};
-$('confirm-page').onclick=()=>{if(!alliancesReady()){status('Confirm the participating alliances first.');return;}for(const row of pageRows()){if(row.excluded)continue;const group=allianceGroups(draft.rows).find(g=>g.key===allianceGroup(row.alliance));if(group&&group.key!=='unknown')row.alliance=group.label;row.playerChecked=!!row.playerKey;row.allianceChecked=!!clean(row.alliance);row.scoreChecked=/^\d{1,12}$/.test(row.score);}markChanged();renderRows();status(pageConfirmed()?'This screenshot page is fully confirmed. Save the review draft to keep the checks.':'Rows without a matched player, alliance or score remain yellow.');};
+$('confirm-page').onclick=()=>{
+ if(!alliancesReady())return;
+ const dialog=el('dialog');dialog.className='r4-match-dialog';dialog.setAttribute('aria-label','Review and confirm page');
+ dialog.append(el('h3','Review & confirm page '+currentPage),el('p','Check each proposed player and score. Selected rows will be linked and confirmed in this draft. Uncheck anything you are unsure about.'));
+ const choices=[];for(const row of pageRows().filter(r=>!r.excluded&&!rowConfirmed(r))){
+  const candidates=candidateCache.get(candidateKey(row))||[],profile=row.playerKey?null:candidates[0];
+  if(!/^\d{1,12}$/.test(row.score)||(!row.playerKey&&!profile)){dialog.append(el('p',(row.name||'Unnamed player')+' — needs an individual match or score correction'));continue;}
+  const label=el('label');label.className='r4-page-confirm-choice';const input=el('input');input.type='checkbox';input.checked=!!row.playerKey||candidates.length===1;
+  const name=row.playerName||profile?.name||row.name;input.setAttribute('aria-label','Confirm '+name);const info=el('span');info.append(el('strong',name+' · '+formatScore(row.score)),el('small',row.alliance+' · Server '+row.allianceServer),el('small','Screenshot: '+row.name+(profile&&candidates.length>1?' · Multiple possible matches — check carefully':'')));label.append(input,info);dialog.append(label);choices.push({row,profile,input});
+ }
+ const feedback=el('p'),cancel=el('button','Cancel'),confirm=el('button','Confirm selected rows');cancel.type=confirm.type='button';cancel.onclick=()=>dialog.close();const update=()=>{const count=choices.filter(x=>x.input.checked).length;confirm.disabled=!count;confirm.textContent='Confirm '+count+' selected row'+(count===1?'':'s');};choices.forEach(x=>x.input.onchange=update);update();
+ confirm.onclick=()=>{let count=0;for(const {row,profile,input} of choices){if(!input.checked)continue;if(profile){row.playerKey=profile.key;row.playerName=profile.name;row.playerAlliance=profile.alliance||'';profileCache.set(profile.key,profile);}row.playerChecked=row.allianceChecked=row.scoreChecked=true;count++;}dialog.close();markChanged();renderRows();status('✓ '+count+' rows confirmed. Save review draft to retain these checks.');};dialog.append(feedback,cancel,confirm);dialog.onclose=()=>dialog.remove();document.body.append(dialog);dialog.showModal();
+};
 $('clear-page').onclick=()=>{for(const row of pageRows()){row.playerChecked=false;row.allianceChecked=false;row.scoreChecked=false;}markChanged();renderRows();status('Confirmation checks cleared for this screenshot page.');};
 $('refresh').onclick=load;
 $('directory-search').onsubmit=searchDirectory;
