@@ -1,6 +1,7 @@
 const TESSERACT_URL='https://cdn.jsdelivr.net/npm/tesseract.js@7.0.0/dist/tesseract.esm.min.js';
 
 const clean=value=>String(value??'').replace(/\s+/g,' ').trim();
+export const cleanOcrName=value=>clean(value).replace(/(\p{Script=Han})\s+(?=\p{Script=Han})/gu,'$1');
 const digits=value=>clean(value).replace(/[^0-9]/g,'');
 
 function wordsFromTsv(tsv){
@@ -28,7 +29,7 @@ export function parseLeaderboardTsv(tsv,{page=1,width,height,includeSlots=false}
   const allianceLine=allianceIndex>=0?middle[allianceIndex]:middle.length>1?middle.at(-1):null;
   const nameLine=middle.find((line,index)=>index!==allianceIndex&&line!==allianceLine);
   if(!scoreText||!nameLine)continue;
-  rows.push({...includeSlots?{slot}: {},rank:Number(rankText)||0,name:clean(nameLine.text),alliance:clean(allianceLine?.text||''),score:scoreText,page,playerKey:'',playerName:'',playerAlliance:'',playerChecked:false,allianceChecked:false,scoreChecked:false,excluded:false,ocrConfidence:Math.round(Math.min(nameLine.confidence,allianceLine?.confidence??nameLine.confidence))});
+  rows.push({...includeSlots?{slot}: {},rank:Number(rankText)||0,name:cleanOcrName(nameLine.text),alliance:clean(allianceLine?.text||''),score:scoreText,page,playerKey:'',playerName:'',playerAlliance:'',playerChecked:false,allianceChecked:false,scoreChecked:false,excluded:false,ocrConfidence:Math.round(Math.min(nameLine.confidence,allianceLine?.confidence??nameLine.confidence))});
  }
  return rows;
 }
@@ -55,12 +56,21 @@ function cropLeaderboard(image){
  context.putImageData(pixels,0,0);return canvas;
 }
 
+function nameCanvas(image,slot){
+ const top=Math.round(image.naturalHeight*.245),rowHeight=(Math.round(image.naturalHeight*.805)-top)/7;
+ const canvas=document.createElement('canvas'),width=image.naturalWidth*.43,height=rowHeight*.34;
+ canvas.width=Math.round(width*3);canvas.height=Math.round(height*3);
+ // Isolate the name line at original colour: thresholding can erase fine CJK strokes.
+ const ctx=canvas.getContext('2d');ctx.drawImage(image,image.naturalWidth*.327,top+rowHeight*(slot+.20),width,height,0,0,canvas.width,canvas.height);return canvas;
+}
+
 function loadImage(url){return new Promise((resolve,reject)=>{const image=new Image();image.crossOrigin='anonymous';image.onload=()=>resolve(image);image.onerror=()=>reject(Error('The private screenshot could not be opened for OCR.'));image.src=url;});}
 
 export async function createLeaderboardOcr(onProgress=()=>{}){
  const module=await import(TESSERACT_URL);
  const {createWorker,PSM}=module.default??module;
  if(typeof createWorker!=='function'||!PSM)throw Error('The OCR library could not initialize. Reload this page and try again.');
+ let nameWorker;
  const worker=await createWorker(['eng','vie','chi_sim','chi_tra'],1,{logger:event=>{if(event?.status)onProgress(event.status,Math.round((event.progress||0)*100));}});
  await worker.setParameters({tessedit_pageseg_mode:PSM.SPARSE_TEXT,preserve_interword_spaces:'1',user_defined_dpi:'300'});
  return {
@@ -73,8 +83,18 @@ export async function createLeaderboardOcr(onProgress=()=>{}){
      rows=recoverRanks(rows,observations);
     }finally{await worker.setParameters({tessedit_char_whitelist:'',tessedit_pageseg_mode:PSM.SPARSE_TEXT});}
    }
+   const chineseRows=rows.filter(row=>/\p{Script=Han}/u.test(row.name));
+   if(chineseRows.length){
+    nameWorker??=await createWorker(['chi_tra','chi_sim','eng','vie'],1);
+    await nameWorker.setParameters({tessedit_pageseg_mode:PSM.SINGLE_LINE,preserve_interword_spaces:'0',user_defined_dpi:'300'});
+    for(const row of chineseRows){
+     onProgress('Reading Chinese name closely',Math.round(row.slot/7*100));
+     const pass=await nameWorker.recognize(nameCanvas(image,row.slot)),name=cleanOcrName(pass.data.text);
+     if(name&&/\p{Script=Han}/u.test(name)&&pass.data.confidence>=60){row.name=name;row.ocrConfidence=Math.round(pass.data.confidence);}
+    }
+   }
    return rows.map(({slot,...row})=>row);
   },
-  terminate:()=>worker.terminate()
+  terminate:()=>Promise.all([worker.terminate(),nameWorker?.terminate()])
  };
 }
