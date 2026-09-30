@@ -14,7 +14,8 @@ function wordsFromTsv(tsv){
 function groupLines(words){
  const groups=new Map();
  for(const word of words){const key=[word.block_num,word.par_num,word.line_num].join(':');if(!groups.has(key))groups.set(key,[]);groups.get(key).push(word);}
- return [...groups.values()].map(items=>{items.sort((a,b)=>a.left-b.left);return {text:clean(items.map(item=>item.text).join(' ')),left:Math.min(...items.map(item=>item.left)),top:Math.min(...items.map(item=>item.top)),right:Math.max(...items.map(item=>item.left+item.width)),bottom:Math.max(...items.map(item=>item.top+item.height)),confidence:items.reduce((sum,item)=>sum+Math.max(0,item.conf),0)/items.length};}).sort((a,b)=>a.top-b.top||a.left-b.left);
+ return [...groups.values()].map(items=>{// TSV word order preserves right-to-left and mixed-script reading order.
+ items.sort((a,b)=>Number(a.word_num)-Number(b.word_num));return {text:clean(items.map(item=>item.text).join(' ')),left:Math.min(...items.map(item=>item.left)),top:Math.min(...items.map(item=>item.top)),right:Math.max(...items.map(item=>item.left+item.width)),bottom:Math.max(...items.map(item=>item.top+item.height)),confidence:items.reduce((sum,item)=>sum+Math.max(0,item.conf),0)/items.length};}).sort((a,b)=>a.top-b.top||a.left-b.left);
 }
 
 export function parseLeaderboardTsv(tsv,{page=1,width,height,includeSlots=false}){
@@ -70,8 +71,8 @@ export async function createLeaderboardOcr(onProgress=()=>{}){
  const module=await import(TESSERACT_URL);
  const {createWorker,PSM}=module.default??module;
  if(typeof createWorker!=='function'||!PSM)throw Error('The OCR library could not initialize. Reload this page and try again.');
- let nameWorker;
- const worker=await createWorker(['eng','vie','chi_sim','chi_tra'],1,{logger:event=>{if(event?.status)onProgress(event.status,Math.round((event.progress||0)*100));}});
+ let nameWorker,arabicWorker,detailWorker;
+ const worker=await createWorker(['eng','vie','ara','chi_sim','chi_tra'],1,{logger:event=>{if(event?.status)onProgress(event.status,Math.round((event.progress||0)*100));}});
  await worker.setParameters({tessedit_pageseg_mode:PSM.SPARSE_TEXT,preserve_interword_spaces:'1',user_defined_dpi:'300'});
  return {
   async read(url,page){
@@ -82,6 +83,23 @@ export async function createLeaderboardOcr(onProgress=()=>{}){
      for(const word of wordsFromTsv(pass.data.tsv)){const n=Number(digits(word.text)),slot=Math.floor((word.top+word.height/2)/ranks.height*7);if(word.conf>=65&&n>0&&n<=10000&&slot>=0&&slot<7)observations[slot]=observations[slot]===undefined?n:0;}
      rows=recoverRanks(rows,observations);
     }finally{await worker.setParameters({tessedit_char_whitelist:'',tessedit_pageseg_mode:PSM.SPARSE_TEXT});}
+   }
+   // Read every name in isolation, including names the page pass misread as Latin.
+   detailWorker??=await createWorker(['eng','vie','ara','chi_tra','chi_sim'],1);
+   await detailWorker.setParameters({tessedit_pageseg_mode:PSM.SINGLE_LINE,preserve_interword_spaces:'0',user_defined_dpi:'300'});
+   for(const row of rows){
+    onProgress('Reading individual names',Math.round(row.slot/7*100));
+    const pass=await detailWorker.recognize(nameCanvas(image,row.slot)),name=cleanOcrName(pass.data.text);
+    if(name&&pass.data.confidence>=60){row.name=name;row.ocrConfidence=Math.round(pass.data.confidence);}
+   }
+   const arabicRows=rows.filter(row=>/\p{Script=Arabic}/u.test(row.name));
+   if(arabicRows.length){
+    arabicWorker??=await createWorker(['ara','eng'],1);
+    await arabicWorker.setParameters({tessedit_pageseg_mode:PSM.SINGLE_LINE,preserve_interword_spaces:'0',user_defined_dpi:'300'});
+    for(const row of arabicRows){
+     const pass=await arabicWorker.recognize(nameCanvas(image,row.slot)),name=cleanOcrName(pass.data.text);
+     if(name&&/\p{Script=Arabic}/u.test(name)&&pass.data.confidence>=60){row.name=name;row.ocrConfidence=Math.round(pass.data.confidence);}
+    }
    }
    const chineseRows=rows.filter(row=>/\p{Script=Han}/u.test(row.name));
    if(chineseRows.length){
@@ -95,6 +113,6 @@ export async function createLeaderboardOcr(onProgress=()=>{}){
    }
    return rows.map(({slot,...row})=>row);
   },
-  terminate:()=>Promise.all([worker.terminate(),nameWorker?.terminate()])
+  terminate:()=>Promise.all([worker.terminate(),nameWorker?.terminate(),arabicWorker?.terminate(),detailWorker?.terminate()])
  };
 }
