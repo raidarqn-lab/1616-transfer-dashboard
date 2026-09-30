@@ -1,4 +1,4 @@
-import {setupSeasonEvents} from './season-events.js?v=attendance-direct-20260930';
+import {setupSeasonEvents} from './season-events.js?v=attendance-finalize-20260930';
 import {createWebsiteProfile} from './website-profile.js?v=avatars-20260928';
 import './site-tutorial.js?v=20260928';
 import {setupStorm} from './storm-planner.js?v=rotation-v2-20260928';

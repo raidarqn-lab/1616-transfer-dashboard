@@ -28,7 +28,7 @@ export function createBountyHandler({memberIdentity,staffIdentity,store,put,sign
     const slot=await store('slot',meta);await put(slot.path,raw,meta.mime);await store('uploaded',meta);
     return reply(200,{ok:true,sequence});
    }
-   if(!type.startsWith('application/json')||size>65536)return reply(400,{error:'Invalid request.'});
+   if(!type.startsWith('application/json')||size>(staff?1048576:65536))return reply(400,{error:'Invalid request.'});
    const body=JSON.parse(new TextDecoder().decode(bytes));
    if(!body||typeof body!=='object'||Array.isArray(body))return reply(400,{error:'Invalid request.'});
    const allowed=staff?['review-list','evidence','profile','player-search','review-draft','save-review']:['list','reserve','commit','evidence'];
