@@ -90,11 +90,11 @@ export async function createLeaderboardOcr(onProgress=()=>{}){
    for(const row of rows){
     onProgress('Reading individual names',Math.round(row.slot/7*100));
     const pass=await detailWorker.recognize(nameCanvas(image,row.slot)),name=cleanOcrName(pass.data.text);
-    if(name&&pass.data.confidence>=60){row.name=name;row.ocrConfidence=Math.round(pass.data.confidence);}
+    if(name&&/[\p{Script=Arabic}\p{Script=Han}]/u.test(name)&&pass.data.confidence>=60){row.name=name;row.ocrConfidence=Math.round(pass.data.confidence);}
    }
    const arabicRows=rows.filter(row=>/\p{Script=Arabic}/u.test(row.name));
    if(arabicRows.length){
-    arabicWorker??=await createWorker(['ara','eng'],1);
+    arabicWorker??=await createWorker(['ara'],1);
     await arabicWorker.setParameters({tessedit_pageseg_mode:PSM.SINGLE_LINE,preserve_interword_spaces:'0',user_defined_dpi:'300'});
     for(const row of arabicRows){
      const pass=await arabicWorker.recognize(nameCanvas(image,row.slot)),name=cleanOcrName(pass.data.text);
