@@ -61,7 +61,7 @@ export async function createLeaderboardOcr(onProgress=()=>{}){
  const module=await import(TESSERACT_URL);
  const {createWorker,PSM}=module.default??module;
  if(typeof createWorker!=='function'||!PSM)throw Error('The OCR library could not initialize. Reload this page and try again.');
- const worker=await createWorker(['eng','vie'],1,{logger:event=>{if(event?.status)onProgress(event.status,Math.round((event.progress||0)*100));}});
+ const worker=await createWorker(['eng','vie','chi_sim','chi_tra'],1,{logger:event=>{if(event?.status)onProgress(event.status,Math.round((event.progress||0)*100));}});
  await worker.setParameters({tessedit_pageseg_mode:PSM.SPARSE_TEXT,preserve_interword_spaces:'1',user_defined_dpi:'300'});
  return {
   async read(url,page){

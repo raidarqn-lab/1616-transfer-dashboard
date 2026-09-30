@@ -4,7 +4,7 @@ import {loadTrainHistory} from './train-history.js?v=history-20260927';
 import {renderReports} from './player-reports.js?v=report-polish-20260926';
 import {user} from './live-session.js';
 import {bountyConnection as config} from './nova-bounty-config.js';
-import {createLeaderboardOcr} from './nova-bounty-ocr.js?v=rank-pass-20260929';
+import {createLeaderboardOcr} from './nova-bounty-ocr.js?v=chinese-20260929';
 
 const $=id=>document.getElementById(id);
 const el=(tag,text)=>{const node=document.createElement(tag);if(text!==undefined)node.textContent=text;return node;};
@@ -485,6 +485,15 @@ async function load(){
 async function saveDraft(){if(!validReward())throw Error('Enter whole bounty points from 0 to 10,000.');draft=await call({action:'save-review',batchId:active.id,revision:draft.revision,rows:draft.rows,rewardPoints:rewardPoints(),rewardRevision:draft.rewardRevision??0});draft.rows=draft.rows.map(normalizeRow);dirty=false;renderRows();return draft;}
 $('bounty-points').oninput=()=>{dirty=true;renderSummary();};
 $('save').onclick=async()=>{try{$('save').disabled=true;await saveDraft();status('Private R4 review draft saved. Scores and rewards remain unpublished.');}catch(error){status(error.message);}finally{$('save').disabled=false;}};
+const rereadNames=el('button','Re-read unmatched names on this page');rereadNames.type='button';rereadNames.id='reread-names';$('extract').after(rereadNames);
+rereadNames.onclick=async()=>{
+ if(extracting||!active||!draft)return;const batch=active,review=draft,page=currentPage,targets=pageRows().filter(r=>!r.playerKey&&!r.excluded);if(!targets.length){status('This page has no unmatched names to re-read.');return;}
+ extracting=true;rereadNames.disabled=true;$('extract').disabled=true;let ocr;
+ try{ocr=await createLeaderboardOcr((stage,percent)=>{$('extract-status').textContent='Reading names · '+stage+' '+percent+'%';});const reads=await ocr.read(await evidenceUrl(page),page);if(active!==batch||draft!==review||currentPage!==page)throw Error('Page changed. Return to the page and try again.');let updated=0;
+ for(const row of targets){const matches=reads.filter(r=>row.rank>0&&r.rank===row.rank);const possible=matches.length===1?matches:reads.filter(r=>r.score===row.score);if(possible.length!==1||!possible[0].name)continue;row.name=possible[0].name;row.playerChecked=false;updated++;}
+ candidateCache.clear();if(updated)markChanged();renderRows();status(updated+' unmatched names re-read. Scores and existing player matches kept. Save review draft to retain the names.');suggestPageMatches();
+ }catch(error){status('Names could not be re-read: '+error.message);}finally{try{await ocr?.terminate();}catch{}extracting=false;rereadNames.disabled=false;$('extract').disabled=false;}
+};
 $('extract').onclick=async()=>{
  if(extracting||!active)return;if(draft.rows.length&&!confirm('Replace the current draft rows with new screenshot suggestions? Unsaved matching work will be lost.'))return;
  extracting=true;$('extract').disabled=true;const suggestions=[];let ocr,readingPage=0;const batch=active,reviewDraft=draft,emptyPages=[];$('extract-status').textContent='Loading OCR engine and language files. The first run may take longer…';
