@@ -574,3 +574,7 @@ window.addEventListener('nova-initiatives-open',loadAdminIdentities);window.addE
 
 window.addEventListener('nova-train-player',event=>showDirectoryProfile(event.detail,'trains'));
 
+
+
+import {attachEnhancedNames} from './enhanced-name-review.js?v=20261001';
+attachEnhancedNames({after:rereadNames,call,getContext:()=>active&&draft&&!extracting?{batchId:active.id,page:currentPage,draft,rows:pageRows()}:null,onApply:count=>{candidateCache.clear();markChanged();renderRows();status(count+' screenshot names updated. Player matches and scores kept; save the review draft to retain these readings.');suggestPageMatches();}});
