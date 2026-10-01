@@ -1,3 +1,4 @@
+import {findPartialMatches,mergePartialMatches} from './partial-name-matches.js?v=partial-20261001';
 import {planPageConfirmation} from './page-confirmation.js?v=20261001';
 import {assessCandidates} from './match-confidence.js?v=20261001';
 import {renderSeasonHistory} from './season-events.js?v=20260930';
@@ -105,12 +106,29 @@ function renderPages(){
  }
 }
 const candidateCache=new Map();let matchingRequest=0;
+async function partialSuggestions(row,batchId,across=false){
+ return findPartialMatches({name:row.name,inScope:p=>across||(allianceGroup(p.alliance)===allianceGroup(row.alliance)&&String(p.server)===String(row.allianceServer)),search:async fragment=>{
+ const results=await Promise.allSettled([call({action:'player-search',query:fragment}),call({action:'player-search',batchId,allianceScope:!across,matchRows:[{name:fragment,alliance:row.alliance,server:row.allianceServer,score:row.score,rank:row.rank}]})]);
+ const directory=results[0].status==='fulfilled'&&Array.isArray(results[0].value)?results[0].value:[];
+ const matches=results[1].status==='fulfilled'?results[1].value.rows?.[0]?.candidates||[]:[];
+ if(results.every(r=>r.status==='rejected'))throw Error('Partial name search unavailable');
+ return [...new Map([...directory,...matches].map(p=>[p.key,p])).values()];
+ }});
+}
 function candidateKey(row){return JSON.stringify([active?.id,row.name,row.alliance,row.allianceServer,row.score,row.rank]);}
 async function suggestPageMatches(){
  if(!active||!draft||!alliancesReady())return;const request=++matchingRequest,batch=active,page=currentPage,rows=pageRows().filter(r=>!r.playerKey&&!r.excluded);if(!rows.length)return;
  const pending=rows.filter(row=>!candidateCache.has(candidateKey(row)));if(!pending.length){renderRows();return;}
  $('extract-status').textContent='Comparing this page with saved names, aliases, alliances and same-event results…';
  try{for(let offset=0;offset<pending.length;offset+=10){const chunk=pending.slice(offset,offset+10),keys=chunk.map(candidateKey);const data=await call({action:'player-search',batchId:batch.id,allianceScope:true,matchRows:chunk.map(({name,alliance,allianceServer,score,rank})=>({name,alliance,server:allianceServer,score,rank}))});if(request!==matchingRequest||active!==batch||currentPage!==page)return;if(!Array.isArray(data.rows))throw Error('Matching service is not available yet.');for(const item of data.rows)candidateCache.set(keys[item.index],(item.candidates||[]).filter(p=>allianceGroup(p.alliance)===allianceGroup(chunk[item.index].alliance)&&String(p.server)===String(chunk[item.index].allianceServer)));}
+ for(const row of pending){
+  const key=candidateKey(row),candidates=candidateCache.get(key)||[];
+  if(!candidates.some(p=>Number(p.nameSimilarity)===1&&!p.eventConflict)){
+   const partials=await partialSuggestions(row,batch.id);
+   if(request!==matchingRequest||active!==batch||currentPage!==page)return;
+   candidateCache.set(key,mergePartialMatches(candidates,partials));
+  }
+ }
  renderRows();$('extract-status').textContent='Directory suggestions ready. Select the correct player; matches remain unconfirmed until reviewed.';
  }catch(error){if(request===matchingRequest)$('extract-status').textContent='Could not load directory suggestions: '+error.message+' Manual search is still available.';}
 }
@@ -147,7 +165,7 @@ function renderRows(){
 
  const exclude=el('button',row.excluded?'Include row':'Exclude duplicate / pinned row');exclude.type='button';exclude.onclick=()=>{row.excluded=!row.excluded;markChanged();renderRows();};details.append(exclude);
  if(!row.playerKey){const candidates=candidateCache.get(candidateKey(row))||[];for(const profile of candidates){const pick=el('button','Use '+profile.name+' · '+profile.alliance+' · '+profile.strength);pick.type='button';pick.onclick=()=>attachCandidate(row,profile);details.append(pick);}}
- const state=el('span',row.excluded?'Excluded':rowConfirmed(row)?'✓ Confirmed':!alliancesReady()?'Confirm alliances to start':row.playerKey?'Ready to confirm':'Choose a player first');state.className='r4-row-state '+(rowConfirmed(row)?'is-confirmed':row.playerKey?'is-ready':'is-unmatched');state.setAttribute('role','status');actions.append(state,confirm,more);const playerCell=el('div');playerCell.className='r4-player-suggestions';playerCell.append(player);const reading=el('small','Screenshot text: '+(row.name||'Unreadable'));reading.dir='auto';playerCell.append(reading);if(row.playerKey){const remove=el('button','Remove match');remove.type='button';remove.className='r4-remove-match';remove.setAttribute('aria-label','Remove match for '+(row.playerName||row.name));remove.onclick=()=>{const previous=row.playerName||row.name;row.playerKey='';row.playerName='';row.playerAlliance='';row.checked=false;resetConfirmations(row,'playerChecked','allianceChecked','scoreChecked');markChanged();renderRows();status('Match removed for '+previous+'. Original screenshot name and score retained. Save review draft to keep this change.');};playerCell.append(remove);}if(!row.playerKey&&!row.excluded&&alliancesReady()){const candidates=candidateCache.get(candidateKey(row));if(candidates){const assessment=assessCandidates(candidates),best=assessment.candidate;playerCell.append(el('small',assessment.label));if(best){const suggestion=el('button','Compare '+best.name);suggestion.type='button';suggestion.className='r4-suggested-player';suggestion.setAttribute('aria-label','Compare possible player: '+best.name);suggestion.onclick=()=>selectRow(index);playerCell.append(suggestion);}}else playerCell.append(el('small','Finding player suggestions…'));}line.append(alliance,playerCell,score,actions);data.append(line,details);tr.append(data);tbody.append(tr);
+ const state=el('span',row.excluded?'Excluded':rowConfirmed(row)?'✓ Confirmed':!alliancesReady()?'Confirm alliances to start':row.playerKey?'Ready to confirm':'Choose a player first');state.className='r4-row-state '+(rowConfirmed(row)?'is-confirmed':row.playerKey?'is-ready':'is-unmatched');state.setAttribute('role','status');actions.append(state,confirm,more);const playerCell=el('div');playerCell.className='r4-player-suggestions';playerCell.append(player);const reading=el('small','Screenshot text: '+(row.name||'Unreadable'));reading.dir='auto';playerCell.append(reading);if(row.playerKey){const remove=el('button','Remove match');remove.type='button';remove.className='r4-remove-match';remove.setAttribute('aria-label','Remove match for '+(row.playerName||row.name));remove.onclick=()=>{const previous=row.playerName||row.name;row.playerKey='';row.playerName='';row.playerAlliance='';row.checked=false;resetConfirmations(row,'playerChecked','allianceChecked','scoreChecked');markChanged();renderRows();status('Match removed for '+previous+'. Original screenshot name and score retained. Save review draft to keep this change.');};playerCell.append(remove);}if(!row.playerKey&&!row.excluded&&alliancesReady()){const candidates=candidateCache.get(candidateKey(row));if(candidates){const assessment=assessCandidates(candidates),best=assessment.candidate;playerCell.append(el('small',assessment.label));for(const partial of candidates.filter(p=>p.partialMatch).slice(0,3)){const option=el('button','Partial “'+partial.matchedFragment+'” · Compare '+partial.name);option.type='button';option.className='r4-suggested-player';option.onclick=()=>selectRow(index);playerCell.append(option);}if(best){const suggestion=el('button','Compare '+best.name);suggestion.type='button';suggestion.className='r4-suggested-player';suggestion.setAttribute('aria-label','Compare possible player: '+best.name);suggestion.onclick=()=>selectRow(index);playerCell.append(suggestion);}}else playerCell.append(el('small','Finding player suggestions…'));}line.append(alliance,playerCell,score,actions);data.append(line,details);tr.append(data);tbody.append(tr);
  });
  if(!visible){const tr=el('tr'),td=el('td','No rows on this page match.');tr.append(td);tbody.append(tr);}renderSummary();
 }
@@ -449,7 +467,8 @@ function selectRow(index){
    if(version!==searchVersion||!results.isConnected||!dialog.open)return;
    const found=directory.status==='fulfilled'&&Array.isArray(directory.value)?directory.value:[];
    const suggestions=matching.status==='fulfilled'&&Array.isArray(matching.value.rows)?matching.value.rows[0]?.candidates||[]:[];
-   const players=[...new Map([...found,...suggestions].filter(p=>searchOtherAlliances||(allianceGroup(p.alliance)===allianceGroup(row.alliance)&&(!row.allianceServer||String(p.server)===String(row.allianceServer)))).map(p=>[p.key,p])).values()];results.replaceChildren();
+   const partials=suggestions.some(p=>Number(p.nameSimilarity)===1&&!p.eventConflict)?[]:await partialSuggestions({...row,name:query},batchId,searchOtherAlliances);if(version!==searchVersion||!dialog.open)return;
+   const players=[...new Map(mergePartialMatches([...found,...suggestions],partials).filter(p=>searchOtherAlliances||(allianceGroup(p.alliance)===allianceGroup(row.alliance)&&(!row.allianceServer||String(p.server)===String(row.allianceServer)))).map(p=>[p.key,p])).values()];results.replaceChildren();
    if(searchOtherAlliances)results.append(el('p','Showing All Contacts across alliances and servers. Check the profile carefully: a player may have moved since this screenshot.'));
    if(matching.status==='rejected'||!Array.isArray(matching.value?.rows))results.append(el('p','Similar-name suggestions could not load. Search again to retry; any exact results are shown below.'));
    if(directory.status==='rejected')results.append(el('p','Exact directory search could not load. Any similar-name suggestions are shown below.'));
@@ -458,6 +477,7 @@ function selectRow(index){
     const card=el('article');card.className='r4-match-card';
     const identity=el('div');identity.className='r4-match-identity';identity.append(el('strong',profile.name),el('span',(profile.alliance||'Alliance unknown')+' · Server '+(profile.server||'unknown')+(profile.strength?' · '+profile.strength:'')));
     if(allianceGroup(profile.alliance)!==allianceGroup(row.alliance)||String(profile.server)!==String(row.allianceServer))identity.append(el('small','Different saved alliance or server — verify before selecting'));
+    if(profile.partialMatch)identity.append(el('small','Partial screenshot name: “'+profile.matchedFragment+'” — verify before choosing'));
     if(profile.matchedName&&profile.matchedName!==profile.name)identity.append(el('small','Matched previous name / alias: '+profile.matchedName));
     const actions=el('div');actions.className='r4-match-card-actions';
     const view=el('button','View profile');view.type='button';view.setAttribute('aria-label','View profile: '+profile.name);view.onclick=event=>{event.preventDefault();event.stopPropagation();showDirectoryProfile({...profile});};
