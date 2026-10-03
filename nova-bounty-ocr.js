@@ -72,7 +72,7 @@ export async function createLeaderboardOcr(onProgress=()=>{}){
  const {createWorker,PSM}=module.default??module;
  if(typeof createWorker!=='function'||!PSM)throw Error('The OCR library could not initialize. Reload this page and try again.');
  let nameWorker,arabicWorker,detailWorker;
- const worker=await createWorker(['eng','vie','ara','chi_sim','chi_tra'],1,{logger:event=>{if(event?.status)onProgress(event.status,Math.round((event.progress||0)*100));}});
+ const worker=await createWorker(['eng','vie','ara','chi_sim','chi_tra','jpn','kor'],1,{logger:event=>{if(event?.status)onProgress(event.status,Math.round((event.progress||0)*100));}});
  await worker.setParameters({tessedit_pageseg_mode:PSM.SPARSE_TEXT,preserve_interword_spaces:'1',user_defined_dpi:'300'});
  return {
   async read(url,page){
@@ -85,12 +85,12 @@ export async function createLeaderboardOcr(onProgress=()=>{}){
     }finally{await worker.setParameters({tessedit_char_whitelist:'',tessedit_pageseg_mode:PSM.SPARSE_TEXT});}
    }
    // Read every name in isolation, including names the page pass misread as Latin.
-   detailWorker??=await createWorker(['eng','vie','ara','chi_tra','chi_sim'],1);
+   detailWorker??=await createWorker(['eng','vie','ara','chi_tra','chi_sim','jpn','kor'],1);
    await detailWorker.setParameters({tessedit_pageseg_mode:PSM.SINGLE_LINE,preserve_interword_spaces:'0',user_defined_dpi:'300'});
    for(const row of rows){
     onProgress('Reading individual names',Math.round(row.slot/7*100));
     const pass=await detailWorker.recognize(nameCanvas(image,row.slot)),name=cleanOcrName(pass.data.text);
-    if(name&&/[\p{Script=Arabic}\p{Script=Han}]/u.test(name)&&pass.data.confidence>=60){row.name=name;row.ocrConfidence=Math.round(pass.data.confidence);}
+    if(name&&/[\p{Script=Arabic}\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Hangul}]/u.test(name)&&pass.data.confidence>=60){row.name=name;row.ocrConfidence=Math.round(pass.data.confidence);}
    }
    const arabicRows=rows.filter(row=>/\p{Script=Arabic}/u.test(row.name));
    if(arabicRows.length){
