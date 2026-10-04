@@ -1,0 +1,282 @@
+const messages=new Map([
+ ['Only the portal owner can publish Toolkit rosters',[403,'Only the portal owner can publish Toolkit rosters.']],
+ ['No dated Toolkit roster published for this alliance',[404,'No dated Toolkit roster has been published for this alliance and server.']],
+ ['Different source data already exists for this retrieval date',[409,'A different export is already saved for this retrieval date. Retrieve the roster again in Toolkit.']],
+ ['Invalid roster export',[422,'Choose a complete Toolkit roster export. Nothing has been published.']],
+ ['Invalid roster dates or count',[422,'The roster date or member count is invalid. Export the alliance again.']],
+ ['Invalid roster identities',[422,'This export contains incomplete or repeated player identities. Export the alliance again.']],
+ ['Access denied',[403,'Your signed-in account does not have permission for this action. Your draft is unchanged.']],
+ ['Review changed; reload',[409,'Another saved version of this review exists. Your edits are still on this page. Open the saved review in another tab to compare before reloading.']],
+ ['Bounty reward changed; reload review',[409,'The bounty reward changed while this review was open. Your edits are still on this page. Refresh the saved review before approving.']],
+ ['Missing batch',[404,'This submission could not be found. Refresh the review queue.']],
+ ['Invalid action',[409,'This submission is no longer available for that action. Refresh its status.']],
+ ['Submission is no longer pending',[409,'This submission has already been reviewed. Refresh the queue to see its result.']],
+ ['Invalid rows',[422,'The draft must contain no more than 1,000 rows. Split larger screenshot sets.']],
+ ['Invalid row',[422,'A row has an invalid score, screenshot page or leaderboard position. Correct the highlighted row before saving.']],
+ ['Invalid player',[422,'A selected player no longer exists in All Contacts. Remove that match and choose the correct profile.']],
+ ['Duplicate player or rank',[422,'The same player or leaderboard position appears more than once. Exclude the overlapping screenshot rows before approving.']],
+ ['Every included row must be confirmed',[422,'Some included rows still need a player, valid score or confirmation. Finish those rows before approving.']],
+ ['No reviewed rows',[422,'Read the screenshots and save the review before approving.']],
+ ['Missing screenshots',[422,'Some screenshots have not finished uploading. Retry the upload before submitting.']],
+ ['Bounty closed',[409,'This bounty is closed for submissions. Select an open bounty or ask leadership to reopen it.']],
+ ['Daily limit',[429,'The daily submission limit has been reached. Try again after the limit resets.']],
+ ['Request conflict',[409,'This upload was already started with different files. Close the form and start a new submission.']],
+]);
+const validation=new Set(['A linked player no longer exists','Unfinished rows cannot be confirmed','Review note is too long','The screenshot set is incomplete. Upload the missing screenshots before approval','Every screenshot must be reviewed, including duplicate pages','Resolve the conflicting screenshot readings before approval','Confirm the event alliances and servers before approval','A different score is already published for this player and event. Resolve the published result before approving another submission','No confirmed player rows were found','This bounty type needs a review template before approval','A rejection note is required','Invalid bounty points','Open a pending submission before creating a player.','Enter a player name, alliance and valid server, then confirm creation.']);
+export function bountyServiceError(data,status=500){
+ const known=messages.get(data?.message),issue=known||(validation.has(data?.message)?[422,data.message]:data?.code==='23505'?[409,'This result already exists. Refresh the review before publishing it again.']:data?.code==='57014'?[503,'The request took too long. Your draft is kept. Wait a moment and retry.']:null);
+ const error=Error(issue?.[1]||'The bounty service could not complete this request. Your draft is kept. Retry shortly.');
+ error.httpStatus=issue?.[0]||(status===429?429:503);error.memberSafe=true;return error;
+}
+export function responseError(error){
+ if(['unauthorized','Please sign in again.'].includes(error?.message))return {status:401,message:'Your sign-in expired. Sign in again in another tab, then retry here. Your unsaved review is still on this page.'};
+ if(error?.name==='TimeoutError'||error?.name==='AbortError')return {status:504,message:'The request timed out. Your draft is kept. Retry when the connection is ready.'};
+ return {status:error?.httpStatus||400,message:error?.memberSafe?error.message:null};
+}
+
+// Server-side orchestration. Never import toolkit credentials into browser code.
+export class RosterRefreshError extends Error {
+ constructor(code,message){super(message);this.code=code;}
+}
+export function validateAllianceSelection(selections){
+ if(!Array.isArray(selections)||selections.length!==2)throw new RosterRefreshError('INVALID_ALLIANCES','Select both alliances and their servers.');
+ const keys=new Set();
+ return selections.map(({server,tag})=>{
+  server=Number(server);tag=String(tag??'').trim();
+  if(!Number.isInteger(server)||server<1||!tag||tag.length>100||/[\u0000-\u001f\u007f]/u.test(tag))throw new RosterRefreshError('INVALID_ALLIANCES','Select an alliance tag and a valid server.');
+  const key=server+':'+tag.toLocaleLowerCase('en');
+  if(keys.has(key))throw new RosterRefreshError('DUPLICATE_ALLIANCE','Choose two different alliances.');
+  keys.add(key);return {server,tag};
+ });
+}
+export function validateRoster(result,selection){
+ const {server,tag}=selection;
+ if(result?.dataset!=='alliance-roster'||result?.effectiveContext?.warzone!==server||result?.effectiveContext?.alliance!==tag||!Array.isArray(result.rows)||result.reportedCount!==result.rows.length||result.rows.length>10000||!Number.isFinite(Date.parse(result.retrievedAt))||!/^[a-f0-9]{64}$/i.test(result.responseSha256??''))throw new RosterRefreshError('INVALID_ROSTER','LW Toolkit returned an unexpected roster. Matching has not started.');
+ const ids=new Set();
+ const members=result.rows.map(row=>{
+  const sameServer=row.warzone===server;
+  const hasServerContext=row.rosterWarzone!==undefined||row.serverContextMatches!==undefined;
+  const flags=row.qualityFlags??[];
+  if(typeof row.uid!=='string'||!/^\d+$/.test(row.uid)||ids.has(row.uid)||typeof row.name!=='string'||!row.name.trim()||!Number.isInteger(row.warzone)||row.warzone<1||row.alliance!==tag||!Array.isArray(flags)||flags.some(flag=>typeof flag!=='string')||
+   (hasServerContext&&(row.rosterWarzone!==server||row.serverContextMatches!==sameServer))||
+   (!sameServer&&(!hasServerContext||!flags.includes('ROSTER_SERVER_CONFLICT')))||
+   (sameServer&&flags.includes('ROSTER_SERVER_CONFLICT')))throw new RosterRefreshError('INVALID_ROSTER','LW Toolkit returned inconsistent player identities. Matching has not started.');
+  ids.add(row.uid);
+  // server/tag identify the roster used for matching. Keep the member's
+  // separate source server claim; never turn a disagreement into a move.
+  return {uid:row.uid,name:row.name,server,tag,reportedServer:row.warzone,rosterServer:server,serverContextMatches:sameServer,qualityFlags:[...flags],membershipObservedAt:row.membershipObservedAt??null};
+ });
+ const serverConflictCount=members.filter(member=>!member.serverContextMatches).length;
+ if(result.serverConflictCount!==undefined&&result.serverConflictCount!==serverConflictCount)throw new RosterRefreshError('INVALID_ROSTER','LW Toolkit returned inconsistent server evidence. Matching has not started.');
+ if(!members.length)throw new RosterRefreshError('EMPTY_ROSTER','LW Toolkit returned no members. Check the alliance and server; an empty response is not a usable matching roster.');
+ return {server,tag,members,serverConflictCount,retrievedAt:result.retrievedAt,sourceTime:result.sourceTime??null,responseSha256:result.responseSha256,coverage:result.coverage,warnings:result.warnings??[]};
+}
+/** authorize must validate the signed-in leader's access to this bounty.
+ * persist must atomically save both rosters and their selection revision. A
+ * failure cannot replace a previously saved snapshot. No source failure is
+ * converted into a contact-directory fallback.
+ */
+export function createRosterRefresher({authorize,readRoster,readNames,persist,now=()=>new Date()}){
+ return async ({actor,batchId,selections,expectedRevision,signal})=>{
+  await authorize(actor,batchId);
+  const selected=validateAllianceSelection(selections);
+  const rosters=[];
+  // Toolkit owns request pacing, authentication refresh and source cooldowns.
+  for(const selection of selected){
+   if(signal?.aborted)throw new RosterRefreshError('CANCELLED','Roster refresh was cancelled.');
+   const result=await readRoster(selection.server,selection.tag,{bypassCache:true,signal});
+   const roster=validateRoster(result,selection);
+   // A partial public board enriches identities; it never replaces membership.
+   // When configured, a failed name read must fail the refresh, not silently
+   // advertise a weekly-only snapshot as a complete current-name refresh.
+   rosters.push(readNames ? enrichRosterNames(roster,await readNames(selection.server,{bypassCache:true,signal})) : {...roster,nameRefreshState:'not-configured'});
+  }
+  const ids=new Set();for(const roster of rosters)for(const member of roster.members){if(ids.has(member.uid))throw new RosterRefreshError('CONFLICTING_ROSTERS','A player appears in both source rosters. Review the roster conflict before matching.');ids.add(member.uid);}
+  return persist({actor,batchId,expectedRevision,rosters,completedAt:now().toISOString()});
+ };
+}
+/** Preserve full weekly membership, joining newer spelling evidence by UID.
+ * Record timestamps are NOT name-change dates. A preferred source spelling is
+ * a matching hint only; persistence must not treat it as a verified rename.
+ */
+export function enrichRosterNames(roster,snapshot){
+ if(snapshot?.dataset!=='players'||snapshot.effectiveContext?.warzone!==roster.server||!Array.isArray(snapshot.players)||!Number.isFinite(Date.parse(snapshot.retrievedAt))||!/^[a-f0-9]{64}$/i.test(snapshot.responseSha256??''))throw new RosterRefreshError('INVALID_NAMES','The latest name source could not be verified. The previous matching roster has been retained.');
+ const byUid=new Map();
+ for(const player of snapshot.players){
+  if(typeof player.uid!=='string'||!/^\d+$/.test(player.uid)||byUid.has(player.uid)||player.warzone!==roster.server||typeof player.name!=='string'||!player.name.trim())throw new RosterRefreshError('INVALID_NAMES','The name source contains conflicting identities. Matching has not started.');
+  byUid.set(player.uid,player);
+ }
+ const members=roster.members.map(member=>{
+  const player=byUid.get(member.uid);
+  if(!player)return {...member,matchingNames:[member.name],nameEvidenceState:'weekly-only'};
+  const sameAlliance=String(player.alliance??'').toLocaleLowerCase('en')===roster.tag.toLocaleLowerCase('en');
+  const recordTime=Date.parse(player.sourceRecordConfirmedAt);
+  const membershipTime=Date.parse(member.membershipObservedAt??roster.sourceTime);
+  const newer=sameAlliance&&Number.isFinite(recordTime)&&Number.isFinite(membershipTime)&&recordTime>membershipTime;
+  return {...member,matchingNames:[...new Set([member.name,player.name])],preferredMatchingName:newer?player.name:member.name,
+   nameEvidenceState:!sameAlliance?'alliance-conflict':newer?'newer-record':'historical-or-undated',
+   nameEvidence:{uid:player.uid,name:player.name,alliance:player.alliance,recordConfirmedAt:player.sourceRecordConfirmedAt??null,retrievedAt:snapshot.retrievedAt,responseSha256:snapshot.responseSha256,timestampMeaning:'source-record-confirmation-not-name-change'}};
+ });
+ return {...roster,members,nameRefreshState:'complete',nameSource:{retrievedAt:snapshot.retrievedAt,sourceTime:snapshot.sourceTime??null,responseSha256:snapshot.responseSha256,coverage:snapshot.coverage??'unknown',warnings:snapshot.warnings??[]},weeklyOnlyCount:members.filter(m=>m.nameEvidenceState==='weekly-only').length};
+}
+/** Exact UID join only. Name similarity never merges or creates contacts. */
+export function linkRosterContacts(roster,contacts){
+ const byUid=new Map();
+ for(const contact of contacts){const uid=contact.sourceUid;if(typeof uid!=='string'||!uid)continue;if(!byUid.has(uid))byUid.set(uid,[]);byUid.get(uid).push(contact);}
+ return roster.members.map(member=>{
+  const found=byUid.get(member.uid)??[];
+  const previousNames=[];const seen=new Set();
+  if(found.length===1)for(const entry of [...(found[0].previousGameNames??[]),...(found[0].aliases??[]),found[0].name]){
+   const name=typeof entry==='string'?entry:entry?.name;
+   if(typeof name!=='string'||!name||name===member.name||seen.has(name))continue;
+   seen.add(name);previousNames.push(entry);
+  }
+  return {...member,contactKey:found.length===1?found[0].key:null,linkState:found.length===1?'linked':found.length?'duplicate-uid':'new-contact',previousNames};
+ });
+}
+
+// Server-only boundary. The actor must come from the verified portal session.
+// The database repeats bounty access checks before returning minimal identities.
+export function createToolkitContactLookup({rpc}) {
+ if(typeof rpc!=='function')throw Error('Toolkit profile lookup is not configured.');
+ return async ({uids,batchId,actor})=>{
+  if(!Array.isArray(uids)||uids.length<1||uids.length>500||uids.some(uid=>typeof uid!=='string'||!/^\d{1,30}$/.test(uid))||
+    typeof batchId!=='string'||!batchId.trim()||typeof actor?.staffEmail!=='string'||!actor.staffEmail.trim())throw Error('Invalid Toolkit profile lookup.');
+  const wanted=new Set(uids);
+  const rows=await rpc('nova_toolkit_contacts',{args:{batchId,staffEmail:actor.staffEmail,uids:[...wanted]}});
+  if(!Array.isArray(rows)||rows.length>1000)throw Error('Toolkit profile links could not be verified.');
+  const keys=new Set();
+  return rows.map(row=>{
+   if(!row||typeof row.key!=='string'||!row.key||keys.has(row.key)||!wanted.has(row.sourceUid)||typeof row.name!=='string'||!row.name.trim())throw Error('Toolkit profile links could not be verified.');
+   keys.add(row.key);
+   const names=key=>{
+    if(!Array.isArray(row[key])||row[key].some(name=>typeof name!=='string'||!name.trim()))throw Error('Toolkit previous names could not be verified.');
+    return [...new Set(row[key])];
+   };
+   // Duplicate UIDs deliberately survive so linkRosterContacts blocks the
+   // identity. Never pick the first profile or join by a similar player name.
+   return {key:row.key,sourceUid:row.sourceUid,name:row.name,aliases:names('aliases'),previousGameNames:names('previousGameNames')};
+  });
+ };
+}
+
+
+// Dated roster exports contain source data only. Credentials never leave Toolkit.
+export function validateRosterExport(input,now=Date.now()) {
+ if(input?.format!=='nova-toolkit-rosters'||input.version!==1||!Array.isArray(input.rosters)||input.rosters.length<1||input.rosters.length>10)throw Error('Choose a Toolkit roster export.');
+ const scopes=new Set();
+ return input.rosters.map(raw=>{
+  const server=raw?.effectiveContext?.warzone,tag=raw?.effectiveContext?.alliance;
+  if(!Number.isInteger(server)||server<1||server>999999||typeof tag!=='string'||!tag.trim()||tag!==tag.trim()||tag.length>100||/[\u0000-\u001f\u007f]/u.test(tag))throw Error('The export has an invalid alliance or server.');
+  const key=server+':'+tag.toLowerCase();if(scopes.has(key))throw Error('The export repeats an alliance.');scopes.add(key);
+  const roster=validateRoster(raw,{server,tag});
+  if(roster.members.some(m=>m.uid.length>30||m.name.length>300||m.qualityFlags.some(f=>f.length>100))||roster.members.length>150||Date.parse(roster.retrievedAt)>now+300000)throw Error('The export has an invalid member count or retrieval date.');
+  // Rebuild an allowlisted source envelope rather than storing arbitrary input.
+  return {dataset:'alliance-roster',effectiveContext:{warzone:server,alliance:tag},reportedCount:roster.members.length,
+   retrievedAt:new Date(roster.retrievedAt).toISOString(),sourceTime:Number.isFinite(Date.parse(raw.sourceTime))?raw.sourceTime:null,
+   responseSha256:roster.responseSha256.toLowerCase(),serverConflictCount:roster.serverConflictCount,
+   coverage:'Dated LW Toolkit source roster; membership observation time may be unknown.',
+   rows:roster.members.map(m=>({uid:m.uid,name:m.name,warzone:m.reportedServer,rosterWarzone:server,serverContextMatches:m.serverContextMatches,alliance:tag,
+    membershipObservedAt:Number.isFinite(Date.parse(m.membershipObservedAt))?m.membershipObservedAt:null,qualityFlags:m.qualityFlags}))};
+ });
+}
+
+export function createDatedRosterProvider({loadSnapshots,contactsForUids,now=()=>Date.now()}) {
+ return async ({selections,batchId,actor})=>{
+  const data=await loadSnapshots({selections,batchId,actor});
+  if(!Array.isArray(data)||data.length!==selections.length)throw Error('A dated Toolkit roster has not been published for every selected alliance.');
+  const records=validateRosterExport({format:'nova-toolkit-rosters',version:1,rosters:data.map(x=>x.roster)},now());
+  const allUids=new Set(),rosters=[];
+  for(const selection of selections){
+   const raw=records.find(r=>r.effectiveContext.warzone===selection.server&&r.effectiveContext.alliance.toLowerCase()===selection.tag.toLowerCase());
+   if(!raw)throw Error('A dated Toolkit roster is missing for the selected alliance.');
+   const roster=validateRoster(raw,{server:selection.server,tag:raw.effectiveContext.alliance});
+   for(const member of roster.members){if(allUids.has(member.uid))throw Error('A player is present in both dated rosters. The source rosters need review.');allUids.add(member.uid);}
+   const entry=data.find(x=>x.roster.responseSha256===raw.responseSha256&&x.roster.effectiveContext.warzone===selection.server);
+   rosters.push({...roster,sourceMode:'dated-snapshot',publishedAt:entry.publishedAt??null,
+    ageDays:Math.max(0,Math.floor((now()-Date.parse(roster.retrievedAt))/86400000)),warnings:[]});
+  }
+  const contacts=await contactsForUids({uids:[...allUids],batchId,actor});
+  return {source:'lw-toolkit',sourceMode:'dated-snapshot',rosters:rosters.map(r=>({...r,members:linkRosterContacts(r,contacts)}))};
+ };
+}
+
+export function memberFailure(data,fallback='Member administration is temporarily unavailable. Try again shortly.'){
+const messages={'Player profile not found':'Select a player from All Players before creating a login. That profile could not be found.','Select a Sapphire player':'This player is not in NvSP. Member-site logins are currently available to NvSP players only. Check their alliance in All Players.','Player already has member access':'This player already has a member account. Find it under Existing accounts to manage their login or recovery.','Username already in use':'That username is already in use. Choose another username, or manage the existing account.','Invalid username':'Use 3–32 lowercase letters, numbers or underscores for the username.','Member account not found':'This member account could not be found. Refresh the account search and try again.','Access denied':'Your account does not have permission to manage member logins.','Reset unavailable':'Recovery is unavailable for a disabled account, or the reason is too short. Enter a reason of at least 8 characters.'};
+let message=messages[data?.message];if(!message&&data?.code==='23505')message=(data.message||'').includes('player_ref')?messages['Player already has member access']:messages['Username already in use'];const error=Error(message||fallback);error.memberSafe=true;return error;}
+export function createMemberAdmin({api,novaApi}){return async function memberAdmin(action,args){
+if(action==='hub-member-search'){const names=await api('/rest/v1/rpc/nova_member_directory','POST',{args});const result=await novaApi('/rest/v1/rpc/nova_admin_store','POST',{action:'search',payload:{...args,accountIds:names.map(x=>x.id)}});const links=await api('/rest/v1/rpc/nova_member_directory','POST',{args:{staffEmail:args.staffEmail,accountIds:(result.accounts||[]).map(x=>x.id)}});return {accounts:(result.accounts||[]).map(account=>{const link=links.find(x=>x.id===account.id&&x.playerKey===account.playerRef);return {...account,playerName:link?.playerName||null,alliance:link?.alliance||null,server:link?.server||null,linkState:link?.profileExists?(link.linkActive?'linked':'inactive'):'missing'};})};}
+if(action==='hub-member-check'||action==='hub-member-create'){if(!String(args.playerKey||'').trim())throw memberFailure({message:'Player profile not found'});const username=String(args.username||'').trim().toLowerCase();if((action==='hub-member-create'||username)&&!/^[a-z0-9_]{3,32}$/.test(username))throw memberFailure({message:'Invalid username'});await api('/rest/v1/rpc/nova_member_link','POST',{action:'validate',args});await novaApi('/rest/v1/rpc/nova_admin_store','POST',{action:'availability',payload:{staffEmail:args.staffEmail,playerRef:args.playerKey,username}});if(action==='hub-member-check')return {ok:true};const inviteCode=[...crypto.getRandomValues(new Uint8Array(32))].map(n=>n.toString(16).padStart(2,'0')).join('');const hash=[...new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(inviteCode)))].map(n=>n.toString(16).padStart(2,'0')).join('');const created=await novaApi('/auth/v1/admin/users','POST',{email:crypto.randomUUID()+'@members.nova.invalid',password:crypto.randomUUID()+crypto.randomUUID(),email_confirm:true});const id=created.id||created.user?.id;if(!id)throw memberFailure(null,'Account creation could not be confirmed. Search Existing accounts before retrying.');try{await novaApi('/rest/v1/rpc/nova_auth_store','POST',{action:'provision',payload:{id,username,playerRef:args.playerKey,hash}});await api('/rest/v1/rpc/nova_member_link','POST',{action:'link',args:{...args,accountId:id}});}catch(error){try{await novaApi('/auth/v1/admin/users/'+id,'DELETE',undefined);}catch{throw memberFailure(null,'Account setup could not be completed or rolled back. Search Existing accounts before retrying; do not create a second login.');}throw error;}return {username,inviteCode};}
+if(action==='hub-member-reset'){const resetCode=[...crypto.getRandomValues(new Uint8Array(32))].map(n=>n.toString(16).padStart(2,'0')).join('');const hash=[...new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(resetCode)))].map(n=>n.toString(16).padStart(2,'0')).join('');return {...await novaApi('/rest/v1/rpc/nova_admin_store','POST',{action:'reset',payload:{...args,hash}}),resetCode};}
+const actions={'hub-member-rename':'rename','hub-member-revoke':'revoke'};if(!actions[action])throw memberFailure(null,'This member administration action is not supported. Refresh the portal.');return novaApi('/rest/v1/rpc/nova_admin_store','POST',{action:actions[action],payload:args});};}
+export function createBountyHandler({memberIdentity,staffIdentity,store,put,sign,rosterProvider,rosterPublisher,memberAdmin,exchangeMember}) {
+ const origins=['https://raidarqn-lab.github.io','https://nova.join1616.com','https://portal.join1616.com'];
+ return async req=>{
+  const origin=req.headers.get('origin');const headers={'Content-Type':'application/json','Cache-Control':'no-store','Vary':'Origin'};const reply=(status,data)=>new Response(JSON.stringify(data),{status,headers});
+  if(!origins.includes(origin))return reply(403,{error:'Access denied.'});Object.assign(headers,{'Access-Control-Allow-Origin':origin,'Access-Control-Allow-Headers':'content-type,apikey,authorization,x-nova-session,x-portal-token','Access-Control-Allow-Methods':'POST,OPTIONS'});if(req.method==='OPTIONS')return new Response(null,{status:204,headers});if(req.method!=='POST')return reply(405,{error:'POST required.'});
+  let requestAction='';
+  try{
+   if(new URL(req.url).searchParams.get('handoff')==='exchange'){
+    if(!['https://raidarqn-lab.github.io','https://nova.join1616.com'].includes(origin)||!req.headers.get('content-type')?.startsWith('application/json'))return reply(403,{error:'Access denied.'});
+    const rd=req.body?.getReader();let raw='',count=0;if(!rd)return reply(400,{error:'Invalid handoff.'});while(true){const x=await rd.read();if(x.done)break;count+=x.value.length;if(count>512){await rd.cancel();return reply(413,{error:'Invalid handoff.'});}raw+=new TextDecoder().decode(x.value);}const b=JSON.parse(raw);
+    if(!/^[a-f0-9]{64}$/.test(b.ticket||''))return reply(400,{error:'Invalid handoff.'});
+    return reply(200,await exchangeMember(b.ticket));
+   }
+   const staff=req.headers.get('x-portal-token');const member=staff?null:await memberIdentity(req.headers.get('x-nova-session'));
+   const actor=staff?{staffEmail:(await staffIdentity(staff)).email}:{accountId:member.id,...(member.leaderEmail?{leaderEmail:member.leaderEmail}:{})};const reader=req.body?.getReader();if(!reader)return reply(400,{error:'Missing request.'});let size=0,chunks=[];while(true){const {done,value}=await reader.read();if(done)break;size+=value.length;if(size>11*1024*1024){await reader.cancel();return reply(413,{error:'Screenshot too large.'});}chunks.push(value);}const bytes=new Uint8Array(size);let off=0;for(const c of chunks){bytes.set(c,off);off+=c.length;}const type=req.headers.get('content-type')||'';
+   if(type.startsWith('multipart/form-data')){await store('access',actor);    if(staff){
+     requestAction='hub-announcement-image';
+     const grant=await store('hub-access',actor);
+     if(!grant?.announcements)return reply(403,{error:'Your account does not have permission to manage announcements.'});
+     const form=await new Request(req.url,{method:'POST',headers:{'content-type':type},body:bytes}).formData();
+     if(form.get('action')!=='hub-announcement-image')return reply(400,{error:'Invalid image upload request.'});
+     const file=form.get('file');
+     if(!file||typeof file==='string'||file.size<1||file.size>5*1024*1024)return reply(400,{error:'Choose a JPG, PNG or WebP image under 5 MB.'});
+     const raw=new Uint8Array(await file.arrayBuffer());
+     const png=[137,80,78,71,13,10,26,10].every((n,i)=>raw[i]===n),jpg=raw[0]===255&&raw[1]===216&&raw[2]===255,webp=new TextDecoder().decode(raw.slice(0,4))==='RIFF'&&new TextDecoder().decode(raw.slice(8,12))==='WEBP';
+     if(!png&&!jpg&&!webp)return reply(400,{error:'Only JPG, PNG or WebP images are supported.'});
+     const path='announcements/'+crypto.randomUUID()+'.'+(png?'png':jpg?'jpg':'webp');
+     await put(path,raw,png?'image/png':jpg?'image/jpeg':'image/webp');
+     return reply(200,{imagePath:path,imageUrl:await sign(path,3600)});
+    }
+const form=await new Request(req.url,{method:'POST',headers:{'content-type':type},body:bytes}).formData();const batchId=form.get('batchId'),sequence=Number(form.get('sequence')),file=form.get('file');if(!file||typeof file==='string'||file.size<1||file.size>10485760)return reply(400,{error:'Select a PNG or JPEG under 10 MB.'});const raw=new Uint8Array(await file.arrayBuffer());const png=[137,80,78,71,13,10,26,10].every((n,i)=>raw[i]===n),jpeg=raw[0]===255&&raw[1]===216&&raw[2]===255;if(!png&&!jpeg)return reply(400,{error:'Select a PNG or JPEG screenshot.'});const sha256=[...new Uint8Array(await crypto.subtle.digest('SHA-256',raw))].map(n=>n.toString(16).padStart(2,'0')).join('');const meta={...actor,batchId,sequence,sha256,bytes:file.size,mime:png?'image/png':'image/jpeg'};const slot=await store('slot',meta);await put(slot.path,raw,meta.mime);await store('uploaded',meta);return reply(200,{ok:true,sequence});}
+   if(!type.startsWith('application/json')||size>(staff?1048576:65536))return reply(400,{error:'Invalid request.'});const body=JSON.parse(new TextDecoder().decode(bytes));if(!body||typeof body!=='object'||Array.isArray(body))return reply(400,{error:'Invalid request.'});requestAction=String(body.action||'');const allowed=staff?['train-load','train-save','train-publish','train-history','hub-member-handoff','hub-leader-invite-list','hub-leader-invite-create','leader-invite-preview','leader-invite-claim','review-list','evidence','profile','player-search','review-draft','save-review','matching-rosters','matching-rosters-publish','extract-page','approve-review','reject-review','hub-access','hub-staff-list','hub-staff-save','hub-staff-revoke','hub-staff-restore','hub-content-list','hub-content-save','hub-member-create','hub-member-check','hub-member-search','hub-member-rename','hub-member-reset','hub-member-revoke']:['list','reserve','commit','evidence','member-content','member-leaderboards','member-trains'];if(!allowed.includes(body.action))return reply(403,{error:'Access denied.'});if(!staff||!['leader-invite-preview','leader-invite-claim'].includes(body.action))await store('access',actor);const {accountId:ignoredAccount,staffEmail:ignoredStaff,leaderEmail:ignoredLeader,...input}=body;
+   if(body.action==='extract-page')return reply(410,{error:'Screenshot reading now runs on your device. Reload the portal and use Read difficult names. Your saved review is unchanged.'});
+   if(body.action==='matching-rosters-publish'){
+    const grant=await store('hub-access',actor);
+    if(!grant?.accountsManage)return reply(403,{error:'Only the portal owner can publish Toolkit rosters.'});
+    let rosters;try{rosters=validateRosterExport(input.export);}catch{return reply(422,{error:'This roster export is incomplete or invalid. Export the full alliances again with Toolkit. Nothing has been published.'});}
+    if(typeof rosterPublisher!=='function')return reply(503,{error:'Roster publishing is not configured yet.'});
+    return reply(200,{rosters:await rosterPublisher({rosters,actor})});
+   }
+   if(body.action==='matching-rosters'){
+    await store('review-draft',{batchId:input.batchId,...actor});
+    const selections=input.selections;
+    if(!Array.isArray(selections)||selections.length<1||selections.length>2||selections.some(s=>!Number.isInteger(s?.server)||s.server<1||typeof s.tag!=='string'||!s.tag.trim()||s.tag.length>100||/[\u0000-\u001f\u007f]/u.test(s.tag))||new Set(selections.map(s=>s.server+':'+s.tag.trim().toLowerCase())).size!==selections.length)return reply(400,{error:'Select one or two distinct alliances and their servers.'});
+    if(typeof rosterProvider!=='function')return reply(503,{error:'The dated Toolkit roster service is not connected yet. Ask the portal owner to finish setup.'});
+    try{return reply(200,await rosterProvider({selections:selections.map(s=>({server:s.server,tag:s.tag.trim()})),batchId:input.batchId,actor,signal:req.signal}));}
+    catch{return reply(503,{error:'The published Toolkit rosters could not be loaded for these alliances and servers. Ask the portal owner to publish a dated export, then retry. Your saved matches are unchanged.'});}
+   }
+
+   let data;if(body.action.startsWith('hub-member-')&&body.action!=='hub-member-handoff'){const grant=await store('hub-access',actor);if(!grant?.accountsManage)throw Error('unauthorized');data=await memberAdmin(body.action,{...input,accountId:body.accountId,...actor});}else data=await store(body.action,{...input,...actor});   if(['member-content','hub-content-list'].includes(body.action)&&Array.isArray(data)){
+    data=await Promise.all(data.map(async item=>{
+     const path=item.kind==='announcement'&&item.payload?.imagePath;
+     if(!path||!/^announcements\/[a-f0-9-]{36}\.(png|jpg|webp)$/.test(path))return item;
+     return {...item,payload:{...item.payload,imageUrl:await sign(path,3600)}};
+    }));
+   }
+if(body.action==='evidence')return reply(200,{url:await sign(data.path)});return reply(200,data);
+  }catch(e){const failure=responseError(e);return reply(failure.status,{error:failure.message||(requestAction.startsWith('train-')?'Train update could not be saved. Check cooldowns, player ranks and required reasons, then reload if another leader changed this week.':['hub-staff-save','hub-staff-revoke','hub-staff-restore','hub-leader-invite-list','hub-leader-invite-create','leader-invite-preview','leader-invite-claim'].includes(requestAction)?'Leadership permissions could not be saved. Refresh the account list to check its current state, then retry. If this continues, contact the portal owner.':requestAction==='matching-rosters-publish'?'The roster export could not be published. Reload the published rosters to check their dates before retrying.':requestAction==='hub-announcement-image'?'Image upload could not be completed. Please try again.':requestAction.startsWith('hub-member-')?'Member account request could not be confirmed. Search Existing accounts before retrying.':requestAction==='hub-member-handoff'||new URL(req.url).searchParams.has('handoff')?'Could not open the member site. Return to the Alliance Hub and try Open Member Site again.':'Unable to complete this request. Check your account access and selected screenshots, then retry.')});}
+ };}
+export function firebaseVerifier({projectId,apiKey,fetcher=fetch,clock=()=>Date.now()}){if(!projectId||!apiKey)throw Error('Missing Firebase configuration');return async token=>{if(typeof token!=='string'||token.length>12000)throw Error('Please sign in again.');const response=await fetcher('https://identitytoolkit.googleapis.com/v1/accounts:lookup?key='+encodeURIComponent(apiKey),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({idToken:token}),signal:AbortSignal.timeout(10000)});if(!response.ok)throw Error('Please sign in again.');const user=(await response.json()).users?.[0];let claims;try{claims=JSON.parse(new TextDecoder().decode(Uint8Array.from(atob(token.split('.')[1].replace(/-/g,'+').replace(/_/g,'/')),c=>c.charCodeAt(0))));}catch{throw Error('Please sign in again.');}const now=Math.floor(clock()/1000);if(!user||user.disabled||!user.emailVerified||!user.email||claims.aud!==projectId||claims.iss!=='https://securetoken.google.com/'+projectId||claims.sub!==user.localId||!(claims.exp>now)||!(claims.iat<=now+60)||user.validSince&&!(claims.auth_time>=Number(user.validSince)))throw Error('Please sign in again.');return{uid:user.localId,email:user.email.toLowerCase(),name:user.displayName||user.email};};}
+const liveUrl=Deno.env.get('SUPABASE_URL');const service=JSON.parse(Deno.env.get('SUPABASE_SECRET_KEYS')||'{}').default;if(typeof service!=='string'||!service.startsWith('sb_secret_'))throw Error('Missing server configuration');const novaUrl='https://jkkladcvvipvhvqkhkvq.supabase.co';const novaAnon='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Impra2xhZGN2dmlwdmh2cWtoa3ZxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAyODgzMDYsImV4cCI6MjEwNTg2NDMwNn0.muIw_B2KuL7Gu6L2OMaTiSaU2l5AYtTwO8Gs8hjkexI';const novaService=Deno.env.get('NOVA_MEMBER_SERVICE_KEY')||'';
+async function api(path,method,body){const r=await fetch(liveUrl+path,{method,headers:{apikey:service,'Content-Type':'application/json'},body:body===undefined?undefined:JSON.stringify(body),signal:AbortSignal.timeout(15000)});if(!r.ok){if(['/rpc/nova_bounty_store','/rpc/nova_matching_store','/rpc/nova_score_store','/rpc/nova_toolkit_contacts','/rpc/nova_toolkit_rosters'].some(route=>path.endsWith(route)))throw bountyServiceError(await r.json().catch(()=>null),r.status);if(path.endsWith('/rpc/nova_train_store')){const d=await r.json().catch(()=>null);if(d?.code==='P0001'){const e=Error(d.message);e.memberSafe=true;throw e;}}if(path.includes('/rpc/nova_member_'))throw memberFailure(await r.json().catch(()=>null));if(path.endsWith('/rpc/nova_hub_store')||path.endsWith('/rpc/nova_leader_invites')){const d=await r.json().catch(()=>null);const allowed=['Confirm the selected leaders before creating invitations','Sign in with Google to use this invitation','Invitation is invalid or expired. Ask leadership for a new link','This player is no longer eligible for NvSP leadership access','Confirm this invitation before accepting','The owner already has access. Share this invitation with the named leader','This Google account or player is already linked. Ask the owner to review the account','Only the portal owner can manage leadership access','Enter a valid portal sign-in email','Choose a valid leadership role','Choose at least one alliance','Choose at least one valid alliance','Admin access is reserved to the portal owner','Owner permissions cannot be reduced','Owner access cannot be revoked','Leadership account not found; refresh the list'];if(allowed.includes(d?.message)){const e=Error(d.message);e.memberSafe=true;throw e;}}throw Error('provider');}return r.json();}
+async function novaApi(path,method,body){if(!/^sb_secret_[A-Za-z0-9_-]+$/.test(novaService))throw memberFailure(null,'Member administration is not configured. The member account service must be connected before creating logins.');const r=await fetch(novaUrl+path,{method,headers:{apikey:novaService,'Content-Type':'application/json'},body:body===undefined?undefined:JSON.stringify(body),signal:AbortSignal.timeout(15000)});if(!r.ok)throw memberFailure(await r.json().catch(()=>null),r.status===401||r.status===403?'The member account service denied this request. Its server credentials or permissions need attention.':'The member account service could not complete this request. Search Existing accounts before retrying.');return r.status===204?null:r.json();}
+const novaAdmin=createMemberAdmin({api,novaApi});
+const toolkitContacts=createToolkitContactLookup({rpc:(name,args)=>api('/rest/v1/rpc/'+name,'POST',args)});
+const datedRosterProvider=createDatedRosterProvider({
+ loadSnapshots:({selections,batchId,actor})=>api('/rest/v1/rpc/nova_toolkit_rosters','POST',{action:'read',args:{selections,batchId,...actor}}),
+ contactsForUids:toolkitContacts
+});
+const publishToolkitRosters=({rosters,actor})=>api('/rest/v1/rpc/nova_toolkit_rosters','POST',{action:'publish',args:{rosters,...actor}});
+Deno.serve(createBountyHandler({rosterProvider:datedRosterProvider,rosterPublisher:publishToolkitRosters,exchangeMember:ticket=>api('/rest/v1/rpc/nova_member_handoff','POST',{action:'exchange',args:{ticket}}),memberIdentity:async token=>{if(/^Bearer lm_[a-f0-9]{64}$/.test(token||''))return api('/rest/v1/rpc/nova_member_handoff','POST',{action:'session',args:{token:token.slice(7)}});if(!/^Bearer [a-f0-9]{64}$/.test(token||''))throw Error('unauthorized');const r=await fetch(novaUrl+'/functions/v1/nova-auth',{method:'POST',headers:{Origin:'https://raidarqn-lab.github.io',apikey:novaAnon,Authorization:'Bearer '+novaAnon,'X-Nova-Session':token,'Content-Type':'application/json'},body:JSON.stringify({action:'session'}),signal:AbortSignal.timeout(15000)});if(!r.ok)throw Error('unauthorized');const d=await r.json();if(!d.user?.id)throw Error('unauthorized');return d.user;},staffIdentity:firebaseVerifier({projectId:Deno.env.get('FIREBASE_PROJECT_ID'),apiKey:Deno.env.get('FIREBASE_API_KEY')}),store:async(action,args)=>{if(action==='hub-member-handoff')return api('/rest/v1/rpc/nova_member_handoff','POST',{action,args});if(args.leaderEmail){if(action==='access')return {ok:true};if(['member-content','member-leaderboards','member-trains'].includes(action))args={staffEmail:args.leaderEmail};else if(!args.accountId){if(action==='list')return [];const e=Error('Your leader sign-in works. To submit screenshots, ask the owner to link a member account to your player profile.');e.memberSafe=true;throw e;}else {const {leaderEmail,...memberArgs}=args;args=memberArgs;}}return api('/rest/v1/rpc/'+(action.startsWith('train-')||action==='member-trains'?'nova_train_store':['hub-leader-invite-list','hub-leader-invite-create','leader-invite-preview','leader-invite-claim'].includes(action)?'nova_leader_invites':(action.startsWith('hub-')||action==='member-content'||action==='portal-access')?'nova_hub_store':['player-search','review-draft','save-review'].includes(action)?'nova_matching_store':['approve-review','reject-review','member-leaderboards'].includes(action)?'nova_score_store':'nova_bounty_store'),'POST',{action,args});},memberAdmin:novaAdmin,put:async(path,bytes,mime)=>{const target='/storage/v1/object/nova-bounty-evidence/'+path;const r=await fetch(liveUrl+target,{method:'POST',headers:{apikey:service,'Content-Type':mime,'x-upsert':'false'},body:bytes,signal:AbortSignal.timeout(30000)});if(r.ok)return;const existing=await fetch(liveUrl+target,{headers:{apikey:service},signal:AbortSignal.timeout(15000)});if(!existing.ok)throw Error('storage');const old=new Uint8Array(await existing.arrayBuffer());if(old.length!==bytes.length||!old.every((v,i)=>v===bytes[i]))throw Error('storage conflict');},sign:async(path,expiresIn=120)=>{const r=await api('/storage/v1/object/sign/nova-bounty-evidence/'+path,'POST',{expiresIn});return liveUrl+'/storage/v1'+r.signedURL;}}));

@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Alliance Hub · Leadership</title>
-  <link rel="stylesheet" href="./nova-bounty-review.css?v=arabic-detail-v2-20260929">
+  <link rel="stylesheet" href="./nova-bounty-review.css?v=lanes-20261004">
   <link rel="stylesheet" href="./alliance-hub.css?v=signin-entry-20260927">
 <link rel="stylesheet" href="./player-reports.css?v=report-menus-20260927"><link rel="stylesheet" href="train-dashboard.css?v=attendance-20260927">
 <style>.announcement-manage-card{padding:18px 0;border-bottom:1px solid #315563}.announcement-manage-card h3{font-size:17px;margin:7px 0;overflow-wrap:anywhere}.announcement-state{font-size:11px;color:#86dcd0;text-transform:capitalize}.announcement-manage-card small{color:#a9c3cd}.announcement-manage-card .hub-actions{margin-top:12px}.announcement-confirm{max-width:480px;background:#102e3b;color:#edf7fa;border:1px solid #527680;border-radius:16px;padding:26px}.announcement-confirm::backdrop{background:#001018bb}.announcement-confirm p{line-height:1.6}.announcement-confirm button{padding:10px 14px;border-radius:8px;border:1px solid #527680;background:#173f4b;color:#edf7fa;cursor:pointer}</style><style>dialog.ds-rotation-dialog{width:min(1080px,calc(100vw - 48px));max-width:calc(100vw - 48px);box-sizing:border-box}dialog.ds-history-dialog{max-width:calc(100vw - 48px);box-sizing:border-box}.ds .ds-history-header{height:auto;min-height:0;padding:0;background:transparent;flex-shrink:0}.ds .ds-history-header p{margin:0}.ds-rotation-controls input{width:100%;max-width:none;box-sizing:border-box}.ds-rotation-dialog .ds-person-name{font-size:14px}.ds-rotation-table{flex:1}.ds-rotation-dialog>p:empty{display:none}</style><style id="ds-select-theme">
@@ -13,7 +13,7 @@
 .ds select option:checked{background-color:#245461!important;color:#fff!important}
 .ds select:focus-visible,.ds-team-board select:focus-visible,.ds-playbook select:focus-visible{outline:2px solid #50dfd0;outline-offset:2px;border-color:#50dfd0!important}
 .ds select:hover{border-color:#72ded4!important}.ds select:disabled{opacity:.55;cursor:not-allowed}
-</style></head>
+</style><link rel="stylesheet" href="./roster-match-picker.css?v=lanes-20261004"><link rel="stylesheet" href="./screenshot-lanes.css?v=lanes-20261004"></head>
 <body class="hub-page">
   <svg class="sprite" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
     <symbol id="target" viewBox="0 0 24 24"><circle cx="12" cy="12" r="7"></circle><circle cx="12" cy="12" r="2"></circle><path d="M12 1v5m0 12v5M1 12h5m12 0h5"></path></symbol>
@@ -79,7 +79,8 @@
           <p class="hint">Each submission is one complete bounty evidence set. Open it to review every uploaded screenshot.</p>
         </aside>
 
-        <section id="workspace" class="r4-work" hidden>
+        <section id="workspace" class="r4-work r4-lanes-work" hidden>
+          <button type="button" id="lane-queue-toggle">Show review queue</button>
           <section class="panel r4-summary">
             <div><div class="eyebrow">SUBMISSION BRIEF</div><h2 id="batch-title">Daily all-player leaderboard</h2><p id="batch-meta"></p><div id="batch-alliance" class="r4-set-alliances"></div></div>
             <div class="r4-reward"><b>—</b><span>BOUNTY POINTS</span></div>
@@ -90,20 +91,20 @@
 
           <div class="r4-columns">
             <section class="panel r4-evidence">
-              <div class="r4-section-head"><h2>Original evidence</h2><span class="pill">REAL SCREENSHOTS</span></div>
+              <div class="r4-section-head"><h2>Screenshots</h2><span class="pill">Original evidence</span></div>
               <div class="r4-evidence-brief"><div class="eyebrow">BOUNTY FOR REVIEW</div><h3 id="evidence-title">Daily leaderboard</h3><p id="evidence-meta" class="r4-brief-meta"></p><code id="evidence-code"></code></div>
               <div id="pages" class="r4-pages" aria-label="Screenshot pages"></div>
               <p id="page-progress">0 screenshots reviewed</p>
               <p id="image-status" role="status"></p>
-              <div id="image" class="r4-original"></div>
+              <details class="r4-full-evidence"><summary>View full screenshot</summary><div id="image" class="r4-original"></div></details>
             </section>
 
             <section class="panel r4-data">
               <div class="r4-section-head"><h2>Review this screenshot</h2><span id="page-state" class="review-indicator pending" tabindex="0">●<span class="review-tooltip">Needs confirmation</span></span></div>
-              <p>Match the player, check their alliance and score, then confirm. Use Details only when something needs correcting.</p>
+              <p>Compare each screenshot row with its player and score. Select a name to browse the alliance roster; Undo clears a confirmation.</p>
               <label class="r4-filter">Filter this page<input id="filter" placeholder="Find a name or alliance on this page"></label>
-              <div class="table-scroll"><table class="r4-single-table"><thead><tr><th><div class="r4-single-head"><span>Alliance</span><span>Player</span><span>Score</span><span>Review</span></div></th></tr></thead><tbody id="rows"></tbody></table></div>
-              <div id="editor" class="r4-match-workspace"><p>Choose Find or create player to search All Contacts. Confirm each row after checking its score.</p></div>
+              <div class="table-scroll"><table class="r4-single-table"><thead><tr><th><div class="r4-single-head"><span>Screenshot evidence</span><span>Alliance · player · score</span><span>Confirmation</span></div></th></tr></thead><tbody id="rows"></tbody></table></div>
+              <div id="editor" class="r4-match-workspace"><p>Choose Search Toolkit roster to compare verified roster members. Confirm each row after checking its score.</p></div>
               <div class="r4-actions"><button id="confirm-page" class="primary">Confirm ready rows on this page</button><button id="clear-page">Reset page checks</button></div>
               <div class="r4-coverage"><h3>Coverage checks</h3><p id="coverage"></p><p class="r4-warning">Repeated, overlapping or pinned rows stay visible for R4 review and are never silently discarded.</p></div>
             </section>
@@ -123,7 +124,7 @@
             <p id="decision-help">Confirm every included row and screenshot before publishing. Both alliances’ results are saved to player histories. Only NvSP scores appear on the member leaderboard.</p>
           </section>
 
-          <section class="score-panel"><div class="eyebrow">R4 PRIVATE PROFILE PREVIEW</div><h3 id="profile-heading">Select a player match</h3><div id="profile-preview"><p>Search a score row to compare All Contacts profiles and previous names.</p></div></section>
+          <section class="score-panel"><div class="eyebrow">R4 PRIVATE PROFILE PREVIEW</div><h3 id="profile-heading">Select a player match</h3><div id="profile-preview"><p>Search a score row to compare linked roster profiles and previous names.</p></div></section>
         </section>
       </div>
       </section>
@@ -157,7 +158,7 @@
   </div>
 
   <dialog id="preview-dialog"><button id="close-preview" class="close" aria-label="Close">×</button><div id="preview-content"></div></dialog>
-  <script type="module" src="./nova-bounty-review.js?v=browser-ocr-20261003"></script>
+  <script type="module" src="./nova-bounty-review.js?v=lanes-20261004"></script>
   <script type="module" src="./alliance-hub.js?v=season-availability-20260930"></script>
 <script type="module" src="./bounty-manager.js?v=workflow-tools-20261003"></script>
 </body>

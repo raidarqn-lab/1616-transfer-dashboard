@@ -1,5 +1,8 @@
-import {nameReadings,mergeReread,mergeCandidates,unresolvedEvidence,approvalReward} from './review-safety.js?v=workflow-20261003';
-import {findPartialMatches,mergePartialMatches} from './partial-name-matches.js?v=workflow-20261003';
+import {renderScreenshotLaneEvidence} from './screenshot-lanes.js?v=lanes-20261004';
+import {openRosterPublisher} from './toolkit-roster-publisher.js?v=dated-20261004';
+import {rosterCandidates,validateMatchingRosters,rosterMatchAvailability} from './toolkit-roster-matches.js?v=dated-20261004';
+import {openRosterMatchPicker} from './roster-match-picker.js?v=lanes-20261004';
+import {nameReadings,mergeReread,unresolvedEvidence,approvalReward} from './review-safety.js?v=workflow-20261003';
 import {planPageConfirmation} from './page-confirmation.js?v=workflow-20261003';
 import {assessCandidates} from './match-confidence.js?v=workflow-20261003';
 const renderSeasonHistory=async(...args)=>(await import('./season-events.js?v=20260930')).renderSeasonHistory(...args);
@@ -10,7 +13,7 @@ const loadTrainHistory=async(...args)=>(await import('./train-history.js?v=histo
 const renderReports=async(...args)=>(await import('./player-reports.js?v=report-polish-20260926')).renderReports(...args);
 import {user} from './live-session.js';
 import {bountyConnection as config} from './nova-bounty-config.js';
-import {createLeaderboardOcr} from './nova-bounty-ocr.js?v=browser-ocr-20261003';
+import {createLeaderboardOcr} from './nova-bounty-ocr.js?v=toolkit-only-20261003';
 
 const $=id=>document.getElementById(id);
 const el=(tag,text)=>{const node=document.createElement(tag);if(text!==undefined)node.textContent=text;return node;};
@@ -18,6 +21,7 @@ const clean=value=>String(value??'').trim();
 const status=message=>$('status').textContent=message;
 const profileCache=new Map();
 let active=null,draft=null,dirty=false,selected=-1,currentPage=1,extracting=false,reviewBusy=false;
+let rosterPublishAccess=null;
 let imageRequest=0,openRequest=0;const saveJobs=new Map();
 
 function updateClocks(){
@@ -30,7 +34,7 @@ window.addEventListener('beforeunload',event=>{if(dirty){event.preventDefault();
 
 async function call(body){
  if(!user)throw Error('Sign in to the Portal first.');
- const response=await fetch(config.endpoint,{method:'POST',headers:{'Content-Type':'application/json',apikey:config.anonKey,'X-Portal-Token':await user.getIdToken()},body:JSON.stringify(body),signal:AbortSignal.timeout(30000)});
+ const response=await fetch(config.endpoint,{method:'POST',headers:{'Content-Type':'application/json',apikey:config.anonKey,'X-Portal-Token':await user.getIdToken()},body:JSON.stringify(body),signal:AbortSignal.timeout(body.action==='matching-rosters'?60000:30000)});
  const data=await response.json();
  if(!response.ok)throw Error(data.error||'Unable to save. Reload the review if another reviewer changed it.');
  return data;
@@ -66,8 +70,18 @@ function formatScore(value){if(value==null||String(value).trim()==='')return '';
 
 function alliancesReady(){return !!draft?.rows?.length&&draft.rows.filter(r=>!r.excluded).every(r=>r.allianceSet&&clean(r.alliance)&&clean(r.allianceServer));}
 function renderSetAlliances(){
- const area=$('batch-alliance');area.replaceChildren();area.append(el('span','Step 1 · Confirm the participating alliances'));area.append(el('small','Player suggestions use saved All Contacts records for these alliances and servers. A live LW Toolkit roster refresh is not connected.'));
+ const area=$('batch-alliance');area.replaceChildren();area.append(el('span','Step 1 · Confirm the participating alliances'));area.append(el('small','Match against the selected alliances’ dated Toolkit rosters. Saved player matches and confirmed scores stay in place.'));
  const groups=allianceGroups(draft.rows.filter(r=>!r.excluded));for(const group of groups){const wrap=el('div');wrap.className='r4-set-alliance';const label=el('strong',group.label+' · Server '+(group.rows.find(r=>r.allianceServer)?.allianceServer||'not set')+' · '+group.rows.length+' rows'),edit=el('button','Edit alliance');edit.type='button';const confirmed=group.rows.every(r=>r.allianceSet),confirmGroup=el('button',confirmed?'✓ Alliance confirmed':'Confirm alliance');confirmGroup.type='button';confirmGroup.disabled=confirmed||group.key==='unknown';confirmGroup.onclick=()=>{if(!group.rows.every(r=>r.allianceServer)){confirmAlliancesForMatch(null);return;}for(const r of group.rows){r.alliance=group.label;r.allianceSet=true;}candidateCache.clear();markChanged();renderRows();status(alliancesReady()?'Alliances confirmed. Match players within their alliance, then save your review draft.':'Confirm the remaining alliance before matching players.');suggestPageMatches();};wrap.append(label,confirmGroup,edit);edit.onclick=()=>confirmAlliancesForMatch(null);area.append(wrap);}
+ const source=el('div');source.className='r4-toolkit-source';source.setAttribute('role','status');
+ const refresh=el('button',matchingRosterState.status==='loading'?'Loading published rosters…':matchingRosterState.status==='ready'?'Reload published rosters':'Load published rosters');refresh.type='button';refresh.disabled=!alliancesReady()||matchingRosterState.status==='loading';refresh.onclick=async()=>{matchingRequest++;candidateCache.clear();await loadMatchingRosters(true);renderRows();suggestPageMatches();};
+ source.append(refresh);
+ if(rosterPublishAccess===true){const publish=el('button','Publish roster export');publish.type='button';publish.className='r4-roster-publish';publish.onclick=()=>openRosterPublisher({call,onPublished:async()=>{matchingRequest++;candidateCache.clear();await loadMatchingRosters(true);renderRows();suggestPageMatches();}});source.append(publish);}
+ if(rosterPublishAccess===null){rosterPublishAccess='loading';call({action:'hub-access'}).then(access=>{rosterPublishAccess=!!access?.accountsManage;if(draft)renderSetAlliances();}).catch(()=>{rosterPublishAccess=false;});}
+
+ if(matchingRosterState.key===matchingRosterKey()&&matchingRosterState.status==='ready'){
+  for(const roster of matchingRosterState.rosters){source.append(el('small','Dated Toolkit roster · '+roster.tag+' · Server '+roster.server+' · '+roster.members.length+' members · Retrieved '+new Date(roster.retrievedAt).toLocaleString()));source.append(el('small',roster.sourceTime?'Source observation: '+new Date(roster.sourceTime).toLocaleString():'This is a dated snapshot. The source does not report when membership was last observed.'));for(const warning of roster.warnings||[])source.append(el('small',typeof warning==='string'?warning:warning.message||'Source membership may be historical.'));}
+ }else source.append(el('small',matchingRosterState.key===matchingRosterKey()&&matchingRosterState.status==='error'?matchingRosterState.error:'Load the published snapshots to see their dates and match players. Your saved review is kept.'));
+ area.append(source);
  if(groups.length>2)area.append(el('small','More than two alliance labels were detected. Correct the extra groups to one of the two participating alliances.'));
 }
 function renderSummary(){
@@ -92,10 +106,10 @@ async function evidence(page){
  $('image').replaceChildren();$('image-status').textContent=`Loading page ${page}…`;
  try{
   const {url}=await call({action:'evidence',batchId:batch.id,sequence:page});if(!current())return;
-  const image=el('img');image.alt=`Submitted leaderboard screenshot page ${page}`;
-  image.onload=()=>{if(current())$('image-status').textContent=`Original file ${page} of ${batch.fileCount}`;};
+  const image=el('img');image.dataset.batch=batch.id;image.dataset.page=String(page);image.alt=`Submitted leaderboard screenshot page ${page}`;
+  image.onload=()=>{if(current()){$('image-status').textContent=`Original file ${page} of ${batch.fileCount}`;renderLaneEvidence();}};
   image.onerror=()=>{if(current())$('image-status').textContent='Image unavailable. Select the page again to retry.';};
-  image.src=url;$('image').replaceChildren(image);
+  image.crossOrigin='anonymous';image.src=url;$('image').replaceChildren(image);
  }catch(error){if(current())$('image-status').textContent=error.message;}
 }
 async function evidenceUrl(page,batchId=active?.id){return (await call({action:'evidence',batchId,sequence:page})).url;}
@@ -111,63 +125,43 @@ function renderPages(){
  }
 }
 const candidateCache=new Map();let matchingRequest=0;
-async function partialSuggestions(row,batchId,across=false){
- return findPartialMatches({name:row.name,inScope:p=>across||(allianceGroup(p.alliance)===allianceGroup(row.alliance)&&String(p.server)===String(row.allianceServer)),search:async fragment=>{
- const results=await Promise.allSettled([call({action:'player-search',query:fragment}),call({action:'player-search',batchId,allianceScope:!across,matchRows:[{name:fragment,alliance:row.alliance,server:row.allianceServer,score:row.score,rank:row.rank}]})]);
- const directory=results[0].status==='fulfilled'&&Array.isArray(results[0].value)?results[0].value:[];
- const matches=results[1].status==='fulfilled'?results[1].value.rows?.[0]?.candidates||[]:[];
- if(results.every(r=>r.status==='rejected'))throw Error('Partial name search unavailable');
- return [...new Map([...directory,...matches].map(p=>[p.key,p])).values()];
- }});
+let matchingRosterState={key:'',status:'idle',rosters:[],error:'',promise:null};
+function matchingSelections(){return allianceGroups((draft?.rows||[]).filter(r=>!r.excluded)).map(group=>({server:Number(group.rows[0].allianceServer),tag:group.key==='nvsp'?'NvSP':String(group.label).match(/\[([^\]]+)\]/)?.[1]||String(group.label).trim()}));}
+function matchingRosterKey(){return JSON.stringify([active?.id,matchingSelections().sort((a,b)=>a.server-b.server||a.tag.localeCompare(b.tag))]);}
+async function loadMatchingRosters(force=false){
+ if(!active||!draft||!alliancesReady())return false;
+ const key=matchingRosterKey(),batch=active,review=draft,selections=matchingSelections();
+ if(matchingRosterState.key===key){if(matchingRosterState.status==='loading')return matchingRosterState.promise;if(!force)return matchingRosterState.status==='ready';}
+ const state={key,status:'loading',rosters:[],error:'',promise:null};matchingRosterState=state;candidateCache.clear();
+ state.promise=(async()=>{try{
+  const result=await call({action:'matching-rosters',batchId:batch.id,selections});
+  if(active!==batch||draft!==review||matchingRosterState!==state||matchingRosterKey()!==key)return false;
+  state.rosters=validateMatchingRosters(result,selections);state.status='ready';return true;
+ }catch(error){if(matchingRosterState===state){state.status='error';state.error=error.message+' Matching is paused; no All Contacts fallback is used.';}return false;
+ }finally{if(active===batch&&draft===review&&matchingRosterState===state)renderSummary();}})();
+ renderSummary();return state.promise;
+}
+function candidatesWithinRoster(row,{query,browse=false}={}){
+ if(matchingRosterState.key!==matchingRosterKey()||matchingRosterState.status!=='ready')throw Error('The selected LW Toolkit roster is unavailable. Load the roster above before matching.');
+ const tag=matchingSelections().find(s=>s.server===Number(row.allianceServer)&&allianceGroup(s.tag)===allianceGroup(row.alliance))?.tag;
+ return rosterCandidates(matchingRosterState.rosters,{server:row.allianceServer,tag,names:query===undefined?nameReadings(row):[query],browse});
 }
 function candidateKey(row){return JSON.stringify([active?.id,nameReadings(row),row.alliance,row.allianceServer,row.score,row.rank]);}
 async function suggestPageMatches(){
  if(!active||!draft||!alliancesReady())return;
  const request=++matchingRequest,batch=active,page=currentPage;
- const current=()=>request===matchingRequest&&active===batch&&currentPage===page;
- const pending=pageRows().filter(row=>!row.playerKey&&!row.excluded&&!candidateCache.has(candidateKey(row)));
- if(!pending.length){renderRows();return;}
- let failures=0;
- $('extract-status').textContent='Finding alliance player matches…';
- const requests=pending.flatMap(row=>nameReadings(row).map(name=>({row,name,key:candidateKey(row)})));
- const failedKeys=new Set();
- for(let offset=0;offset<requests.length;offset+=10){
-  const chunk=requests.slice(offset,offset+10);
-  try{
-   const data=await call({action:'player-search',batchId:batch.id,allianceScope:true,matchRows:chunk.map(({row,name})=>({name,alliance:row.alliance,server:row.allianceServer,score:row.score,rank:row.rank}))});
-   if(!current())return;if(!Array.isArray(data.rows))throw Error('No matching results');
-   const received=new Set();
-   for(const item of data.rows){if(!Number.isInteger(item.index)||!chunk[item.index])continue;received.add(item.index);
-    const {row,key}=chunk[item.index];
-    candidateCache.set(key,mergeCandidates(candidateCache.get(key)||[],(item.candidates||[]).filter(p=>allianceGroup(p.alliance)===allianceGroup(row.alliance)&&String(p.server)===String(row.allianceServer))));
-   }
-   chunk.forEach((item,i)=>{if(!received.has(i))failedKeys.add(item.key);});renderRows();
-  }catch(error){if(!current())return;chunk.forEach(item=>failedKeys.add(item.key));}
- }
- failures+=failedKeys.size;
- if(!current())return;
- $('extract-status').textContent='Exact matches are ready. Checking unclear names…';
- // Keep successful matches visible while two bounded workers search difficult rows.
- const unclear=pending.filter(row=>!(candidateCache.get(candidateKey(row))||[]).some(p=>Number(p.nameSimilarity)===1&&!p.eventConflict));
- let next=0;
- async function searchNext(){
-  while(current()&&next<unclear.length){
-   const row=unclear[next++],key=candidateKey(row);
-   try{
-    const partials=await partialSuggestions(row,batch.id);
-    if(!current())return;
-    candidateCache.set(key,mergePartialMatches(candidateCache.get(key)||[],partials));
-    renderRows();
-   }catch(error){if(!current())return;failures++;}
-  }
- }
- await Promise.all([searchNext(),searchNext()]);
- if(!current())return;
- renderRows();
- $('extract-status').textContent=failures?'Available matches are ready. Some searches failed; use Refresh player suggestions to retry. Your selections are kept.':'Matches ready. Confirm exact matches on this page; compare possible matches before choosing.';
+ if(!await loadMatchingRosters())return;
+ if(request!==matchingRequest||active!==batch||currentPage!==page)return;
+ for(const row of pageRows().filter(r=>!r.playerKey&&!r.excluded))candidateCache.set(candidateKey(row),candidatesWithinRoster(row).filter(p=>p.key));
+ renderRows();$('extract-status').textContent='Toolkit roster matches ready. Confirm exact matches; compare possible matches before choosing.';
 }
-function attachCandidate(row,profile){document.querySelector('.r4-match-dialog')?.close();profileCache.set(profile.key,profile);row.playerKey=profile.key;row.playerName=profile.name;row.playerAlliance=profile.alliance||'';resetConfirmations(row,'playerChecked','allianceChecked');markChanged();renderRows();status('Linked '+profile.name+'. Check the score and screenshot alliance, then confirm and save draft.');}
-function selectPage(page){if(reviewBusy)return;matchingRequest++;currentPage=page;selected=-1;renderPages();renderRows();renderSummary();evidence(page);$('editor').replaceChildren(el('p','Select a player name to search All Contacts.'));suggestPageMatches();}
+function attachCandidate(row,profile){
+ if(!draft?.rows.includes(row)||row.excluded)return false;
+ let verified;try{verified=rosterMatchAvailability(candidatesWithinRoster(row,{browse:true}),draft.rows,row).find(p=>p.key===profile.key&&p.uid===profile.uid);}catch(error){status(error.message);return false;}
+ if(!verified?.key||verified.linkState!=='linked'||verified.alreadyMatched){status('This player is already matched or is no longer available in this alliance roster. Reopen the player list.');return false;}
+ document.querySelector('.r4-match-dialog')?.close?.();profileCache.set(verified.key,verified);row.playerKey=verified.key;row.playerName=verified.name;row.playerAlliance=verified.alliance||'';resetConfirmations(row,'playerChecked','allianceChecked');markChanged();renderRows();status('Linked '+verified.name+'. Check the score and screenshot alliance, then confirm and save draft.');return true;
+}
+function selectPage(page){if(reviewBusy)return;matchingRequest++;currentPage=page;selected=-1;renderPages();renderRows();renderSummary();evidence(page);$('editor').replaceChildren(el('p','Select a player name to search its LW Toolkit roster.'));suggestPageMatches();}
 
 function checkbox(key,label,row,index){
  const wrapper=el('label'),input=el('input');wrapper.className='r4-row-confirm';input.type='checkbox';input.checked=!!row[key];
@@ -177,6 +171,13 @@ function editable(label,value,onchange,type='text'){
  const wrapper=el('label',label),input=el('input');input.type=type;input.value=value??'';input.onclick=event=>event.stopPropagation();
  input.oninput=()=>{onchange(input.value);markChanged();};input.onblur=()=>renderRows();wrapper.append(input);return wrapper;
 }
+function renderLaneEvidence(){
+ const candidate=$('image')?.querySelector('img'),image=candidate?.dataset.batch===active?.id&&candidate?.dataset.page===String(currentPage)?candidate:null;
+ for(const holder of document.querySelectorAll('.r4-lane-evidence[data-row]')){
+  const row=draft?.rows[Number(holder.dataset.row)];if(!row||row.page!==currentPage)continue;
+  renderScreenshotLaneEvidence({container:holder,row,rows:pageRows(),image,onOpen:()=>{const full=document.querySelector('.r4-full-evidence');if(full)full.open=true;$('image').scrollIntoView({block:'nearest'});}});
+ }
+}
 function renderRows(){
  if($('rows')?.contains(document.activeElement)&&document.activeElement?.tagName==='INPUT'){renderSummary();return;}
  const tbody=$('rows'),editor=$('editor');if(editor&&tbody.contains(editor)){tbody.closest('.r4-data').append(editor);editor.hidden=true;}tbody.replaceChildren();if(!draft)return;
@@ -184,11 +185,11 @@ function renderRows(){
  const query=$('filter').value.toLowerCase();let visible=0;
  draft.rows.forEach((row,index)=>{
  if(row.page!==currentPage||query&&!`${row.name} ${row.alliance} ${row.playerName}`.toLowerCase().includes(query))return;visible++;
- const tr=el('tr');tr.className=`${rowConfirmed(row)?'confirmed':'pending'}${index===selected?' selected':''}${row.excluded?' excluded-row':''}`;
+ const tr=el('tr');tr.dataset.row=String(index);tr.className=`${rowConfirmed(row)?'confirmed':'pending'}${index===selected?' selected':''}${row.excluded?' excluded-row':''}`;
  const data=el('td'),line=el('div');line.className='r4-single-row';
  const group=allianceGroups(draft.rows).find(g=>g.key===allianceGroup(row.alliance));const alliance=el('span',group?.label||row.alliance||'Not detected');alliance.className='r4-alliance-value';alliance.title='Detected: '+row.alliance+'. Edit this alliance for the whole set above.';
  const ready=readyRows.has(row),suggested=assessCandidates(candidateCache.get(candidateKey(row))||[]).candidate;
- const player=el('button');player.append(el('span',row.playerName||(ready?suggested?.name:null)||row.name||'Unnamed player'));const badge=el('span',rowConfirmed(row)?'✓ Confirmed':row.playerKey?'Change player':ready?'✓ Exact match · ready':'⌕ Find or create player');badge.className=rowConfirmed(row)?'r4-confirmed-badge':'r4-match-prompt';player.append(badge);player.setAttribute('aria-label',(row.playerName||row.name)+' — '+(rowConfirmed(row)?'Confirmed; change match':row.playerKey?'Change match':'Match player'));player.type='button';player.className='r4-inline-player';player.title=row.playerKey?'Linked player — click to change':'Click to match this player';player.disabled=false;player.onclick=()=>selectRow(index);
+ const player=el('button');player.append(el('span',row.playerName||(ready?suggested?.name:null)||row.name||'Unnamed player'));const badge=el('span',rowConfirmed(row)?'✓ Confirmed':row.playerKey?'Change player':ready?'✓ Exact match · ready':'⌕ Search Toolkit roster');badge.className=rowConfirmed(row)?'r4-confirmed-badge':'r4-match-prompt';player.append(badge);player.setAttribute('aria-label',(row.playerName||row.name)+' — '+(rowConfirmed(row)?'Confirmed; change match':row.playerKey?'Change match':'Match player'));player.type='button';player.className='r4-inline-player';player.title=row.playerKey?'Linked player — click to change':'Click to match this player';player.disabled=false;player.onclick=()=>selectRow(index);
  const score=editable('Suggested score',formatScore(row.score),value=>{row.score=value.replace(/,/g,'');row.scoreResolved=true;resetConfirmations(row,'scoreChecked');});score.className='r4-inline-field r4-inline-score';
  const actions=el('div');actions.className='r4-inline-actions';
  const issue=row.excluded?'Excluded row':unresolvedEvidence(row)?'Resolve the screenshot reading below':!/^\d{1,12}$/.test(row.score)?'Correct the score':!clean(row.alliance)?'Correct the alliance':'';
@@ -207,9 +208,9 @@ function renderRows(){
 
  const exclude=el('button',row.excluded?'Include row':'Exclude duplicate / pinned row');exclude.type='button';exclude.onclick=()=>{row.excluded=!row.excluded;markChanged();renderRows();};details.append(exclude);
  if(!row.playerKey){const candidates=candidateCache.get(candidateKey(row))||[];for(const profile of candidates){const pick=el('button','Use '+profile.name+' · '+profile.alliance+' · '+profile.strength);pick.type='button';pick.onclick=()=>attachCandidate(row,profile);details.append(pick);}}
- const state=el('span',row.excluded?'Excluded':rowConfirmed(row)?'✓ Confirmed':!alliancesReady()?'Confirm alliances to start':row.playerKey||ready?'Ready to confirm':'Needs a match');state.className='r4-row-state '+(rowConfirmed(row)?'is-confirmed':row.playerKey||ready?'is-ready':'is-unmatched');state.setAttribute('role','status');actions.append(state,confirm,more);const playerCell=el('div');playerCell.className='r4-player-suggestions';playerCell.append(player);const reading=el('small','Screenshot text: '+(row.name||'Unreadable'));reading.dir='auto';playerCell.append(reading);if(row.playerKey){const remove=el('button','Remove match');remove.type='button';remove.className='r4-remove-match';remove.setAttribute('aria-label','Remove match for '+(row.playerName||row.name));remove.onclick=()=>{const previous=row.playerName||row.name;row.playerKey='';row.playerName='';row.playerAlliance='';row.checked=false;resetConfirmations(row,'playerChecked','allianceChecked','scoreChecked');markChanged();renderRows();status('Match removed for '+previous+'. Original screenshot name and score retained. Save review draft to keep this change.');};playerCell.append(remove);}if(!row.playerKey&&!row.excluded&&alliancesReady()){const candidates=candidateCache.get(candidateKey(row));if(candidates){const assessment=assessCandidates(candidates),best=assessment.candidate;playerCell.append(el('small',assessment.label));for(const partial of candidates.filter(p=>p.partialMatch).slice(0,3)){const option=el('button','Partial “'+partial.matchedFragment+'” · Compare '+partial.name);option.type='button';option.className='r4-suggested-player';option.onclick=()=>selectRow(index);playerCell.append(option);}if(best&&!ready){const suggestion=el('button','Compare '+best.name);suggestion.type='button';suggestion.className='r4-suggested-player';suggestion.setAttribute('aria-label','Compare possible player: '+best.name);suggestion.onclick=()=>selectRow(index);playerCell.append(suggestion);}}else playerCell.append(el('small','Finding player suggestions…'));}line.append(alliance,playerCell,score,actions);data.append(line,details);tr.append(data);tbody.append(tr);
+ const state=el('span',row.excluded?'Excluded':rowConfirmed(row)?'✓ Confirmed':!alliancesReady()?'Confirm alliances to start':row.playerKey||ready?'Ready to confirm':'Needs a match');state.className='r4-row-state '+(rowConfirmed(row)?'is-confirmed':row.playerKey||ready?'is-ready':'is-unmatched');state.setAttribute('role','status');const undo=el('button','Undo');undo.type='button';undo.className='r4-lane-undo';undo.hidden=!rowConfirmed(row);undo.onclick=()=>{resetConfirmations(row,'playerChecked','allianceChecked','scoreChecked');row.checked=false;markChanged();renderRows();status('Confirmation removed. The player match and score are kept. Save the draft to keep this change.');};actions.append(state,confirm,undo,more);const playerCell=el('div');playerCell.className='r4-player-suggestions';playerCell.append(player);const reading=el('small','Screenshot text: '+(row.name||'Unreadable'));reading.dir='auto';playerCell.append(reading);if(row.playerKey){const remove=el('button','Remove match');remove.type='button';remove.className='r4-remove-match';remove.setAttribute('aria-label','Remove match for '+(row.playerName||row.name));remove.onclick=()=>{const previous=row.playerName||row.name;row.playerKey='';row.playerName='';row.playerAlliance='';row.checked=false;resetConfirmations(row,'playerChecked','allianceChecked','scoreChecked');markChanged();renderRows();status('Match removed for '+previous+'. Original screenshot name and score retained. Save review draft to keep this change.');};playerCell.append(remove);}if(!row.playerKey&&!row.excluded&&alliancesReady()){const candidates=candidateCache.get(candidateKey(row));if(candidates){const assessment=assessCandidates(candidates),best=assessment.candidate;playerCell.append(el('small',assessment.label));for(const partial of candidates.filter(p=>p.partialMatch).slice(0,3)){const option=el('button','Partial “'+partial.matchedFragment+'” · Compare '+partial.name);option.type='button';option.className='r4-suggested-player';option.onclick=()=>selectRow(index);playerCell.append(option);}if(best&&!ready){const suggestion=el('button','Compare '+best.name);suggestion.type='button';suggestion.className='r4-suggested-player';suggestion.setAttribute('aria-label','Compare possible player: '+best.name);suggestion.onclick=()=>selectRow(index);playerCell.append(suggestion);}}else playerCell.append(el('small',matchingRosterState.status==='error'?'Toolkit roster unavailable — saved matches kept':'Loading Toolkit roster…'));}const evidence=el('div');evidence.className='r4-lane-evidence';evidence.dataset.row=String(index);const match=el('div');match.className='r4-lane-match';match.append(alliance,playerCell,score);line.append(evidence,match,actions);data.append(line,details);tr.append(data);tbody.append(tr);
  });
- if(!visible){const tr=el('tr'),td=el('td','No rows on this page match.');tr.append(td);tbody.append(tr);}renderSummary();
+ if(!visible){const tr=el('tr'),td=el('td','No rows on this page match.');tr.append(td);tbody.append(tr);}renderLaneEvidence();renderSummary();
 }
 
 function profileLine(label,value){const p=el('p');p.append(el('strong',`${label}: `),document.createTextNode(clean(value)||'Unknown'));return p;}
@@ -301,7 +302,7 @@ function setPlayerPhoto(container,value,name){
  let source='';if(typeof value==='string'&&/^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/.test(value))source=value;
  else{try{const url=new URL(value);if(url.protocol==='https:'&&url.hostname==='lastwar-cdn.akamaized.net')source=url.href;}catch{}}
  if(!source){container.title='No profile photo saved';return;}
- const image=el('img');image.alt=`${name||'Player'} profile photo`;image.referrerPolicy='no-referrer';image.onload=()=>container.replaceChildren(image);image.onerror=()=>{container.title='Profile photo unavailable';};image.src=source;
+ const image=el('img');image.dataset.batch=batch.id;image.dataset.page=String(page);image.alt=`${name||'Player'} profile photo`;image.referrerPolicy='no-referrer';image.onload=()=>container.replaceChildren(image);image.onerror=()=>{container.title='Profile photo unavailable';};image.src=source;
 }
 
 function drawPlayerHR(body,profile,full){
@@ -339,7 +340,7 @@ function drawPlayerHR(body,profile,full){
  render();
 }
 
-async function showDirectoryProfile(profile,initialTab='all'){
+async function showDirectoryProfile(profile,initialTab='all',matchContext=null){
  profileCache.set(profile.key,profile);const out=$('directory-profile');document.body.append(out);out.replaceChildren();
  const header=el('header'),identity=el('div'),avatar=el('div',(profile.name||'?').trim().slice(0,1).toUpperCase()),title=el('div'),heading=el('h2',profile.name||'Player profile');header.className='player-header';identity.className='player-identity';avatar.className='player-avatar';title.append(el('small','ALLIANCE HUB · PLAYER RECORD'),heading,el('p',`[${profile.alliance||'Unknown'}] · Server ${profile.server||'—'}${profile.allianceRank?' · '+profile.allianceRank:''}`));identity.append(avatar,title);header.append(identity);const close=el('button','Close ×');close.className='player-close';close.onclick=()=>out.close?out.close():out.replaceChildren();header.append(close);out.append(header);out.setAttribute('aria-label',`${profile.name||'Player'} profile`);if(out.showModal&&!out.open)out.showModal();
  const layout=el('div'),tabs=el('nav'),body=el('section');layout.className='player-layout';tabs.className='player-tabs';tabs.setAttribute('role','tablist');tabs.setAttribute('aria-label','Player profile sections');body.className='player-body';body.setAttribute('role','tabpanel');layout.append(tabs,body);out.append(layout);body.textContent='Loading player record…';
@@ -354,13 +355,13 @@ async function showDirectoryProfile(profile,initialTab='all'){
  if(key==='server_plans'){drawServerPlans(body,profile,full);return;}
  if(key==='hr'){drawPlayerHR(body,profile,full);return;}
  if(key==='bounties'){drawPlayerBounties(body,full);return;}
- if(key==='all'){const edit=el('button','Edit player details');edit.className='overview-edit';edit.onclick=()=>{if(!body.querySelector('form'))editPlayerOverview(body,profile,full,updated=>showDirectoryProfile(updated));};body.append(edit);const grid=el('div');grid.className='player-info-grid';grid.append(facts('Player details',[['Player name',profile.name],['Translated name',profile.translatedName],['Alliance',profile.alliance],['Alliance rank',profile.allianceRank],['Hard save',profile.hardSave?(profile.hardSaveLabel||'Active hard-save order'):'No active order'],['Server',profile.server],['Aliases',(profile.aliases||[]).join(' · ')],['Previous in-game names',(profile.previousGameNames||[]).map(n=>typeof n==='string'?n:[n.name,n.date?new Date(n.date).toLocaleDateString():null].filter(Boolean).join(' · ')).join(' / ')]]),facts('Game statistics',[['Hero power (M)',profile.power],['Profession level',profile.profession],['Kills',profile.kills==null?null:formatScore(profile.kills)]]));body.append(grid);const hardSavePair=Array.from(grid.querySelectorAll('dl>div')).find(node=>node.querySelector('dt')?.textContent==='Hard save');if(profile.hardSave&&hardSavePair)hardSavePair.querySelector('dd').prepend(hardSaveMarker(profile),document.createTextNode(' '));return;}
+ if(key==='all'){const edit=el('button','Edit player details');edit.className='overview-edit';edit.onclick=()=>{if(!body.querySelector('form'))editPlayerOverview(body,profile,full,updated=>showDirectoryProfile(updated,'all',matchContext));};body.append(edit);const grid=el('div');grid.className='player-info-grid';grid.append(facts('Player details',[['Player name',profile.name],['Translated name',profile.translatedName],['Alliance',profile.alliance],['Alliance rank',profile.allianceRank],['Hard save',profile.hardSave?(profile.hardSaveLabel||'Active hard-save order'):'No active order'],['Server',profile.server],['Aliases',(profile.aliases||[]).join(' · ')],['Previous in-game names',(profile.previousGameNames||[]).map(n=>typeof n==='string'?n:[n.name,n.date?new Date(n.date).toLocaleDateString():null].filter(Boolean).join(' · ')).join(' / ')]]),facts('Game statistics',[['Hero power (M)',profile.power],['Profession level',profile.profession],['Kills',profile.kills==null?null:formatScore(profile.kills)]]));body.append(grid);const hardSavePair=Array.from(grid.querySelectorAll('dl>div')).find(node=>node.querySelector('dt')?.textContent==='Hard save');if(profile.hardSave&&hardSavePair)hardSavePair.querySelector('dd').prepend(hardSaveMarker(profile),document.createTextNode(' '));return;}
  else body.append(el('p',key==='vs'?'Daily target: 7,200,000 · Six play days each week':key==='donations'?'Weekly target: 35,000 · One weekly donation screenshot':'Approved event results linked to this player.'));
  const rows=(full.activity||[]).filter(item=>key==='all'||item.metric===key);if(!rows.length){empty('No confirmed activity yet','Approved results will appear here. Pending screenshot submissions are kept in review until confirmed.');return;}const table=el('table');table.className='player-activity-table';const head=el('tr');for(const label of ['Event','Game date','Period','Score','Details'])head.append(el('th',label));table.append(head);for(const item of rows){const tr=el('tr');for(const value of [choices.find(c=>c[0]===item.metric)?.[1]||item.metric,item.date,item.period,formatScore(item.score)])tr.append(el('td',value));const cell=el('td'),details=el('details');details.append(el('summary','Full details'));const evidence=(full.bounties||[]).find(b=>b.bounty===item.bounty&&b.gameDate===item.date);details.append(profileLine('Source',item.bounty),profileLine('Record','Confirmed leaderboard score · no bounty reward for being listed'));if(evidence){details.append(profileLine('Screenshots',String(evidence.fileCount||0)),profileLine('Review status',evidence.state),profileLine('Reviewed',evidence.reviewedAt?new Date(evidence.reviewedAt).toLocaleString():'Not recorded'));if(evidence.reviewNote)details.append(el('p',evidence.reviewNote));}cell.append(details);tr.append(cell);table.append(tr);}body.append(table);};
  for(const [key,label] of choices){const button=el('button',label);button.type='button';button.dataset.key=key;button.setAttribute('role','tab');button.onclick=()=>draw(key);tabs.append(button);}draw(initialTab);
  }catch(error){body.replaceChildren(el('h2','Unable to load player record'),el('p',error.message));}
 
- if(draft&&selected>=0){const attach=el('button','Use this player for the selected OCR row');attach.className='primary directory-attach';attach.onclick=()=>{const row=draft.rows[selected];row.playerKey=profile.key;row.playerName=profile.name;row.playerAlliance=profile.alliance||'';resetConfirmations(row,'playerChecked','allianceChecked');markChanged();out.close();document.querySelector('.r4-match-dialog')?.close();renderRows();status(`${profile.name} attached as an unconfirmed match. Confirm the player and alliance after checking the evidence.`);};out.append(attach);}
+ if(matchContext){const attach=el('button','Select this player');attach.type='button';attach.className='primary directory-attach';attach.onclick=()=>{if(matchContext.select()!==false)out.close();};out.append(attach);}
 }
 
 let recordsPage=0,recordsQuery='',rosterOnly=false,duelOnly=false,directoryRequestId=0;
@@ -470,15 +471,6 @@ async function searchDirectory(event){
 }
 if($('records-next')){window.addEventListener('nova-records-open',event=>{rosterOnly=!!event.detail?.roster;duelOnly=!!event.detail?.duel;if(duelOnly)rosterMetric='vs';recordsPage=0;$('directory-title').textContent=duelOnly?'Alliance Duel / Versus (VS)':rosterOnly?'NvSP Roster':'All Players';searchDirectory();});}
 
-function showCreateContact(row,editor){
- const existing=editor.querySelector('.r4-new-contact');if(existing){existing.hidden=false;return;}
- const form=el('form');form.className='r4-new-contact';form.append(el('h3','Create player in All Contacts'),el('p','Creates a shared player record, not a login. Check the name and server before saving.'));
- const inputs={};for(const [key,label,value] of [['name','Player name',row.name],['alliance','Alliance',allianceGroups(draft.rows).find(g=>g.key===allianceGroup(row.alliance))?.label||row.alliance],['server','Server',row.allianceServer||'']]){const field=el('label',label),input=el('input');input.value=value;input.required=true;input.maxLength=key==='name'?160:key==='server'?6:100;if(key==='server'){input.inputMode='numeric';input.pattern='[0-9]{1,6}';input.placeholder='Enter the opponent’s server';}field.append(input);form.append(field);inputs[key]=input;}
- const save=el('button','Review new player'),cancel=el('button','Cancel'),feedback=el('p');feedback.setAttribute('role','status');save.type='submit';cancel.type='button';cancel.onclick=()=>{form.remove();editor.querySelector('h3').hidden=false;editor.querySelector('.search-line').hidden=false;editor.querySelector('.search-results').hidden=false;editor.querySelector('.r4-create-contact').hidden=false;};form.append(save,cancel,feedback);editor.append(form);
- form.onsubmit=async event=>{event.preventDefault();const name=inputs.name.value.trim(),alliance=inputs.alliance.value.trim(),server=inputs.server.value.trim();if(!await confirmPlanChange('Create player in All Contacts',[name,alliance,'Server '+server,'This will create a shared player record and link it to this review row.']))return;save.disabled=true;feedback.textContent='Checking for duplicates and saving…';
- try{const creationBatch=active.id,creationDraft=draft;const result=await call({action:'save-review',operation:'create-contact',batchId:creationBatch,name,alliance,server,confirmed:true});if(active?.id!==creationBatch||draft!==creationDraft){status(result.created?'Player created in All Contacts. Return to the original submission to link the player.':'An existing player was found. Return to the original submission to link the player.');return;}if(result.duplicate){feedback.replaceChildren(el('span','An existing player has this name or previous name on that server. '));const use=el('button','Use existing player: '+result.player.name);use.type='button';use.onclick=()=>attachCandidate(row,result.player);feedback.append(use);return;}if(!result.created||!result.player?.key)throw Error('The record was not created.');directoryCache.clear();candidateCache.clear();attachCandidate(row,result.player);status('Created '+result.player.name+' in All Contacts and linked this row. Save draft to retain the match.');}
- catch(error){feedback.textContent='Player not created: '+error.message;}finally{save.disabled=false;}};
-}
 function allianceLookupField(group,position){
  const wrap=el('section');wrap.className='r4-alliance-lookup';const label=el('label',group.rows.length+' screenshot rows · Alliance'),input=el('input');input.value=group.key==='unknown'?'':group.label;input.required=true;input.maxLength=100;input.autocomplete='off';input.placeholder='Start typing an alliance name or tag';input.setAttribute('aria-label','Alliance '+position);label.append(input);
  const serverLabel=el('label','Server'),server=el('input');server.inputMode='numeric';server.pattern='[0-9]{1,6}';server.maxLength=6;server.required=true;server.placeholder='Select an alliance or enter its server';server.value=group.rows.find(r=>r.allianceServer)?.allianceServer||'';server.setAttribute('aria-label','Server for alliance '+position);serverLabel.append(server);
@@ -492,44 +484,14 @@ function confirmAlliancesForMatch(index){
  const fields=allianceGroups(draft.rows.filter(r=>!r.excluded)).map((group,i)=>{const field=allianceLookupField(group,i+1);content.append(field.wrap);return {group,...field};});
  const feedback=el('p'),cancel=el('button','Cancel'),proceed=el('button',index==null?'Confirm alliances':'Confirm alliances and find player');cancel.type=proceed.type='button';cancel.onclick=()=>dialog.close();proceed.onclick=()=>{if(fields.some(({input,server})=>!input.reportValidity()||!server.reportValidity()||!input.value.trim()))return;for(const {group,input,server} of fields){for(const row of group.rows){if(row.alliance!==input.value.trim()||row.allianceServer!==server.value.trim())row.allianceChecked=false;row.alliance=input.value.trim();row.allianceServer=server.value.trim();row.allianceSet=true;}}candidateCache.clear();markChanged();dialog.close();renderRows();if(index!=null)selectRow(index);else {status('Alliance names and servers updated. Save draft to retain them.');suggestPageMatches();}};content.append(feedback,cancel,proceed);dialog.append(content);dialog.onclose=()=>dialog.remove();document.body.append(dialog);dialog.showModal();fields.forEach(field=>field.start());
 }
-function selectRow(index){
- if(!alliancesReady()){confirmAlliancesForMatch(index);return;}selected=index;const row=draft.rows[index],editor=$('editor');renderRows();editor.replaceChildren();const dialog=el('dialog');dialog.className='r4-match-dialog';dialog.setAttribute('aria-label','Find or create player');document.body.append(dialog);dialog.append(editor);dialog.onclose=()=>{editor.hidden=true;document.querySelector('.r4-data').append(editor);dialog.remove();};
- const heading=el('h3',`Match player: ${row.name||'Unnamed player'}`),line=el('div');line.className='search-line';const label=el('label','Search '+row.alliance+' by player name or previous name'),input=el('input');input.value=row.name;label.append(input);const find=el('button','Search All Contacts'),results=el('div');results.className='search-results';line.append(label,find);editor.append(heading,line,results);const create=el('button','＋ Create new player');create.type='button';create.className='r4-create-contact';create.onclick=()=>{heading.hidden=true;line.hidden=true;results.hidden=true;create.hidden=true;showCreateContact(row,editor);};editor.append(create);const close=el('button','Close search');close.onclick=()=>dialog.close();editor.prepend(close);editor.hidden=false;editor.onclick=event=>event.stopPropagation();dialog.showModal();
- let searchVersion=0,searchOtherAlliances=false;
- const broaden=el('button','Search other alliances too');broaden.type='button';line.append(broaden);
- broaden.onclick=()=>{searchOtherAlliances=!searchOtherAlliances;broaden.textContent=searchOtherAlliances?'Search this alliance only':'Search other alliances too';runSearch();};
- const runSearch=async()=>{
-  const version=++searchVersion,query=input.value.trim(),batchId=active.id;
-  find.disabled=true;results.replaceChildren(el('p','Searching All Contacts…'));
-  try{
-   const [directory,matching]=await Promise.allSettled([
-    call({action:'player-search',query}),
-    call({action:'player-search',batchId,allianceScope:!searchOtherAlliances,matchRows:[{name:query,alliance:row.alliance,server:row.allianceServer||'',score:row.score,rank:row.rank}]})
-   ]);
-   if(version!==searchVersion||!results.isConnected||!dialog.open)return;
-   const found=directory.status==='fulfilled'&&Array.isArray(directory.value)?directory.value:[];
-   const suggestions=matching.status==='fulfilled'&&Array.isArray(matching.value.rows)?matching.value.rows[0]?.candidates||[]:[];
-   const partials=suggestions.some(p=>Number(p.nameSimilarity)===1&&!p.eventConflict)?[]:await partialSuggestions({...row,name:query},batchId,searchOtherAlliances);if(version!==searchVersion||!dialog.open)return;
-   const players=[...new Map(mergePartialMatches([...found,...suggestions],partials).filter(p=>searchOtherAlliances||(allianceGroup(p.alliance)===allianceGroup(row.alliance)&&(!row.allianceServer||String(p.server)===String(row.allianceServer)))).map(p=>[p.key,p])).values()];results.replaceChildren();
-   if(searchOtherAlliances)results.append(el('p','Showing All Contacts across alliances and servers. Check the profile carefully: a player may have moved since this screenshot.'));
-   if(matching.status==='rejected'||!Array.isArray(matching.value?.rows))results.append(el('p','Similar-name suggestions could not load. Search again to retry; any exact results are shown below.'));
-   if(directory.status==='rejected')results.append(el('p','Exact directory search could not load. Any similar-name suggestions are shown below.'));
-   if(!players.length){results.append(el('p','No matching contacts found. Try a shorter part of the name or a previous name.'));const simplified=input.value.normalize('NFKC').replace(/[^\p{L}\p{N}\s]/gu,' ').split(/\s+/).filter(part=>part.length>2).join(' ').trim();if(simplified&&simplified!==input.value.trim()){const retry=el('button','Search “'+simplified+'”');retry.type='button';retry.onclick=event=>{event.stopPropagation();input.value=simplified;runSearch();};results.append(retry);}}
-   for(const profile of players){
-    const card=el('article');card.className='r4-match-card';
-    const identity=el('div');identity.className='r4-match-identity';identity.append(el('strong',profile.name),el('span',(profile.alliance||'Alliance unknown')+' · Server '+(profile.server||'unknown')+(profile.strength?' · '+profile.strength:'')));
-    if(allianceGroup(profile.alliance)!==allianceGroup(row.alliance)||String(profile.server)!==String(row.allianceServer))identity.append(el('small','Different saved alliance or server — verify before selecting'));
-    if(profile.partialMatch)identity.append(el('small','Partial screenshot name: “'+profile.matchedFragment+'” — verify before choosing'));
-    if(profile.matchedName&&profile.matchedName!==profile.name)identity.append(el('small','Matched previous name / alias: '+profile.matchedName));
-    const actions=el('div');actions.className='r4-match-card-actions';
-    const view=el('button','View profile');view.type='button';view.setAttribute('aria-label','View profile: '+profile.name);view.onclick=event=>{event.preventDefault();event.stopPropagation();showDirectoryProfile({...profile});};
-    const use=el('button','Use this player');use.type='button';use.className='r4-use-player';use.setAttribute('aria-label','Use this player: '+profile.name);use.onclick=event=>{event.preventDefault();event.stopPropagation();profileCache.set(profile.key,profile);row.playerKey=profile.key;row.playerName=profile.name;row.playerAlliance=profile.alliance||'';resetConfirmations(row,'playerChecked','allianceChecked');markChanged();dialog.close();renderRows();status('Matched to '+profile.name+'. Check the screenshot alliance and score, then confirm the row. Save draft to keep this match.');};
-    actions.append(view,use);card.append(identity,actions);results.append(card);
-   }
-  }catch(error){if(version===searchVersion&&dialog.open)results.replaceChildren(el('p','Search could not finish. Please retry.'));}finally{if(version===searchVersion)find.disabled=false;}
- };
- find.onclick=runSearch;input.onkeydown=event=>{if(event.key==='Enter'){event.preventDefault();runSearch();}};
- runSearch();
+async function selectRow(index){
+ if(!alliancesReady()){confirmAlliancesForMatch(index);return;}
+ const batch=active,review=draft,row=draft.rows[index],scope=matchingRosterKey();selected=index;
+ if(!row||row.excluded)return;
+ if(!await loadMatchingRosters()){status(matchingRosterState.error||'Load the selected LW Toolkit roster before matching.');return;}
+ const isCurrent=()=>active===batch&&draft===review&&matchingRosterKey()===scope&&draft.rows.includes(row)&&!row.excluded;
+ if(!isCurrent())return;
+ renderRows();const container=document.createElement('div');container.className='r4-lane-picker-mount';$('rows').querySelector('tr[data-row="'+index+'"] td').append(container);openRosterMatchPicker({container,row,getRows:()=>draft.rows,getCandidates:options=>candidatesWithinRoster(row,options),isCurrent,onSelect:profile=>attachCandidate(row,profile),onViewProfile:(profile,select)=>showDirectoryProfile(profile,'all',{select})});
 }
 
 async function openBatch(batch){
@@ -537,7 +499,7 @@ async function openBatch(batch){
  if(dirty&&!confirm('Discard unsaved review changes?'))return;
  const request=++openRequest;
  try{
-  const data=await call({action:'review-draft',batchId:batch.id});if(request!==openRequest)return;matchingRequest++;candidateCache.clear();profileCache.clear();active=batch;draft={...data,rows:(data.rows||[]).map(normalizeRow)};dirty=false;selected=-1;currentPage=draft.rows[0]?.page||1;$('workspace').hidden=false;
+  const data=await call({action:'review-draft',batchId:batch.id});if(request!==openRequest)return;matchingRequest++;matchingRosterState={key:'',status:'idle',rosters:[],error:'',promise:null};candidateCache.clear();profileCache.clear();active=batch;draft={...data,rows:(data.rows||[]).map(normalizeRow)};dirty=false;selected=-1;currentPage=draft.rows[0]?.page||1;$('workspace').hidden=false;
   $('bounty-points').value=String(data.rewardPoints??10);$('bounty-points-code').textContent=batch.bounty;
   document.querySelectorAll('.final-check').forEach(input=>input.checked=false);$('review-note').value=data.reviewNote||'';
   $('batch-title').textContent=/^VSD/.test(batch.bounty)?'Daily Alliance Duel leaderboard':/^VSW/.test(batch.bounty)?'Weekly Alliance Duel leaderboard':/^DN/.test(batch.bounty)?'Alliance donations':'Bounty evidence review';$('batch-meta').textContent=`${batch.gameDate} · ${batch.fileCount} uploaded screenshots · Submitted by ${batch.profileName||'Member'}`;
@@ -653,7 +615,7 @@ window.addEventListener('nova-train-player',event=>showDirectoryProfile(event.de
 
 
 
-import {attachEnhancedNames} from './enhanced-name-review.js?v=browser-ocr-20261003';
+import {attachEnhancedNames} from './enhanced-name-review.js?v=toolkit-only-20261003';
 const enhancedNames=el('button','Read difficult names');enhancedNames.type='button';
 async function readNamesLocally(context,careful=false){
  if(extracting)throw Error('Screenshot reading is already running.');extracting=true;$('extract').disabled=true;let reader;
@@ -667,7 +629,9 @@ attachEnhancedNames({button:rereadNames,label:'Review new screenshot readings',g
 // Keep the normal review path clear; repair actions remain available on demand.
 const readingTools=el('details'),readingToolsTitle=el('summary','Reading tools'),readingToolsBody=el('div');
 readingTools.className='r4-reading-tools';readingToolsBody.className='r4-reading-tools-body';
-readingToolsBody.append(el('p','Screenshot reading runs on this device without an AI API. Difficult-name reading checks extra language-specific crops and may take longer.'),rereadNames,enhancedNames,refreshMatches,$('add'));
+readingToolsBody.append(el('p','Screenshot reading runs on this device without an AI API. Difficult-name reading checks extra language-specific crops and may take longer. Suggestions use the loaded LW Toolkit roster.'),rereadNames,enhancedNames,refreshMatches,$('add'));
 readingTools.append(readingToolsTitle,readingToolsBody);$('extract').closest('.r4-toolbar').append(readingTools);
 $('extract').textContent='Read & match screenshots';
 const readingToolsStyle=el('style');readingToolsStyle.textContent='.r4-reading-tools{flex-basis:100%;margin-top:6px;border-top:1px solid #284854;padding-top:12px}.r4-reading-tools>summary{display:list-item;cursor:pointer;color:#9dbbc6;font-size:13px;font-weight:600;list-style-position:inside;padding:8px 0}.r4-reading-tools>summary:focus-visible{outline:2px solid #04d3dc;outline-offset:3px}.r4-reading-tools-body{display:flex;flex-wrap:wrap;gap:10px;padding:8px 0}.r4-reading-tools-body p{flex-basis:100%;margin:0 0 4px;color:#9dbbc6;font-size:13px}.r4-reading-tools-body button{font-size:13px;padding:9px 13px}';document.head.append(readingToolsStyle);
+
+$('lane-queue-toggle').onclick=()=>{const layout=document.querySelector('.r4-layout');const shown=layout.classList.toggle('r4-show-queue');$('lane-queue-toggle').textContent=shown?'Hide review queue':'Show review queue';};
