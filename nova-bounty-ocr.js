@@ -30,7 +30,7 @@ export function parseLeaderboardTsv(tsv,{page=1,width,height,includeSlots=false}
   const allianceLine=allianceIndex>=0?middle[allianceIndex]:middle.length>1?middle.at(-1):null;
   const nameLine=middle.find((line,index)=>index!==allianceIndex&&line!==allianceLine);
   if(!scoreText||!nameLine)continue;
-  rows.push({...includeSlots?{slot}: {},rank:Number(rankText)||0,name:cleanOcrName(nameLine.text),alliance:clean(allianceLine?.text||''),score:scoreText,page,playerKey:'',playerName:'',playerAlliance:'',playerChecked:false,allianceChecked:false,scoreChecked:false,excluded:false,ocrConfidence:Math.round(Math.min(nameLine.confidence,allianceLine?.confidence??nameLine.confidence))});
+  rows.push({...includeSlots?{slot,nameBounds:{left:nameLine.left,top:nameLine.top,right:nameLine.right,bottom:nameLine.bottom}}: {},rank:Number(rankText)||0,name:cleanOcrName(nameLine.text),alliance:clean(allianceLine?.text||''),score:scoreText,page,playerKey:'',playerName:'',playerAlliance:'',playerChecked:false,allianceChecked:false,scoreChecked:false,excluded:false,ocrConfidence:Math.round(Math.min(nameLine.confidence,allianceLine?.confidence??nameLine.confidence))});
  }
  return rows;
 }
@@ -48,21 +48,26 @@ function rankCanvas(image){
  const ctx=canvas.getContext('2d',{willReadFrequently:true});ctx.drawImage(image,0,top,canvas.width/2,bottom-top,0,0,canvas.width,canvas.height);const data=ctx.getImageData(0,0,canvas.width,canvas.height);
  for(let i=0;i<data.data.length;i+=4){const value=Math.min(data.data[i],data.data[i+1],data.data[i+2])>225?0:255;data.data[i]=data.data[i+1]=data.data[i+2]=value;}ctx.putImageData(data,0,0);return canvas;
 }
-function cropLeaderboard(image){
+function cropLeaderboard(image,enhance=false){
  const canvas=document.createElement('canvas'),top=Math.round(image.naturalHeight*.245),bottom=Math.round(image.naturalHeight*.805);
  canvas.width=image.naturalWidth;canvas.height=bottom-top;
  const context=canvas.getContext('2d',{willReadFrequently:true});context.drawImage(image,0,top,image.naturalWidth,canvas.height,0,0,canvas.width,canvas.height);
+ if(!enhance)return canvas;
  const pixels=context.getImageData(0,0,canvas.width,canvas.height);
  for(let i=0;i<pixels.data.length;i+=4){const gray=.299*pixels.data[i]+.587*pixels.data[i+1]+.114*pixels.data[i+2];const value=(i/4)%canvas.width<canvas.width*.19?(gray>240?0:255):gray<145?0:gray>205?255:Math.round((gray-145)*255/60);pixels.data[i]=pixels.data[i+1]=pixels.data[i+2]=value;}
  context.putImageData(pixels,0,0);return canvas;
 }
 
-function nameCanvas(image,slot){
+function nameCanvas(image,slot,bounds){
  const top=Math.round(image.naturalHeight*.245),rowHeight=(Math.round(image.naturalHeight*.805)-top)/7;
- const canvas=document.createElement('canvas'),width=image.naturalWidth*.43,height=rowHeight*.34;
+ const x=bounds?Math.max(image.naturalWidth*.32,bounds.left-6):image.naturalWidth*.327;
+ const y=bounds?Math.max(0,bounds.top-6):rowHeight*(slot+.16);
+ const width=bounds?Math.min(image.naturalWidth*.74-x,bounds.right+6-x):image.naturalWidth*.413;
+ const height=bounds?bounds.bottom+6-y:rowHeight*.42;
+ const canvas=document.createElement('canvas');
  canvas.width=Math.round(width*3);canvas.height=Math.round(height*3);
  // Isolate the name line at original colour: thresholding can erase fine CJK strokes.
- const ctx=canvas.getContext('2d');ctx.drawImage(image,image.naturalWidth*.327,top+rowHeight*(slot+.20),width,height,0,0,canvas.width,canvas.height);return canvas;
+ const ctx=canvas.getContext('2d');ctx.drawImage(image,x,top+y,width,height,0,0,canvas.width,canvas.height);return canvas;
 }
 
 function loadImage(url){return new Promise((resolve,reject)=>{const image=new Image();image.crossOrigin='anonymous';image.onload=()=>resolve(image);image.onerror=()=>reject(Error('The private screenshot could not be opened for OCR.'));image.src=url;});}
@@ -77,6 +82,10 @@ export async function createLeaderboardOcr(onProgress=()=>{}){
  return {
   async read(url,page){
    const image=await loadImage(url),canvas=cropLeaderboard(image),result=await worker.recognize(canvas,{}, {tsv:true});let rows=parseLeaderboardTsv(result.data.tsv,{page,width:canvas.width,height:canvas.height,includeSlots:true});
+   // Use original pixels first. A contrast pass is only additional evidence.
+   const contrast=cropLeaderboard(image,true),contrastResult=await worker.recognize(contrast,{}, {tsv:true});
+   const other=parseLeaderboardTsv(contrastResult.data.tsv,{page,width:contrast.width,height:contrast.height,includeSlots:true});
+   rows=combinePageReadings(rows,other);
    if(rows.some(row=>!row.rank)){
     onProgress('Reading leaderboard positions',0);const ranks=rankCanvas(image),observations={};
     try{await worker.setParameters({tessedit_char_whitelist:'0123456789',tessedit_pageseg_mode:PSM.SPARSE_TEXT});const pass=await worker.recognize(ranks,{}, {tsv:true});
@@ -89,16 +98,16 @@ export async function createLeaderboardOcr(onProgress=()=>{}){
    await detailWorker.setParameters({tessedit_pageseg_mode:PSM.SINGLE_LINE,preserve_interword_spaces:'0',user_defined_dpi:'300'});
    for(const row of rows){
     onProgress('Reading individual names',Math.round(row.slot/7*100));
-    const pass=await detailWorker.recognize(nameCanvas(image,row.slot)),name=cleanOcrName(pass.data.text);
-    if(name&&/[\p{Script=Arabic}\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Hangul}]/u.test(name)&&pass.data.confidence>=60){row.name=name;row.ocrConfidence=Math.round(pass.data.confidence);}
+    const pass=await detailWorker.recognize(nameCanvas(image,row.slot,row.nameBounds)),name=cleanOcrName(pass.data.text);
+    recordNameReading(row,name,pass.data.confidence);
    }
    const arabicRows=rows.filter(row=>/\p{Script=Arabic}/u.test(row.name));
    if(arabicRows.length){
     arabicWorker??=await createWorker(['ara'],1);
     await arabicWorker.setParameters({tessedit_pageseg_mode:PSM.SINGLE_LINE,preserve_interword_spaces:'0',user_defined_dpi:'300'});
     for(const row of arabicRows){
-     const pass=await arabicWorker.recognize(nameCanvas(image,row.slot)),name=cleanOcrName(pass.data.text);
-     if(name&&/\p{Script=Arabic}/u.test(name)&&pass.data.confidence>=60){row.name=name;row.ocrConfidence=Math.round(pass.data.confidence);}
+     const pass=await arabicWorker.recognize(nameCanvas(image,row.slot,row.nameBounds)),name=cleanOcrName(pass.data.text);
+     recordNameReading(row,name,pass.data.confidence);
     }
    }
    const chineseRows=rows.filter(row=>/\p{Script=Han}/u.test(row.name));
@@ -107,12 +116,28 @@ export async function createLeaderboardOcr(onProgress=()=>{}){
     await nameWorker.setParameters({tessedit_pageseg_mode:PSM.SINGLE_LINE,preserve_interword_spaces:'0',user_defined_dpi:'300'});
     for(const row of chineseRows){
      onProgress('Reading Chinese name closely',Math.round(row.slot/7*100));
-     const pass=await nameWorker.recognize(nameCanvas(image,row.slot)),name=cleanOcrName(pass.data.text);
-     if(name&&/\p{Script=Han}/u.test(name)&&pass.data.confidence>=60){row.name=name;row.ocrConfidence=Math.round(pass.data.confidence);}
+     const pass=await nameWorker.recognize(nameCanvas(image,row.slot,row.nameBounds)),name=cleanOcrName(pass.data.text);
+     recordNameReading(row,name,pass.data.confidence);
     }
    }
-   return rows.map(({slot,...row})=>row);
+   return rows.map(({slot,nameBounds,...row})=>row);
   },
   terminate:()=>Promise.all([worker.terminate(),nameWorker?.terminate(),arabicWorker?.terminate(),detailWorker?.terminate()])
  };
+}
+
+export function recordNameReading(row,name,confidence){
+ if(!name||confidence<40)return;
+ row.ocrAlternatives=[...new Set([...(row.ocrAlternatives||[]),name])].filter(n=>n!==row.name);
+ if(row.ocrAlternatives.length)row.ocrNeedsReview=true;
+}
+export function combinePageReadings(original,contrast){
+ const rows=original.map(r=>({...r,ocrAlternatives:[...(r.ocrAlternatives||[])]}));
+ for(const other of contrast){
+  const row=rows.find(r=>r.slot===other.slot);
+  if(!row){rows.push({...other,ocrNeedsReview:true});continue;}
+  if(row.score===other.score&&row.rank===other.rank)recordNameReading(row,other.name,other.ocrConfidence);
+  else if(row.score!==other.score||row.rank!==other.rank)row.ocrNeedsReview=true;
+ }
+ return rows.sort((a,b)=>a.slot-b.slot);
 }

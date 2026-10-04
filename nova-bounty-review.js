@@ -9,7 +9,7 @@ import {loadTrainHistory} from './train-history.js?v=history-20260927';
 import {renderReports} from './player-reports.js?v=report-polish-20260926';
 import {user} from './live-session.js';
 import {bountyConnection as config} from './nova-bounty-config.js';
-import {createLeaderboardOcr} from './nova-bounty-ocr.js?v=arabic-detail-v2-20260929';
+import {createLeaderboardOcr} from './nova-bounty-ocr.js?v=careful-20261003';
 
 const $=id=>document.getElementById(id);
 const el=(tag,text)=>{const node=document.createElement(tag);if(text!==undefined)node.textContent=text;return node;};
@@ -117,20 +117,49 @@ async function partialSuggestions(row,batchId,across=false){
 }
 function candidateKey(row){return JSON.stringify([active?.id,row.name,row.alliance,row.allianceServer,row.score,row.rank]);}
 async function suggestPageMatches(){
- if(!active||!draft||!alliancesReady())return;const request=++matchingRequest,batch=active,page=currentPage,rows=pageRows().filter(r=>!r.playerKey&&!r.excluded);if(!rows.length)return;
- const pending=rows.filter(row=>!candidateCache.has(candidateKey(row)));if(!pending.length){renderRows();return;}
- $('extract-status').textContent='Comparing this page with saved names, aliases, alliances and same-event results…';
- try{for(let offset=0;offset<pending.length;offset+=10){const chunk=pending.slice(offset,offset+10),keys=chunk.map(candidateKey);const data=await call({action:'player-search',batchId:batch.id,allianceScope:true,matchRows:chunk.map(({name,alliance,allianceServer,score,rank})=>({name,alliance,server:allianceServer,score,rank}))});if(request!==matchingRequest||active!==batch||currentPage!==page)return;if(!Array.isArray(data.rows))throw Error('Matching service is not available yet.');for(const item of data.rows)candidateCache.set(keys[item.index],(item.candidates||[]).filter(p=>allianceGroup(p.alliance)===allianceGroup(chunk[item.index].alliance)&&String(p.server)===String(chunk[item.index].allianceServer)));}
- for(const row of pending){
-  const key=candidateKey(row),candidates=candidateCache.get(key)||[];
-  if(!candidates.some(p=>Number(p.nameSimilarity)===1&&!p.eventConflict)){
-   const partials=await partialSuggestions(row,batch.id);
-   if(request!==matchingRequest||active!==batch||currentPage!==page)return;
-   candidateCache.set(key,mergePartialMatches(candidates,partials));
+ if(!active||!draft||!alliancesReady())return;
+ const request=++matchingRequest,batch=active,page=currentPage;
+ const current=()=>request===matchingRequest&&active===batch&&currentPage===page;
+ const pending=pageRows().filter(row=>!row.playerKey&&!row.excluded&&!candidateCache.has(candidateKey(row)));
+ if(!pending.length){renderRows();return;}
+ let failures=0;
+ $('extract-status').textContent='Finding alliance player matches…';
+ for(let offset=0;offset<pending.length;offset+=10){
+  const chunk=pending.slice(offset,offset+10),keys=chunk.map(candidateKey);
+  try{
+   const data=await call({action:'player-search',batchId:batch.id,allianceScope:true,matchRows:chunk.map(({name,alliance,allianceServer,score,rank})=>({name,alliance,server:allianceServer,score,rank}))});
+   if(!current())return;
+   if(!Array.isArray(data.rows))throw Error('No matching results');
+   const received=new Set();
+   for(const item of data.rows){
+    if(!Number.isInteger(item.index)||item.index<0||item.index>=chunk.length)continue;
+    received.add(item.index);
+    candidateCache.set(keys[item.index],(item.candidates||[]).filter(p=>allianceGroup(p.alliance)===allianceGroup(chunk[item.index].alliance)&&String(p.server)===String(chunk[item.index].allianceServer)));
+   }
+   failures+=chunk.length-received.size;
+   renderRows();
+  }catch(error){if(!current())return;failures+=chunk.length;}
+ }
+ if(!current())return;
+ $('extract-status').textContent='Exact matches are ready. Checking unclear names…';
+ // Keep successful matches visible while two bounded workers search difficult rows.
+ const unclear=pending.filter(row=>!(candidateCache.get(candidateKey(row))||[]).some(p=>Number(p.nameSimilarity)===1&&!p.eventConflict));
+ let next=0;
+ async function searchNext(){
+  while(current()&&next<unclear.length){
+   const row=unclear[next++],key=candidateKey(row);
+   try{
+    const partials=await partialSuggestions(row,batch.id);
+    if(!current())return;
+    candidateCache.set(key,mergePartialMatches(candidateCache.get(key)||[],partials));
+    renderRows();
+   }catch(error){if(!current())return;failures++;}
   }
  }
- renderRows();$('extract-status').textContent='Directory suggestions ready. Select the correct player; matches remain unconfirmed until reviewed.';
- }catch(error){if(request===matchingRequest)$('extract-status').textContent='Could not load directory suggestions: '+error.message+' Manual search is still available.';}
+ await Promise.all([searchNext(),searchNext()]);
+ if(!current())return;
+ renderRows();
+ $('extract-status').textContent=failures?'Available matches are ready. Some searches failed; use Refresh player suggestions to retry. Your selections are kept.':'Matches ready. Confirm exact matches on this page; compare possible matches before choosing.';
 }
 function attachCandidate(row,profile){document.querySelector('.r4-match-dialog')?.close();profileCache.set(profile.key,profile);row.playerKey=profile.key;row.playerName=profile.name;row.playerAlliance=profile.alliance||'';resetConfirmations(row,'playerChecked','allianceChecked');markChanged();renderRows();status('Linked '+profile.name+'. Check the score and screenshot alliance, then confirm and save draft.');}
 function selectPage(page){matchingRequest++;candidateCache.clear();currentPage=page;selected=-1;renderPages();renderRows();renderSummary();evidence(page);$('editor').replaceChildren(el('p','Select a player name to search All Contacts.'));suggestPageMatches();}
@@ -145,13 +174,15 @@ function editable(label,value,onchange,type='text'){
 }
 function renderRows(){
  const tbody=$('rows'),editor=$('editor');if(editor&&tbody.contains(editor)){tbody.closest('.r4-data').append(editor);editor.hidden=true;}tbody.replaceChildren();if(!draft)return;
+ const readyRows=new Set(planPageConfirmation(pageRows(),draft.rows,r=>candidateCache.get(candidateKey(r)),rowConfirmed).ready.map(item=>item.row));
  const query=$('filter').value.toLowerCase();let visible=0;
  draft.rows.forEach((row,index)=>{
  if(row.page!==currentPage||query&&!`${row.name} ${row.alliance} ${row.playerName}`.toLowerCase().includes(query))return;visible++;
  const tr=el('tr');tr.className=`${rowConfirmed(row)?'confirmed':'pending'}${index===selected?' selected':''}${row.excluded?' excluded-row':''}`;
  const data=el('td'),line=el('div');line.className='r4-single-row';
  const group=allianceGroups(draft.rows).find(g=>g.key===allianceGroup(row.alliance));const alliance=el('span',group?.label||row.alliance||'Not detected');alliance.className='r4-alliance-value';alliance.title='Detected: '+row.alliance+'. Edit this alliance for the whole set above.';
- const player=el('button');player.append(el('span',row.playerName||row.name||'Unnamed player'));const badge=el('span',rowConfirmed(row)?'✓ Confirmed':row.playerKey?'Change player':'⌕ Find or create player');badge.className=rowConfirmed(row)?'r4-confirmed-badge':'r4-match-prompt';player.append(badge);player.setAttribute('aria-label',(row.playerName||row.name)+' — '+(rowConfirmed(row)?'Confirmed; change match':row.playerKey?'Change match':'Match player'));player.type='button';player.className='r4-inline-player';player.title=row.playerKey?'Linked player — click to change':'Click to match this player';player.disabled=false;player.onclick=()=>selectRow(index);
+ const ready=readyRows.has(row),suggested=assessCandidates(candidateCache.get(candidateKey(row))||[]).candidate;
+ const player=el('button');player.append(el('span',row.playerName||(ready?suggested?.name:null)||row.name||'Unnamed player'));const badge=el('span',rowConfirmed(row)?'✓ Confirmed':row.playerKey?'Change player':ready?'✓ Exact match · ready':'⌕ Find or create player');badge.className=rowConfirmed(row)?'r4-confirmed-badge':'r4-match-prompt';player.append(badge);player.setAttribute('aria-label',(row.playerName||row.name)+' — '+(rowConfirmed(row)?'Confirmed; change match':row.playerKey?'Change match':'Match player'));player.type='button';player.className='r4-inline-player';player.title=row.playerKey?'Linked player — click to change':'Click to match this player';player.disabled=false;player.onclick=()=>selectRow(index);
  const score=editable('Suggested score',formatScore(row.score),value=>{row.score=value.replace(/,/g,'');resetConfirmations(row,'scoreChecked');});score.className='r4-inline-field r4-inline-score';
  const actions=el('div');actions.className='r4-inline-actions';
  const issue=row.excluded?'Excluded row':!/^\d{1,12}$/.test(row.score)?'Correct the score':!clean(row.alliance)?'Correct the alliance':'';
@@ -165,7 +196,7 @@ function renderRows(){
 
  const exclude=el('button',row.excluded?'Include row':'Exclude duplicate / pinned row');exclude.type='button';exclude.onclick=()=>{row.excluded=!row.excluded;markChanged();renderRows();};details.append(exclude);
  if(!row.playerKey){const candidates=candidateCache.get(candidateKey(row))||[];for(const profile of candidates){const pick=el('button','Use '+profile.name+' · '+profile.alliance+' · '+profile.strength);pick.type='button';pick.onclick=()=>attachCandidate(row,profile);details.append(pick);}}
- const state=el('span',row.excluded?'Excluded':rowConfirmed(row)?'✓ Confirmed':!alliancesReady()?'Confirm alliances to start':row.playerKey?'Ready to confirm':'Choose a player first');state.className='r4-row-state '+(rowConfirmed(row)?'is-confirmed':row.playerKey?'is-ready':'is-unmatched');state.setAttribute('role','status');actions.append(state,confirm,more);const playerCell=el('div');playerCell.className='r4-player-suggestions';playerCell.append(player);const reading=el('small','Screenshot text: '+(row.name||'Unreadable'));reading.dir='auto';playerCell.append(reading);if(row.playerKey){const remove=el('button','Remove match');remove.type='button';remove.className='r4-remove-match';remove.setAttribute('aria-label','Remove match for '+(row.playerName||row.name));remove.onclick=()=>{const previous=row.playerName||row.name;row.playerKey='';row.playerName='';row.playerAlliance='';row.checked=false;resetConfirmations(row,'playerChecked','allianceChecked','scoreChecked');markChanged();renderRows();status('Match removed for '+previous+'. Original screenshot name and score retained. Save review draft to keep this change.');};playerCell.append(remove);}if(!row.playerKey&&!row.excluded&&alliancesReady()){const candidates=candidateCache.get(candidateKey(row));if(candidates){const assessment=assessCandidates(candidates),best=assessment.candidate;playerCell.append(el('small',assessment.label));for(const partial of candidates.filter(p=>p.partialMatch).slice(0,3)){const option=el('button','Partial “'+partial.matchedFragment+'” · Compare '+partial.name);option.type='button';option.className='r4-suggested-player';option.onclick=()=>selectRow(index);playerCell.append(option);}if(best){const suggestion=el('button','Compare '+best.name);suggestion.type='button';suggestion.className='r4-suggested-player';suggestion.setAttribute('aria-label','Compare possible player: '+best.name);suggestion.onclick=()=>selectRow(index);playerCell.append(suggestion);}}else playerCell.append(el('small','Finding player suggestions…'));}line.append(alliance,playerCell,score,actions);data.append(line,details);tr.append(data);tbody.append(tr);
+ const state=el('span',row.excluded?'Excluded':rowConfirmed(row)?'✓ Confirmed':!alliancesReady()?'Confirm alliances to start':row.playerKey||ready?'Ready to confirm':'Needs a match');state.className='r4-row-state '+(rowConfirmed(row)?'is-confirmed':row.playerKey||ready?'is-ready':'is-unmatched');state.setAttribute('role','status');actions.append(state,confirm,more);const playerCell=el('div');playerCell.className='r4-player-suggestions';playerCell.append(player);const reading=el('small','Screenshot text: '+(row.name||'Unreadable'));reading.dir='auto';playerCell.append(reading);if(row.playerKey){const remove=el('button','Remove match');remove.type='button';remove.className='r4-remove-match';remove.setAttribute('aria-label','Remove match for '+(row.playerName||row.name));remove.onclick=()=>{const previous=row.playerName||row.name;row.playerKey='';row.playerName='';row.playerAlliance='';row.checked=false;resetConfirmations(row,'playerChecked','allianceChecked','scoreChecked');markChanged();renderRows();status('Match removed for '+previous+'. Original screenshot name and score retained. Save review draft to keep this change.');};playerCell.append(remove);}if(!row.playerKey&&!row.excluded&&alliancesReady()){const candidates=candidateCache.get(candidateKey(row));if(candidates){const assessment=assessCandidates(candidates),best=assessment.candidate;playerCell.append(el('small',assessment.label));for(const partial of candidates.filter(p=>p.partialMatch).slice(0,3)){const option=el('button','Partial “'+partial.matchedFragment+'” · Compare '+partial.name);option.type='button';option.className='r4-suggested-player';option.onclick=()=>selectRow(index);playerCell.append(option);}if(best&&!ready){const suggestion=el('button','Compare '+best.name);suggestion.type='button';suggestion.className='r4-suggested-player';suggestion.setAttribute('aria-label','Compare possible player: '+best.name);suggestion.onclick=()=>selectRow(index);playerCell.append(suggestion);}}else playerCell.append(el('small','Finding player suggestions…'));}line.append(alliance,playerCell,score,actions);data.append(line,details);tr.append(data);tbody.append(tr);
  });
  if(!visible){const tr=el('tr'),td=el('td','No rows on this page match.');tr.append(td);tbody.append(tr);}renderSummary();
 }
@@ -560,6 +591,11 @@ $('reject-review').onclick=async()=>{
  catch(error){status(error.message);}finally{button.disabled=false;}
 };
 $('filter').oninput=renderRows;$('add').onclick=()=>{draft.rows.push(normalizeRow({rank:0,name:'New row',alliance:'',score:'0',page:currentPage,playerKey:'',excluded:false}));markChanged();selected=draft.rows.length-1;renderRows();selectRow(selected);};
+const pageActionBar=el('div');pageActionBar.className='r4-page-action-bar';
+pageActionBar.style.cssText='display:flex;flex-wrap:wrap;align-items:center;gap:12px;padding:14px 0;position:sticky;top:0;background:#08232f;z-index:2';
+const pageAction=$('confirm-page');pageAction.style.cssText='background:#04d3dc;color:#00232d;border:0;border-radius:9px;padding:12px 18px;font-weight:700';
+const rowTable=$('rows').closest('table');rowTable.before(pageActionBar);pageActionBar.append(pageAction);
+if($('confirm-page-help'))pageActionBar.append($('confirm-page-help'));
 $('confirm-page').onclick=async()=>{
  if(!alliancesReady())return;
  const plan=planPageConfirmation(pageRows(),draft.rows,r=>candidateCache.get(candidateKey(r)),rowConfirmed);if(!plan.ready.length)return;
@@ -585,7 +621,7 @@ window.addEventListener('nova-train-player',event=>showDirectoryProfile(event.de
 
 
 
-import {attachEnhancedNames} from './enhanced-name-review.js?v=review-safe-20261001';
+import {attachEnhancedNames} from './enhanced-name-review.js?v=careful-20261003';
 attachEnhancedNames({after:rereadNames,call,getContext:()=>active&&draft&&!extracting?{batchId:active.id,page:currentPage,draft,rows:pageRows()}:null,onApply:count=>{candidateCache.clear();markChanged();renderRows();status(count+' screenshot names updated. Player matches and scores kept; save the review draft to retain these readings.');suggestPageMatches();}});
 
 attachEnhancedNames({button:rereadNames,label:'Review new screenshot readings',call,getContext:()=>active&&draft?{batchId:active.id,page:currentPage,draft,rows:pageRows()}:null,read:async context=>{if(extracting)throw Error('Screenshot reading is already running.');extracting=true;$('extract').disabled=true;let reader;try{reader=await createLeaderboardOcr((stage,percent)=>{$('extract-status').textContent='Reading names · '+stage+' '+percent+'%';});return {rows:await reader.read(await evidenceUrl(context.page),context.page)};}finally{try{await reader?.terminate();}catch{}extracting=false;$('extract').disabled=false;}},onApply:count=>{candidateCache.clear();markChanged();renderRows();status(count+' screenshot readings changed by your selection. Player profiles were not renamed. Save draft to keep the readings.');suggestPageMatches();}});
