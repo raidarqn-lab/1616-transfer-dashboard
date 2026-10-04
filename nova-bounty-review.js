@@ -302,7 +302,7 @@ function setPlayerPhoto(container,value,name){
  let source='';if(typeof value==='string'&&/^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/.test(value))source=value;
  else{try{const url=new URL(value);if(url.protocol==='https:'&&url.hostname==='lastwar-cdn.akamaized.net')source=url.href;}catch{}}
  if(!source){container.title='No profile photo saved';return;}
- const image=el('img');image.dataset.batch=batch.id;image.dataset.page=String(page);image.alt=`${name||'Player'} profile photo`;image.referrerPolicy='no-referrer';image.onload=()=>container.replaceChildren(image);image.onerror=()=>{container.title='Profile photo unavailable';};image.src=source;
+ const image=el('img');image.alt=`${name||'Player'} profile photo`;image.referrerPolicy='no-referrer';image.onload=()=>container.replaceChildren(image);image.onerror=()=>{container.title='Profile photo unavailable';};image.src=source;
 }
 
 function drawPlayerHR(body,profile,full){
