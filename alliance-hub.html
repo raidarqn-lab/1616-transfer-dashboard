@@ -82,7 +82,7 @@
         <section id="workspace" class="r4-work" hidden>
           <section class="panel r4-summary">
             <div><div class="eyebrow">SUBMISSION BRIEF</div><h2 id="batch-title">Daily all-player leaderboard</h2><p id="batch-meta"></p><div id="batch-alliance" class="r4-set-alliances"></div></div>
-            <div class="r4-reward"><b>+10</b><span>BOUNTY POINTS</span></div>
+            <div class="r4-reward"><b>—</b><span>BOUNTY POINTS</span></div>
             <p id="counts" class="r4-wide"></p>
             <div class="r4-wide r4-toolbar"><button id="extract" class="primary">Read screenshots with OCR</button><button id="save">Save review draft</button><button id="preview">Preview decision</button><button id="add">Add row</button></div>
             <p id="extract-status" class="r4-wide" role="status"></p>
@@ -117,13 +117,13 @@
               <label><input class="final-check" type="checkbox"> Alliances and all pages checked</label>
               <label><input class="final-check" type="checkbox"> Overlaps, duplicates and pinned rows checked</label>
             </div>
-            <label class="r4-reason">Bounty reward points · <span id="bounty-points-code"></span><input id="bounty-points" type="number" min="0" max="10000" step="1" value="10" required aria-describedby="bounty-points-help"></label><p id="bounty-points-help">Suggested: 10 points per bounty. Override when needed, then save the review draft. Applies to pending approvals for this bounty; previous awards stay unchanged. These are contribution points, separate from player leaderboard scores.</p>
+            <label class="r4-reason">Bounty reward points · <span id="bounty-points-code"></span><input id="bounty-points" type="number" min="0" max="10000" step="1" value="10" required aria-describedby="bounty-points-help"></label><p id="bounty-points-help">The displayed amount is this bounty’s current reward. Excluded submitters receive no points. Override when needed, then save the review draft. Applies to pending approvals for this bounty; previous awards stay unchanged. These are contribution points, separate from player leaderboard scores.</p>
             <label class="r4-reason">Review note<textarea id="review-note" rows="4" placeholder="Record what was checked or corrected"></textarea></label>
-            <div class="r4-actions"><button id="reject-review" class="reject-button">Reject submission</button><button id="decision-preview">Preview approval</button><button id="approve-review" class="primary" disabled>Approve and publish NvSP scores</button></div>
-            <p id="decision-help">Confirm every included row and screenshot before publishing. Opponent rows remain with the evidence and are not posted to the member leaderboard.</p>
+            <div class="r4-actions"><button id="reject-review" class="reject-button">Reject submission</button><button id="decision-preview">Preview approval</button><button id="approve-review" class="primary" disabled>Approve results</button></div>
+            <p id="decision-help">Confirm every included row and screenshot before publishing. Both alliances’ results are saved to player histories. Only NvSP scores appear on the member leaderboard.</p>
           </section>
 
-          <section class="score-panel"><div class="eyebrow">R4 PRIVATE PROFILE PREVIEW</div><h3 id="profile-heading">Select a player match</h3><div id="profile-preview"><p>Search a score row to view transfer profile data and known identities.</p></div></section>
+          <section class="score-panel"><div class="eyebrow">R4 PRIVATE PROFILE PREVIEW</div><h3 id="profile-heading">Select a player match</h3><div id="profile-preview"><p>Search a score row to compare All Contacts profiles and previous names.</p></div></section>
         </section>
       </div>
       </section>
@@ -157,9 +157,9 @@
   </div>
 
   <dialog id="preview-dialog"><button id="close-preview" class="close" aria-label="Close">×</button><div id="preview-content"></div></dialog>
-  <script type="module" src="./nova-bounty-review.js?v=partial-20261001"></script>
+  <script type="module" src="./nova-bounty-review.js?v=workflow-20261003"></script>
   <script type="module" src="./alliance-hub.js?v=season-availability-20260930"></script>
-<script type="module" src="./bounty-manager.js?v=receipt-20260928"></script>
+<script type="module" src="./bounty-manager.js?v=workflow-20261003"></script>
 </body>
 </html>
 

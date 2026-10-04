@@ -2,7 +2,7 @@ const TESSERACT_URL='https://cdn.jsdelivr.net/npm/tesseract.js@7.0.0/dist/tesser
 
 const clean=value=>String(value??'').replace(/\s+/g,' ').trim();
 export const cleanOcrName=value=>clean(value).replace(/(\p{Script=Han})\s+(?=\p{Script=Han})/gu,'$1');
-const digits=value=>clean(value).replace(/[^0-9]/g,'');
+const digits=value=>clean(value).normalize('NFKC').replace(/[٠-٩]/g,c=>String(c.charCodeAt(0)-0x660)).replace(/[۰-۹]/g,c=>String(c.charCodeAt(0)-0x6f0)).replace(/[^0-9]/g,'');
 
 function wordsFromTsv(tsv){
  const lines=String(tsv||'').trim().split(/\r?\n/);if(lines.length<2)return [];
@@ -18,38 +18,53 @@ function groupLines(words){
  items.sort((a,b)=>Number(a.word_num)-Number(b.word_num));return {text:clean(items.map(item=>item.text).join(' ')),left:Math.min(...items.map(item=>item.left)),top:Math.min(...items.map(item=>item.top)),right:Math.max(...items.map(item=>item.left+item.width)),bottom:Math.max(...items.map(item=>item.top+item.height)),confidence:items.reduce((sum,item)=>sum+Math.max(0,item.conf),0)/items.length};}).sort((a,b)=>a.top-b.top||a.left-b.left);
 }
 
-export function parseLeaderboardTsv(tsv,{page=1,width,height,includeSlots=false}){
+export function parseLeaderboardTsv(tsv,{page=1,width,height,includeSlots=false,bands=null}){
  const words=wordsFromTsv(tsv),rows=[];
- for(let slot=0;slot<7;slot++){
-  const top=height*slot/7,bottom=height*(slot+1)/7;
+ const regions=bands||Array.from({length:7},(_,slot)=>({top:height*slot/7,bottom:height*(slot+1)/7}));
+ for(let slot=0;slot<regions.length;slot++){
+  const {top,bottom}=regions[slot];
   const inSlot=words.filter(word=>{const y=word.top+word.height/2;return y>=top&&y<bottom;});
   const rankText=groupLines(inSlot.filter(word=>word.left+word.width/2<width*.19)).map(line=>digits(line.text)).find(value=>value&&Number(value)>0&&Number(value)<10000);
-  const scoreText=groupLines(inSlot.filter(word=>word.left+word.width/2>width*.72)).map(line=>digits(line.text)).filter(value=>value.length>=4).sort((a,b)=>b.length-a.length)[0];
+  const scoreText=groupLines(inSlot.filter(word=>word.left+word.width/2>width*.72)).map(line=>digits(line.text)).filter(value=>/^\d{1,12}$/.test(value)).sort((a,b)=>b.length-a.length)[0];
   const middle=groupLines(inSlot.filter(word=>{const x=word.left+word.width/2;return x>width*.325&&x<width*.72;})).filter(line=>line.text.length>0);
   const allianceIndex=middle.findIndex(line=>/\[[^\]]{1,12}\]|\b(?:NvSP|UNIi)\b/i.test(line.text));
   const allianceLine=allianceIndex>=0?middle[allianceIndex]:middle.length>1?middle.at(-1):null;
   const nameLine=middle.find((line,index)=>index!==allianceIndex&&line!==allianceLine);
-  if(!scoreText||!nameLine)continue;
-  rows.push({...includeSlots?{slot,nameBounds:{left:nameLine.left,top:nameLine.top,right:nameLine.right,bottom:nameLine.bottom}}: {},rank:Number(rankText)||0,name:cleanOcrName(nameLine.text),alliance:clean(allianceLine?.text||''),score:scoreText,page,playerKey:'',playerName:'',playerAlliance:'',playerChecked:false,allianceChecked:false,scoreChecked:false,excluded:false,ocrConfidence:Math.round(Math.min(nameLine.confidence,allianceLine?.confidence??nameLine.confidence))});
+  if(!bands&&!rankText&&scoreText===undefined&&!nameLine)continue;
+  rows.push({...includeSlots?{slot,ocrSlot:slot,slotBounds:{top,bottom},nameBounds:nameLine?{left:nameLine.left,top:nameLine.top,right:nameLine.right,bottom:nameLine.bottom}:null}: {},rank:Number(rankText)||0,name:cleanOcrName(nameLine?.text),alliance:clean(allianceLine?.text||''),score:scoreText??'',ocrIncomplete:!nameLine||scoreText===undefined,page,playerKey:'',playerName:'',playerAlliance:'',playerChecked:false,allianceChecked:false,scoreChecked:false,excluded:false,ocrConfidence:Math.round(Math.min(nameLine?.confidence??0,allianceLine?.confidence??nameLine?.confidence??0))});
  }
  return rows;
 }
 
 export function recoverRanks(rows,observations){
- const result=rows.map(row=>({...row,rank:row.rank||observations[row.slot]||0}));
- // Infer only inside a complete, descending seven-row screenshot with two agreeing numeric anchors.
- if(result.length!==7||result.some((r,i)=>r.slot!==i)||result.some((r,i)=>i&&Number(r.score)>Number(result[i-1].score)))return result;
- const anchors=result.filter(r=>r.rank>0),bases=new Set(anchors.map(r=>r.rank-r.slot));
- if(anchors.length>=2&&bases.size===1){const base=[...bases][0];if(base>0&&base+6<=10000)return result.map(r=>({...r,rank:r.rank||base+r.slot}));}
- return result;
+ // A leaderboard position must be read, never inferred from neighbouring players.
+ return rows.map(row=>({...row,rank:row.rank||observations[row.slot]||0}));
 }
-function rankCanvas(image){
- const canvas=document.createElement('canvas'),top=Math.round(image.naturalHeight*.245),bottom=Math.round(image.naturalHeight*.805);canvas.width=Math.round(image.naturalWidth*.19)*2;canvas.height=(bottom-top)*2;
+export function detectLeaderboardBands({width,height,data}){
+ const runs=[];let start=null;
+ for(let y=Math.floor(height*.15);y<Math.floor(height*.9);y++){
+  let hits=0;
+  for(const x of [.055,.115,.9]){const i=(y*width+Math.floor(width*x))*4,r=data[i],g=data[i+1],b=data[i+2];if(r>130&&r<240&&b-r>=8&&b-r<65&&g>=r-5&&b>=g)hits++;}
+  if(hits>=2){if(start===null)start=y;}else if(start!==null){runs.push({top:start,bottom:y});start=null;}
+ }
+ if(start!==null)runs.push({top:start,bottom:Math.floor(height*.9)});
+ const merged=[];
+ for(const run of runs){const last=merged.at(-1);if(last&&run.top-last.bottom<height*.003)last.bottom=run.bottom;else merged.push({...run});}
+ const bands=merged.filter(r=>r.bottom-r.top>height*.035&&r.bottom-r.top<height*.12);
+ return bands.length>=1&&bands.length<=10?bands:[];
+}
+function imageLayout(image){
+ const c=document.createElement('canvas');c.width=image.naturalWidth;c.height=image.naturalHeight;const ctx=c.getContext('2d',{willReadFrequently:true});ctx.drawImage(image,0,0);const bands=detectLeaderboardBands(ctx.getImageData(0,0,c.width,c.height));
+ if(bands.length){const top=bands[0].top,bottom=bands.at(-1).bottom;return {top,bottom,bands:bands.map(b=>({top:b.top-top,bottom:b.bottom-top})),uncertain:false};}
+ const top=Math.round(image.naturalHeight*.245),bottom=Math.round(image.naturalHeight*.805);return {top,bottom,bands:Array.from({length:7},(_,i)=>({top:(bottom-top)*i/7,bottom:(bottom-top)*(i+1)/7})),uncertain:true};
+}
+function rankCanvas(image,layout){
+ const canvas=document.createElement('canvas'),top=layout.top,bottom=layout.bottom;canvas.width=Math.round(image.naturalWidth*.19)*2;canvas.height=(bottom-top)*2;
  const ctx=canvas.getContext('2d',{willReadFrequently:true});ctx.drawImage(image,0,top,canvas.width/2,bottom-top,0,0,canvas.width,canvas.height);const data=ctx.getImageData(0,0,canvas.width,canvas.height);
  for(let i=0;i<data.data.length;i+=4){const value=Math.min(data.data[i],data.data[i+1],data.data[i+2])>225?0:255;data.data[i]=data.data[i+1]=data.data[i+2]=value;}ctx.putImageData(data,0,0);return canvas;
 }
-function cropLeaderboard(image,enhance=false){
- const canvas=document.createElement('canvas'),top=Math.round(image.naturalHeight*.245),bottom=Math.round(image.naturalHeight*.805);
+function cropLeaderboard(image,enhance=false,layout){
+ const canvas=document.createElement('canvas'),top=layout.top,bottom=layout.bottom;
  canvas.width=image.naturalWidth;canvas.height=bottom-top;
  const context=canvas.getContext('2d',{willReadFrequently:true});context.drawImage(image,0,top,image.naturalWidth,canvas.height,0,0,canvas.width,canvas.height);
  if(!enhance)return canvas;
@@ -58,10 +73,10 @@ function cropLeaderboard(image,enhance=false){
  context.putImageData(pixels,0,0);return canvas;
 }
 
-function nameCanvas(image,slot,bounds){
- const top=Math.round(image.naturalHeight*.245),rowHeight=(Math.round(image.naturalHeight*.805)-top)/7;
+function nameCanvas(image,slot,bounds,layout){
+ const top=layout.top,band=layout.bands[slot],rowHeight=band.bottom-band.top;
  const x=bounds?Math.max(image.naturalWidth*.32,bounds.left-6):image.naturalWidth*.327;
- const y=bounds?Math.max(0,bounds.top-6):rowHeight*(slot+.16);
+ const y=bounds?Math.max(0,bounds.top-6):band.top+rowHeight*.16;
  const width=bounds?Math.min(image.naturalWidth*.74-x,bounds.right+6-x):image.naturalWidth*.413;
  const height=bounds?bounds.bottom+6-y:rowHeight*.42;
  const canvas=document.createElement('canvas');
@@ -81,15 +96,15 @@ export async function createLeaderboardOcr(onProgress=()=>{}){
  await worker.setParameters({tessedit_pageseg_mode:PSM.SPARSE_TEXT,preserve_interword_spaces:'1',user_defined_dpi:'300'});
  return {
   async read(url,page){
-   const image=await loadImage(url),canvas=cropLeaderboard(image),result=await worker.recognize(canvas,{}, {tsv:true});let rows=parseLeaderboardTsv(result.data.tsv,{page,width:canvas.width,height:canvas.height,includeSlots:true});
+   const image=await loadImage(url),layout=imageLayout(image),canvas=cropLeaderboard(image,false,layout),result=await worker.recognize(canvas,{}, {tsv:true});let rows=parseLeaderboardTsv(result.data.tsv,{page,width:canvas.width,height:canvas.height,includeSlots:true,bands:layout.bands});
    // Use original pixels first. A contrast pass is only additional evidence.
-   const contrast=cropLeaderboard(image,true),contrastResult=await worker.recognize(contrast,{}, {tsv:true});
-   const other=parseLeaderboardTsv(contrastResult.data.tsv,{page,width:contrast.width,height:contrast.height,includeSlots:true});
+   const contrast=cropLeaderboard(image,true,layout),contrastResult=await worker.recognize(contrast,{}, {tsv:true});
+   const other=parseLeaderboardTsv(contrastResult.data.tsv,{page,width:contrast.width,height:contrast.height,includeSlots:true,bands:layout.bands});
    rows=combinePageReadings(rows,other);
    if(rows.some(row=>!row.rank)){
-    onProgress('Reading leaderboard positions',0);const ranks=rankCanvas(image),observations={};
+    onProgress('Reading leaderboard positions',0);const ranks=rankCanvas(image,layout),observations={};
     try{await worker.setParameters({tessedit_char_whitelist:'0123456789',tessedit_pageseg_mode:PSM.SPARSE_TEXT});const pass=await worker.recognize(ranks,{}, {tsv:true});
-     for(const word of wordsFromTsv(pass.data.tsv)){const n=Number(digits(word.text)),slot=Math.floor((word.top+word.height/2)/ranks.height*7);if(word.conf>=65&&n>0&&n<=10000&&slot>=0&&slot<7)observations[slot]=observations[slot]===undefined?n:0;}
+     for(const word of wordsFromTsv(pass.data.tsv)){const n=Number(digits(word.text)),slot=layout.bands.findIndex(b=>(word.top+word.height/2)/2>=b.top&&(word.top+word.height/2)/2<b.bottom);if(word.conf>=65&&n>0&&n<=10000&&slot>=0&&slot<layout.bands.length)observations[slot]=observations[slot]===undefined?n:0;}
      rows=recoverRanks(rows,observations);
     }finally{await worker.setParameters({tessedit_char_whitelist:'',tessedit_pageseg_mode:PSM.SPARSE_TEXT});}
    }
@@ -97,30 +112,30 @@ export async function createLeaderboardOcr(onProgress=()=>{}){
    detailWorker??=await createWorker(['eng','vie','ara','chi_tra','chi_sim','jpn','kor'],1);
    await detailWorker.setParameters({tessedit_pageseg_mode:PSM.SINGLE_LINE,preserve_interword_spaces:'0',user_defined_dpi:'300'});
    for(const row of rows){
-    onProgress('Reading individual names',Math.round(row.slot/7*100));
-    const pass=await detailWorker.recognize(nameCanvas(image,row.slot,row.nameBounds)),name=cleanOcrName(pass.data.text);
+    onProgress('Reading individual names',Math.round(row.slot/rows.length*100));
+    const pass=await detailWorker.recognize(nameCanvas(image,row.slot,row.nameBounds,layout)),name=cleanOcrName(pass.data.text);
     recordNameReading(row,name,pass.data.confidence);
    }
-   const arabicRows=rows.filter(row=>/\p{Script=Arabic}/u.test(row.name));
+   const arabicRows=rows.filter(row=>[row.name,...(row.ocrAlternatives||[])].some(n=>/\p{Script=Arabic}/u.test(n)));
    if(arabicRows.length){
     arabicWorker??=await createWorker(['ara'],1);
     await arabicWorker.setParameters({tessedit_pageseg_mode:PSM.SINGLE_LINE,preserve_interword_spaces:'0',user_defined_dpi:'300'});
     for(const row of arabicRows){
-     const pass=await arabicWorker.recognize(nameCanvas(image,row.slot,row.nameBounds)),name=cleanOcrName(pass.data.text);
+     const pass=await arabicWorker.recognize(nameCanvas(image,row.slot,row.nameBounds,layout)),name=cleanOcrName(pass.data.text);
      recordNameReading(row,name,pass.data.confidence);
     }
    }
-   const chineseRows=rows.filter(row=>/\p{Script=Han}/u.test(row.name));
+   const chineseRows=rows.filter(row=>[row.name,...(row.ocrAlternatives||[])].some(n=>/\p{Script=Han}/u.test(n)));
    if(chineseRows.length){
     nameWorker??=await createWorker(['chi_tra','chi_sim','eng','vie'],1);
     await nameWorker.setParameters({tessedit_pageseg_mode:PSM.SINGLE_LINE,preserve_interword_spaces:'0',user_defined_dpi:'300'});
     for(const row of chineseRows){
-     onProgress('Reading Chinese name closely',Math.round(row.slot/7*100));
-     const pass=await nameWorker.recognize(nameCanvas(image,row.slot,row.nameBounds)),name=cleanOcrName(pass.data.text);
+     onProgress('Reading Chinese name closely',Math.round(row.slot/rows.length*100));
+     const pass=await nameWorker.recognize(nameCanvas(image,row.slot,row.nameBounds,layout)),name=cleanOcrName(pass.data.text);
      recordNameReading(row,name,pass.data.confidence);
     }
    }
-   return rows.map(({slot,nameBounds,...row})=>row);
+   return rows.map(({slot,nameBounds,slotBounds,...row})=>({...row,ocrSlot:slot,layoutUncertain:layout.uncertain}));
   },
   terminate:()=>Promise.all([worker.terminate(),nameWorker?.terminate(),arabicWorker?.terminate(),detailWorker?.terminate()])
  };
@@ -136,8 +151,11 @@ export function combinePageReadings(original,contrast){
  for(const other of contrast){
   const row=rows.find(r=>r.slot===other.slot);
   if(!row){rows.push({...other,ocrNeedsReview:true});continue;}
-  if(row.score===other.score&&row.rank===other.rank)recordNameReading(row,other.name,other.ocrConfidence);
-  else if(row.score!==other.score||row.rank!==other.rank)row.ocrNeedsReview=true;
+  recordNameReading(row,other.name,other.ocrConfidence);
+  if(!row.name&&other.name)row.ocrAlternatives=[...new Set([...(row.ocrAlternatives||[]),other.name])];
+  if(row.score!==other.score){row.ocrNeedsReview=true;row.ocrScoreConflict=true;row.ocrScoreAlternatives=[...new Set([...(row.ocrScoreAlternatives||[]),other.score].filter(v=>v!==''))];}
+  if(row.rank!==other.rank){row.ocrNeedsReview=true;row.ocrRankConflict=true;row.ocrRankAlternatives=[...new Set([...(row.ocrRankAlternatives||[]),other.rank])];}
+
  }
  return rows.sort((a,b)=>a.slot-b.slot);
 }
