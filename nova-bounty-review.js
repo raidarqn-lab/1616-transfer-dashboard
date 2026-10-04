@@ -10,7 +10,7 @@ const loadTrainHistory=async(...args)=>(await import('./train-history.js?v=histo
 const renderReports=async(...args)=>(await import('./player-reports.js?v=report-polish-20260926')).renderReports(...args);
 import {user} from './live-session.js';
 import {bountyConnection as config} from './nova-bounty-config.js';
-import {createLeaderboardOcr} from './nova-bounty-ocr.js?v=workflow-20261003';
+import {createLeaderboardOcr} from './nova-bounty-ocr.js?v=browser-ocr-20261003';
 
 const $=id=>document.getElementById(id);
 const el=(tag,text)=>{const node=document.createElement(tag);if(text!==undefined)node.textContent=text;return node;};
@@ -30,7 +30,7 @@ window.addEventListener('beforeunload',event=>{if(dirty){event.preventDefault();
 
 async function call(body){
  if(!user)throw Error('Sign in to the Portal first.');
- const response=await fetch(config.endpoint,{method:'POST',headers:{'Content-Type':'application/json',apikey:config.anonKey,'X-Portal-Token':await user.getIdToken()},body:JSON.stringify(body),signal:AbortSignal.timeout(body.action==='extract-page'?65000:30000)});
+ const response=await fetch(config.endpoint,{method:'POST',headers:{'Content-Type':'application/json',apikey:config.anonKey,'X-Portal-Token':await user.getIdToken()},body:JSON.stringify(body),signal:AbortSignal.timeout(30000)});
  const data=await response.json();
  if(!response.ok)throw Error(data.error||'Unable to save. Reload the review if another reviewer changed it.');
  return data;
@@ -653,15 +653,21 @@ window.addEventListener('nova-train-player',event=>showDirectoryProfile(event.de
 
 
 
-import {attachEnhancedNames} from './enhanced-name-review.js?v=workflow-20261003';
+import {attachEnhancedNames} from './enhanced-name-review.js?v=browser-ocr-20261003';
 const enhancedNames=el('button','Read difficult names');enhancedNames.type='button';
-attachEnhancedNames({button:enhancedNames,call,getContext:()=>active&&draft&&!extracting?{batchId:active.id,page:currentPage,draft,rows:pageRows()}:null,onApply:count=>{candidateCache.clear();markChanged();renderRows();status(count+' screenshot names updated. Player matches and scores kept; save the review draft to retain these readings.');suggestPageMatches();}});
-
-attachEnhancedNames({button:rereadNames,label:'Review new screenshot readings',call,getContext:()=>active&&draft?{batchId:active.id,page:currentPage,draft,rows:pageRows()}:null,read:async context=>{if(extracting)throw Error('Screenshot reading is already running.');extracting=true;$('extract').disabled=true;let reader;try{reader=await createLeaderboardOcr((stage,percent)=>{$('extract-status').textContent='Reading names · '+stage+' '+percent+'%';});return {rows:await reader.read(await evidenceUrl(context.page,context.batchId),context.page)};}finally{try{await reader?.terminate();}catch{}extracting=false;$('extract').disabled=false;}},onApply:count=>{candidateCache.clear();markChanged();renderRows();status(count+' screenshot readings changed by your selection. Player profiles were not renamed. Save draft to keep the readings.');suggestPageMatches();}});
+async function readNamesLocally(context,careful=false){
+ if(extracting)throw Error('Screenshot reading is already running.');extracting=true;$('extract').disabled=true;let reader;
+ try{reader=await createLeaderboardOcr((stage,percent)=>{$('extract-status').textContent='Reading on this device · '+stage+' '+percent+'%';},{careful});return {rows:await reader.read(await evidenceUrl(context.page,context.batchId),context.page)};}
+ finally{try{await reader?.terminate();}catch{}extracting=false;$('extract').disabled=false;}
+}
+const nameReadContext=()=>active&&draft&&!extracting?{batchId:active.id,page:currentPage,draft,rows:pageRows()}:null;
+const applyNameReadings=count=>{candidateCache.clear();markChanged();renderRows();status(count+' screenshot readings changed by your selection. Player profiles and scores were kept. Save draft to retain the readings.');suggestPageMatches();};
+attachEnhancedNames({button:enhancedNames,label:'Read difficult names on this device',getContext:nameReadContext,read:context=>readNamesLocally(context,true),onApply:applyNameReadings});
+attachEnhancedNames({button:rereadNames,label:'Review new screenshot readings',getContext:nameReadContext,read:context=>readNamesLocally(context,false),onApply:applyNameReadings});
 // Keep the normal review path clear; repair actions remain available on demand.
 const readingTools=el('details'),readingToolsTitle=el('summary','Reading tools'),readingToolsBody=el('div');
 readingTools.className='r4-reading-tools';readingToolsBody.className='r4-reading-tools-body';
-readingToolsBody.append(el('p','Suggestions appear automatically for each screenshot. Use these tools only when a reading needs another look.'),rereadNames,enhancedNames,refreshMatches,$('add'));
+readingToolsBody.append(el('p','Screenshot reading runs on this device without an AI API. Difficult-name reading checks extra language-specific crops and may take longer.'),rereadNames,enhancedNames,refreshMatches,$('add'));
 readingTools.append(readingToolsTitle,readingToolsBody);$('extract').closest('.r4-toolbar').append(readingTools);
 $('extract').textContent='Read & match screenshots';
 const readingToolsStyle=el('style');readingToolsStyle.textContent='.r4-reading-tools{flex-basis:100%;margin-top:6px;border-top:1px solid #284854;padding-top:12px}.r4-reading-tools>summary{display:list-item;cursor:pointer;color:#9dbbc6;font-size:13px;font-weight:600;list-style-position:inside;padding:8px 0}.r4-reading-tools>summary:focus-visible{outline:2px solid #04d3dc;outline-offset:3px}.r4-reading-tools-body{display:flex;flex-wrap:wrap;gap:10px;padding:8px 0}.r4-reading-tools-body p{flex-basis:100%;margin:0 0 4px;color:#9dbbc6;font-size:13px}.r4-reading-tools-body button{font-size:13px;padding:9px 13px}';document.head.append(readingToolsStyle);

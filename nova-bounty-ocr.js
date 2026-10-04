@@ -87,7 +87,7 @@ function nameCanvas(image,slot,bounds,layout){
 
 function loadImage(url){return new Promise((resolve,reject)=>{const image=new Image();image.crossOrigin='anonymous';image.onload=()=>resolve(image);image.onerror=()=>reject(Error('The private screenshot could not be opened for OCR.'));image.src=url;});}
 
-export async function createLeaderboardOcr(onProgress=()=>{}){
+export async function createLeaderboardOcr(onProgress=()=>{},{careful=false}={}){
  const module=await import(TESSERACT_URL);
  const {createWorker,PSM}=module.default??module;
  if(typeof createWorker!=='function'||!PSM)throw Error('The OCR library could not initialize. Reload this page and try again.');
@@ -117,7 +117,7 @@ export async function createLeaderboardOcr(onProgress=()=>{}){
     recordNameReading(row,name,pass.data.confidence);
    }
    const arabicRows=rows.filter(row=>[row.name,...(row.ocrAlternatives||[])].some(n=>/\p{Script=Arabic}/u.test(n)));
-   if(arabicRows.length){
+   if(arabicRows.length&&!careful){
     arabicWorker??=await createWorker(['ara'],1);
     await arabicWorker.setParameters({tessedit_pageseg_mode:PSM.SINGLE_LINE,preserve_interword_spaces:'0',user_defined_dpi:'300'});
     for(const row of arabicRows){
@@ -126,13 +126,28 @@ export async function createLeaderboardOcr(onProgress=()=>{}){
     }
    }
    const chineseRows=rows.filter(row=>[row.name,...(row.ocrAlternatives||[])].some(n=>/\p{Script=Han}/u.test(n)));
-   if(chineseRows.length){
+   if(chineseRows.length&&!careful){
     nameWorker??=await createWorker(['chi_tra','chi_sim','eng','vie'],1);
     await nameWorker.setParameters({tessedit_pageseg_mode:PSM.SINGLE_LINE,preserve_interword_spaces:'0',user_defined_dpi:'300'});
     for(const row of chineseRows){
      onProgress('Reading Chinese name closely',Math.round(row.slot/rows.length*100));
      const pass=await nameWorker.recognize(nameCanvas(image,row.slot,row.nameBounds,layout)),name=cleanOcrName(pass.data.text);
      recordNameReading(row,name,pass.data.confidence);
+    }
+   }
+   if(careful){
+    // A failed first pass must not decide which script is allowed to be read.
+    // Full name-line crops retain characters omitted by page-level detection.
+    for(const languages of [['ara'],['chi_sim','chi_tra'],['jpn'],['kor'],['eng','vie']]){
+     const scriptWorker=await createWorker(languages,1);
+     try{
+      await scriptWorker.setParameters({tessedit_pageseg_mode:PSM.SINGLE_LINE,preserve_interword_spaces:'1',user_defined_dpi:'300'});
+      for(const row of rows){
+       onProgress('Careful name reading · '+languages.join(' + '),Math.round((row.slot+1)/rows.length*100));
+       const pass=await scriptWorker.recognize(nameCanvas(image,row.slot,null,layout));
+       recordNameReading(row,cleanOcrName(pass.data.text),pass.data.confidence);
+      }
+     }finally{await scriptWorker.terminate();}
     }
    }
    return rows.map(({slot,nameBounds,slotBounds,...row})=>({...row,ocrSlot:slot,layoutUncertain:layout.uncertain}));
