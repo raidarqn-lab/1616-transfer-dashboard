@@ -167,7 +167,7 @@ async function suggestPageMatches(){
  $('extract-status').textContent=failures?'Available matches are ready. Some searches failed; use Refresh player suggestions to retry. Your selections are kept.':'Matches ready. Confirm exact matches on this page; compare possible matches before choosing.';
 }
 function attachCandidate(row,profile){document.querySelector('.r4-match-dialog')?.close();profileCache.set(profile.key,profile);row.playerKey=profile.key;row.playerName=profile.name;row.playerAlliance=profile.alliance||'';resetConfirmations(row,'playerChecked','allianceChecked');markChanged();renderRows();status('Linked '+profile.name+'. Check the score and screenshot alliance, then confirm and save draft.');}
-function selectPage(page){if(reviewBusy)return;matchingRequest++;candidateCache.clear();currentPage=page;selected=-1;renderPages();renderRows();renderSummary();evidence(page);$('editor').replaceChildren(el('p','Select a player name to search All Contacts.'));suggestPageMatches();}
+function selectPage(page){if(reviewBusy)return;matchingRequest++;currentPage=page;selected=-1;renderPages();renderRows();renderSummary();evidence(page);$('editor').replaceChildren(el('p','Select a player name to search All Contacts.'));suggestPageMatches();}
 
 function checkbox(key,label,row,index){
  const wrapper=el('label'),input=el('input');wrapper.className='r4-row-confirm';input.type='checkbox';input.checked=!!row[key];
@@ -654,6 +654,14 @@ window.addEventListener('nova-train-player',event=>showDirectoryProfile(event.de
 
 
 import {attachEnhancedNames} from './enhanced-name-review.js?v=workflow-20261003';
-attachEnhancedNames({after:rereadNames,call,getContext:()=>active&&draft&&!extracting?{batchId:active.id,page:currentPage,draft,rows:pageRows()}:null,onApply:count=>{candidateCache.clear();markChanged();renderRows();status(count+' screenshot names updated. Player matches and scores kept; save the review draft to retain these readings.');suggestPageMatches();}});
+const enhancedNames=el('button','Read difficult names');enhancedNames.type='button';
+attachEnhancedNames({button:enhancedNames,call,getContext:()=>active&&draft&&!extracting?{batchId:active.id,page:currentPage,draft,rows:pageRows()}:null,onApply:count=>{candidateCache.clear();markChanged();renderRows();status(count+' screenshot names updated. Player matches and scores kept; save the review draft to retain these readings.');suggestPageMatches();}});
 
 attachEnhancedNames({button:rereadNames,label:'Review new screenshot readings',call,getContext:()=>active&&draft?{batchId:active.id,page:currentPage,draft,rows:pageRows()}:null,read:async context=>{if(extracting)throw Error('Screenshot reading is already running.');extracting=true;$('extract').disabled=true;let reader;try{reader=await createLeaderboardOcr((stage,percent)=>{$('extract-status').textContent='Reading names · '+stage+' '+percent+'%';});return {rows:await reader.read(await evidenceUrl(context.page,context.batchId),context.page)};}finally{try{await reader?.terminate();}catch{}extracting=false;$('extract').disabled=false;}},onApply:count=>{candidateCache.clear();markChanged();renderRows();status(count+' screenshot readings changed by your selection. Player profiles were not renamed. Save draft to keep the readings.');suggestPageMatches();}});
+// Keep the normal review path clear; repair actions remain available on demand.
+const readingTools=el('details'),readingToolsTitle=el('summary','Reading tools'),readingToolsBody=el('div');
+readingTools.className='r4-reading-tools';readingToolsBody.className='r4-reading-tools-body';
+readingToolsBody.append(el('p','Suggestions appear automatically for each screenshot. Use these tools only when a reading needs another look.'),rereadNames,enhancedNames,refreshMatches,$('add'));
+readingTools.append(readingToolsTitle,readingToolsBody);$('extract').closest('.r4-toolbar').append(readingTools);
+$('extract').textContent='Read & match screenshots';
+const readingToolsStyle=el('style');readingToolsStyle.textContent='.r4-reading-tools{flex-basis:100%;margin-top:6px;border-top:1px solid #284854;padding-top:12px}.r4-reading-tools>summary{display:list-item;cursor:pointer;color:#9dbbc6;font-size:13px;font-weight:600;list-style-position:inside;padding:8px 0}.r4-reading-tools>summary:focus-visible{outline:2px solid #04d3dc;outline-offset:3px}.r4-reading-tools-body{display:flex;flex-wrap:wrap;gap:10px;padding:8px 0}.r4-reading-tools-body p{flex-basis:100%;margin:0 0 4px;color:#9dbbc6;font-size:13px}.r4-reading-tools-body button{font-size:13px;padding:9px 13px}';document.head.append(readingToolsStyle);
