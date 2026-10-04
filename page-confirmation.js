@@ -1,8 +1,9 @@
-import {assessCandidates} from './match-confidence.js?v=20261001';
+import {unresolvedEvidence} from './review-safety.js?v=workflow-20261003';
+import {assessCandidates} from './match-confidence.js?v=workflow-20261003';
 // Explicit page confirmation can accept unique exact-name suggestions, never fuzzy guesses.
 export function planPageConfirmation(rows,allRows,candidatesFor,isConfirmed){
  const proposed=rows.filter(r=>!r.excluded&&!isConfirmed(r)).map(row=>{
-  if(!/^\d{1,12}$/.test(String(row.score))||!row.allianceSet||!row.allianceServer)return {row};
+  if(unresolvedEvidence(row)||!/^\d{1,12}$/.test(String(row.score))||!row.allianceSet||!row.allianceServer)return {row};
   const candidates=candidatesFor(row)||[];
   if(row.playerKey){if(candidates.some(c=>c.key===row.playerKey&&c.eventConflict))return {row};return {row,key:row.playerKey};}
   const profile=assessCandidates(candidates).candidate;

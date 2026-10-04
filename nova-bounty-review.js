@@ -1,22 +1,24 @@
-import {findPartialMatches,mergePartialMatches} from './partial-name-matches.js?v=partial-20261001';
-import {planPageConfirmation} from './page-confirmation.js?v=20261001';
-import {assessCandidates} from './match-confidence.js?v=20261001';
-import {renderSeasonHistory} from './season-events.js?v=20260930';
+import {nameReadings,mergeReread,mergeCandidates,unresolvedEvidence,approvalReward} from './review-safety.js?v=workflow-20261003';
+import {findPartialMatches,mergePartialMatches} from './partial-name-matches.js?v=workflow-20261003';
+import {planPageConfirmation} from './page-confirmation.js?v=workflow-20261003';
+import {assessCandidates} from './match-confidence.js?v=workflow-20261003';
+const renderSeasonHistory=async(...args)=>(await import('./season-events.js?v=20260930')).renderSeasonHistory(...args);
 import {loadTiers,tierOf,powerOf} from './season-events-core.js?v=20260930';
 import {allianceGroup,allianceGroups,correctAlliance} from './nova-review-alliances.js?v=set-20260929';
-import {loadStormHistory} from './storm-profile.js?v=rotation-20260928';
-import {loadTrainHistory} from './train-history.js?v=history-20260927';
-import {renderReports} from './player-reports.js?v=report-polish-20260926';
+const loadStormHistory=async(...args)=>(await import('./storm-profile.js?v=rotation-20260928')).loadStormHistory(...args);
+const loadTrainHistory=async(...args)=>(await import('./train-history.js?v=history-20260927')).loadTrainHistory(...args);
+const renderReports=async(...args)=>(await import('./player-reports.js?v=report-polish-20260926')).renderReports(...args);
 import {user} from './live-session.js';
 import {bountyConnection as config} from './nova-bounty-config.js';
-import {createLeaderboardOcr} from './nova-bounty-ocr.js?v=careful-20261003';
+import {createLeaderboardOcr} from './nova-bounty-ocr.js?v=workflow-20261003';
 
 const $=id=>document.getElementById(id);
 const el=(tag,text)=>{const node=document.createElement(tag);if(text!==undefined)node.textContent=text;return node;};
 const clean=value=>String(value??'').trim();
 const status=message=>$('status').textContent=message;
 const profileCache=new Map();
-let active=null,draft=null,dirty=false,selected=-1,currentPage=1,extracting=false;
+let active=null,draft=null,dirty=false,selected=-1,currentPage=1,extracting=false,reviewBusy=false;
+let imageRequest=0,openRequest=0;const saveJobs=new Map();
 
 function updateClocks(){
  const now=new Date();
@@ -38,9 +40,9 @@ function normalizeRow(row){
  const migrated=!!row.checked;
  return {...row,rank:Number(row.rank)||0,page:Number(row.page)||1,score:clean(row.score),name:clean(row.name),alliance:clean(row.alliance),playerAlliance:clean(row.playerAlliance),playerName:clean(row.playerName),playerKey:clean(row.playerKey),playerChecked:row.playerChecked??migrated,allianceChecked:row.allianceChecked??false,scoreChecked:row.scoreChecked??migrated,excluded:!!row.excluded};
 }
-function rowConfirmed(row){return !!(/^\d{1,12}$/.test(row.score)&&clean(row.alliance)&&row.playerKey&&row.playerChecked&&row.allianceChecked&&row.scoreChecked);}
+function rowConfirmed(row){return !!(!unresolvedEvidence(row)&&/^\d{1,12}$/.test(row.score)&&clean(row.alliance)&&row.playerKey&&row.playerChecked&&row.allianceChecked&&row.scoreChecked);}
 function pageRows(page=currentPage){return (draft?.rows||[]).filter(row=>row.page===page);}
-function pageConfirmed(page){const rows=pageRows(page).filter(row=>!row.excluded);return rows.length>0&&rows.every(rowConfirmed);}
+function pageConfirmed(page){const rows=pageRows(page);return rows.length>0&&rows.every(row=>row.excluded||rowConfirmed(row));}
 function issues(rows){
  const included=rows.filter(row=>!row.excluded),keys=new Set(),ranks=new Set();let duplicates=0;
  for(const row of included){if((row.rank>0&&ranks.has(row.rank))||(row.playerKey&&keys.has(row.playerKey)))duplicates++;if(row.rank>0)ranks.add(row.rank);if(row.playerKey)keys.add(row.playerKey);}
@@ -49,27 +51,28 @@ function issues(rows){
 function rewardPoints(){const input=$('bounty-points');return input.value.trim()===''?NaN:Number(input.value);}
 function validReward(){const n=rewardPoints();return Number.isInteger(n)&&n>=0&&n<=10000;}
 function decisionReady(){
- if(!active||!draft||!validReward())return false;
+ if(reviewBusy||!active||!draft||!validReward())return false;
  const report=issues(draft.rows),allPages=Array.from({length:active.fileCount},(_,index)=>pageConfirmed(index+1)).every(Boolean);
  return report.included.length>0&&report.pending===0&&report.duplicates===0&&allPages&&[...document.querySelectorAll('.final-check')].every(input=>input.checked);
 }
 function renderDecision(){
  const ready=decisionReady(),button=$('approve-review');if(!button)return;
  button.disabled=!ready;
- $('decision-help').textContent=ready?'Ready to publish confirmed NvSP rows. Opponent rows remain private review evidence.':'Confirm every included row, screenshot and final review check before publishing.';
+ $('decision-help').textContent=ready?'Ready to save both alliances’ player histories and publish the NvSP leaderboard.':'Confirm every included row, screenshot and final review check before publishing.';
 }
 function markChanged(){dirty=true;renderSummary();renderPages();}
 function resetConfirmations(row,...keys){for(const key of keys)row[key]=false;}
-function formatScore(value){const number=Number(String(value).replace(/,/g,''));return Number.isFinite(number)?number.toLocaleString():clean(value);}
+function formatScore(value){if(value==null||String(value).trim()==='')return '';const number=Number(String(value).replace(/,/g,''));return Number.isFinite(number)?number.toLocaleString():clean(value);}
 
 function alliancesReady(){return !!draft?.rows?.length&&draft.rows.filter(r=>!r.excluded).every(r=>r.allianceSet&&clean(r.alliance)&&clean(r.allianceServer));}
 function renderSetAlliances(){
- const area=$('batch-alliance');area.replaceChildren();area.append(el('span','Step 1 · Confirm the participating alliances'));
+ const area=$('batch-alliance');area.replaceChildren();area.append(el('span','Step 1 · Confirm the participating alliances'));area.append(el('small','Player suggestions use saved All Contacts records for these alliances and servers. A live LW Toolkit roster refresh is not connected.'));
  const groups=allianceGroups(draft.rows.filter(r=>!r.excluded));for(const group of groups){const wrap=el('div');wrap.className='r4-set-alliance';const label=el('strong',group.label+' · Server '+(group.rows.find(r=>r.allianceServer)?.allianceServer||'not set')+' · '+group.rows.length+' rows'),edit=el('button','Edit alliance');edit.type='button';const confirmed=group.rows.every(r=>r.allianceSet),confirmGroup=el('button',confirmed?'✓ Alliance confirmed':'Confirm alliance');confirmGroup.type='button';confirmGroup.disabled=confirmed||group.key==='unknown';confirmGroup.onclick=()=>{if(!group.rows.every(r=>r.allianceServer)){confirmAlliancesForMatch(null);return;}for(const r of group.rows){r.alliance=group.label;r.allianceSet=true;}candidateCache.clear();markChanged();renderRows();status(alliancesReady()?'Alliances confirmed. Match players within their alliance, then save your review draft.':'Confirm the remaining alliance before matching players.');suggestPageMatches();};wrap.append(label,confirmGroup,edit);edit.onclick=()=>confirmAlliancesForMatch(null);area.append(wrap);}
  if(groups.length>2)area.append(el('small','More than two alliance labels were detected. Correct the extra groups to one of the two participating alliances.'));
 }
 function renderSummary(){
  if(!draft)return;
+ const reward=document.querySelector('.r4-reward b');if(reward)reward.textContent='+'+(draft.rewardEligible===false?0:validReward()?rewardPoints():'—');
  const report=issues(draft.rows),reviewed=Array.from({length:active.fileCount},(_,index)=>index+1).filter(pageConfirmed).length;
  $('counts').textContent=`${draft.rows.length} suggested rows · ${report.included.length} included · ${report.unmatched} unmatched · ${report.pending} awaiting confirmation · ${report.duplicates} duplicate conflicts`;
  $('coverage').textContent=`${active.fileCount} uploaded files · ${draft.rows.length} leaderboard rows found · ${reviewed} pages fully confirmed · ${report.duplicates} possible overlaps or duplicate conflicts.`;
@@ -84,16 +87,18 @@ function renderSummary(){
 }
 
 async function evidence(page){
+ const batch=active,request=++imageRequest;
+ const current=()=>request===imageRequest&&active===batch&&currentPage===page;
+ $('image').replaceChildren();$('image-status').textContent=`Loading page ${page}…`;
  try{
-  $('image-status').textContent=`Loading page ${page}…`;
-  const {url}=await call({action:'evidence',batchId:active.id,sequence:page});
+  const {url}=await call({action:'evidence',batchId:batch.id,sequence:page});if(!current())return;
   const image=el('img');image.alt=`Submitted leaderboard screenshot page ${page}`;
-  image.onload=()=>{$('image-status').textContent=`Original file ${page} of ${active.fileCount}`;};
-  image.onerror=()=>{$('image-status').textContent='Image unavailable. Select the page again to retry.';};
+  image.onload=()=>{if(current())$('image-status').textContent=`Original file ${page} of ${batch.fileCount}`;};
+  image.onerror=()=>{if(current())$('image-status').textContent='Image unavailable. Select the page again to retry.';};
   image.src=url;$('image').replaceChildren(image);
- }catch(error){status(error.message);}
+ }catch(error){if(current())$('image-status').textContent=error.message;}
 }
-async function evidenceUrl(page){return (await call({action:'evidence',batchId:active.id,sequence:page})).url;}
+async function evidenceUrl(page,batchId=active?.id){return (await call({action:'evidence',batchId,sequence:page})).url;}
 
 function renderPages(){
  const pages=$('pages');pages.replaceChildren();
@@ -115,7 +120,7 @@ async function partialSuggestions(row,batchId,across=false){
  return [...new Map([...directory,...matches].map(p=>[p.key,p])).values()];
  }});
 }
-function candidateKey(row){return JSON.stringify([active?.id,row.name,row.alliance,row.allianceServer,row.score,row.rank]);}
+function candidateKey(row){return JSON.stringify([active?.id,nameReadings(row),row.alliance,row.allianceServer,row.score,row.rank]);}
 async function suggestPageMatches(){
  if(!active||!draft||!alliancesReady())return;
  const request=++matchingRequest,batch=active,page=currentPage;
@@ -124,22 +129,22 @@ async function suggestPageMatches(){
  if(!pending.length){renderRows();return;}
  let failures=0;
  $('extract-status').textContent='Finding alliance player matches…';
- for(let offset=0;offset<pending.length;offset+=10){
-  const chunk=pending.slice(offset,offset+10),keys=chunk.map(candidateKey);
+ const requests=pending.flatMap(row=>nameReadings(row).map(name=>({row,name,key:candidateKey(row)})));
+ const failedKeys=new Set();
+ for(let offset=0;offset<requests.length;offset+=10){
+  const chunk=requests.slice(offset,offset+10);
   try{
-   const data=await call({action:'player-search',batchId:batch.id,allianceScope:true,matchRows:chunk.map(({name,alliance,allianceServer,score,rank})=>({name,alliance,server:allianceServer,score,rank}))});
-   if(!current())return;
-   if(!Array.isArray(data.rows))throw Error('No matching results');
+   const data=await call({action:'player-search',batchId:batch.id,allianceScope:true,matchRows:chunk.map(({row,name})=>({name,alliance:row.alliance,server:row.allianceServer,score:row.score,rank:row.rank}))});
+   if(!current())return;if(!Array.isArray(data.rows))throw Error('No matching results');
    const received=new Set();
-   for(const item of data.rows){
-    if(!Number.isInteger(item.index)||item.index<0||item.index>=chunk.length)continue;
-    received.add(item.index);
-    candidateCache.set(keys[item.index],(item.candidates||[]).filter(p=>allianceGroup(p.alliance)===allianceGroup(chunk[item.index].alliance)&&String(p.server)===String(chunk[item.index].allianceServer)));
+   for(const item of data.rows){if(!Number.isInteger(item.index)||!chunk[item.index])continue;received.add(item.index);
+    const {row,key}=chunk[item.index];
+    candidateCache.set(key,mergeCandidates(candidateCache.get(key)||[],(item.candidates||[]).filter(p=>allianceGroup(p.alliance)===allianceGroup(row.alliance)&&String(p.server)===String(row.allianceServer))));
    }
-   failures+=chunk.length-received.size;
-   renderRows();
-  }catch(error){if(!current())return;failures+=chunk.length;}
+   chunk.forEach((item,i)=>{if(!received.has(i))failedKeys.add(item.key);});renderRows();
+  }catch(error){if(!current())return;chunk.forEach(item=>failedKeys.add(item.key));}
  }
+ failures+=failedKeys.size;
  if(!current())return;
  $('extract-status').textContent='Exact matches are ready. Checking unclear names…';
  // Keep successful matches visible while two bounded workers search difficult rows.
@@ -162,7 +167,7 @@ async function suggestPageMatches(){
  $('extract-status').textContent=failures?'Available matches are ready. Some searches failed; use Refresh player suggestions to retry. Your selections are kept.':'Matches ready. Confirm exact matches on this page; compare possible matches before choosing.';
 }
 function attachCandidate(row,profile){document.querySelector('.r4-match-dialog')?.close();profileCache.set(profile.key,profile);row.playerKey=profile.key;row.playerName=profile.name;row.playerAlliance=profile.alliance||'';resetConfirmations(row,'playerChecked','allianceChecked');markChanged();renderRows();status('Linked '+profile.name+'. Check the score and screenshot alliance, then confirm and save draft.');}
-function selectPage(page){matchingRequest++;candidateCache.clear();currentPage=page;selected=-1;renderPages();renderRows();renderSummary();evidence(page);$('editor').replaceChildren(el('p','Select a player name to search All Contacts.'));suggestPageMatches();}
+function selectPage(page){if(reviewBusy)return;matchingRequest++;candidateCache.clear();currentPage=page;selected=-1;renderPages();renderRows();renderSummary();evidence(page);$('editor').replaceChildren(el('p','Select a player name to search All Contacts.'));suggestPageMatches();}
 
 function checkbox(key,label,row,index){
  const wrapper=el('label'),input=el('input');wrapper.className='r4-row-confirm';input.type='checkbox';input.checked=!!row[key];
@@ -170,9 +175,10 @@ function checkbox(key,label,row,index){
 }
 function editable(label,value,onchange,type='text'){
  const wrapper=el('label',label),input=el('input');input.type=type;input.value=value??'';input.onclick=event=>event.stopPropagation();
- input.onchange=()=>{onchange(input.value);markChanged();renderRows();};wrapper.append(input);return wrapper;
+ input.oninput=()=>{onchange(input.value);markChanged();};input.onblur=()=>renderRows();wrapper.append(input);return wrapper;
 }
 function renderRows(){
+ if($('rows')?.contains(document.activeElement)&&document.activeElement?.tagName==='INPUT'){renderSummary();return;}
  const tbody=$('rows'),editor=$('editor');if(editor&&tbody.contains(editor)){tbody.closest('.r4-data').append(editor);editor.hidden=true;}tbody.replaceChildren();if(!draft)return;
  const readyRows=new Set(planPageConfirmation(pageRows(),draft.rows,r=>candidateCache.get(candidateKey(r)),rowConfirmed).ready.map(item=>item.row));
  const query=$('filter').value.toLowerCase();let visible=0;
@@ -183,13 +189,18 @@ function renderRows(){
  const group=allianceGroups(draft.rows).find(g=>g.key===allianceGroup(row.alliance));const alliance=el('span',group?.label||row.alliance||'Not detected');alliance.className='r4-alliance-value';alliance.title='Detected: '+row.alliance+'. Edit this alliance for the whole set above.';
  const ready=readyRows.has(row),suggested=assessCandidates(candidateCache.get(candidateKey(row))||[]).candidate;
  const player=el('button');player.append(el('span',row.playerName||(ready?suggested?.name:null)||row.name||'Unnamed player'));const badge=el('span',rowConfirmed(row)?'✓ Confirmed':row.playerKey?'Change player':ready?'✓ Exact match · ready':'⌕ Find or create player');badge.className=rowConfirmed(row)?'r4-confirmed-badge':'r4-match-prompt';player.append(badge);player.setAttribute('aria-label',(row.playerName||row.name)+' — '+(rowConfirmed(row)?'Confirmed; change match':row.playerKey?'Change match':'Match player'));player.type='button';player.className='r4-inline-player';player.title=row.playerKey?'Linked player — click to change':'Click to match this player';player.disabled=false;player.onclick=()=>selectRow(index);
- const score=editable('Suggested score',formatScore(row.score),value=>{row.score=value.replace(/,/g,'');resetConfirmations(row,'scoreChecked');});score.className='r4-inline-field r4-inline-score';
+ const score=editable('Suggested score',formatScore(row.score),value=>{row.score=value.replace(/,/g,'');row.scoreResolved=true;resetConfirmations(row,'scoreChecked');});score.className='r4-inline-field r4-inline-score';
  const actions=el('div');actions.className='r4-inline-actions';
- const issue=row.excluded?'Excluded row':!/^\d{1,12}$/.test(row.score)?'Correct the score':!clean(row.alliance)?'Correct the alliance':'';
- const confirm=el('button',rowConfirmed(row)?'✓ Confirmed':'Confirm');confirm.type='button';confirm.disabled=row.excluded||rowConfirmed(row);confirm.title=issue||'Confirm player, alliance and score';confirm.onclick=async()=>{if(!alliancesReady()){confirmAlliancesForMatch(index);return;}if(issue){status(issue+' before confirming this row.');score.querySelector('input')?.focus();return;}if(!row.playerKey){const profile=assessCandidates(candidateCache.get(candidateKey(row))||[]).candidate;if(!profile){selectRow(index);return;}if(String(profile.server)!==String(row.allianceServer)||draft.rows.some(r=>r!==row&&!r.excluded&&r.playerKey===profile.key)){status('This suggestion needs review because its server or another assigned row conflicts.');selectRow(index);return;}row.playerKey=profile.key;row.playerName=profile.name;row.playerAlliance=profile.alliance||'';profileCache.set(profile.key,profile);}if(group&&group.key!=='unknown')row.alliance=group.label;row.playerChecked=row.allianceChecked=row.scoreChecked=true;markChanged();renderRows();status('Saving confirmed row…');try{await saveDraft();status('✓ '+(row.playerName||row.name)+' confirmed and draft saved.');}catch(error){status('Row is checked but could not be saved. '+error.message+' Use Save review draft to retry.');}};
+ const issue=row.excluded?'Excluded row':unresolvedEvidence(row)?'Resolve the screenshot reading below':!/^\d{1,12}$/.test(row.score)?'Correct the score':!clean(row.alliance)?'Correct the alliance':'';
+ const confirm=el('button',rowConfirmed(row)?'✓ Confirmed':'Confirm');confirm.type='button';confirm.disabled=row.excluded||rowConfirmed(row);confirm.title=issue||'Confirm player, alliance and score';confirm.onclick=async()=>{if(!alliancesReady()){confirmAlliancesForMatch(index);return;}if(issue){status(issue+' before confirming this row.');score.querySelector('input')?.focus();return;}if(!row.playerKey){const profile=assessCandidates(candidateCache.get(candidateKey(row))||[]).candidate;if(!profile||Number(profile.nameSimilarity)!==1){selectRow(index);return;}if(String(profile.server)!==String(row.allianceServer)||draft.rows.some(r=>r!==row&&!r.excluded&&r.playerKey===profile.key)){status('This suggestion needs review because its server or another assigned row conflicts.');selectRow(index);return;}row.playerKey=profile.key;row.playerName=profile.name;row.playerAlliance=profile.alliance||'';profileCache.set(profile.key,profile);}if(group&&group.key!=='unknown')row.alliance=group.label;row.playerChecked=row.allianceChecked=row.scoreChecked=true;markChanged();renderRows();status('Saving confirmed row…');try{if(await saveDraft())status(dirty?'Confirmed row saved. Newer edits still need saving.':'✓ '+(row.playerName||row.name)+' confirmed and draft saved.');}catch(error){status('Row is checked but could not be saved. '+error.message+' Use Save review draft to retry.');}};
  const more=el('button','Details');more.type='button';more.setAttribute('aria-expanded','false');
  const details=el('div');details.className='r4-inline-details';details.hidden=true;more.onclick=()=>{details.hidden=!details.hidden;more.setAttribute('aria-expanded',String(!details.hidden));};
  details.append(el('p',issue||'Player, alliance and score are ready to confirm.'));
+ if(unresolvedEvidence(row)){details.hidden=false;more.setAttribute('aria-expanded','true');}
+ if(row.ocrScoreConflict&&!row.scoreResolved){details.append(el('p','The readers disagree about the score. Compare the original and choose a value, or type a correction above.'));for(const value of [...new Set([row.score,...(row.ocrScoreAlternatives||[])])]){const use=el('button','Use '+formatScore(value));use.onclick=()=>{row.score=value;row.scoreResolved=true;row.scoreChecked=false;markChanged();renderRows();};details.append(use);}}
+ if(row.ocrRankConflict&&!row.rankResolved){details.append(el('p','The readers disagree about leaderboard position.'));for(const value of [...new Set([row.rank,...(row.ocrRankAlternatives||[])])]){const use=el('button',value?'Position '+value:'Position unreadable');use.onclick=()=>{row.rank=value;row.rankResolved=true;markChanged();renderRows();};details.append(use);}}
+ if(row.layoutUncertain&&!row.layoutChecked){const checked=el('button','I checked this row against the screenshot');checked.onclick=()=>{row.layoutChecked=true;markChanged();renderRows();};details.append(el('p','Screenshot layout could not be detected reliably.'),checked);}
+ if(row.rereadScore&&String(row.rereadScore)!==String(row.score)){const alternate=el('button','Use reread score '+formatScore(row.rereadScore));alternate.onclick=()=>{row.score=String(row.rereadScore);row.scoreResolved=true;row.scoreChecked=false;markChanged();renderRows();};details.append(el('p','A reread found a different score. Your saved value is kept until you choose.'),alternate);}
  details.append(el('p','Screenshot name: '+row.name+(row.playerKey?' · Linked to '+row.playerName+' · Current alliance: '+row.playerAlliance:'')));
  details.append(el('p',row.rank>0?'Leaderboard position: '+row.rank+' · read from screenshot':'Leaderboard position unreadable · optional; player and score can still be confirmed.'));
  const editName=editable('Screenshot name',row.name,value=>{row.name=value;resetConfirmations(row,'playerChecked');});details.append(editName);
@@ -522,12 +533,15 @@ function selectRow(index){
 }
 
 async function openBatch(batch){
+ if(reviewBusy){status('Finishing the current review. Please wait.');return;}
  if(dirty&&!confirm('Discard unsaved review changes?'))return;
+ const request=++openRequest;
  try{
-  const data=await call({action:'review-draft',batchId:batch.id});matchingRequest++;candidateCache.clear();profileCache.clear();active=batch;draft={...data,rows:(data.rows||[]).map(normalizeRow)};dirty=false;selected=-1;currentPage=draft.rows[0]?.page||1;$('workspace').hidden=false;
+  const data=await call({action:'review-draft',batchId:batch.id});if(request!==openRequest)return;matchingRequest++;candidateCache.clear();profileCache.clear();active=batch;draft={...data,rows:(data.rows||[]).map(normalizeRow)};dirty=false;selected=-1;currentPage=draft.rows[0]?.page||1;$('workspace').hidden=false;
   $('bounty-points').value=String(data.rewardPoints??10);$('bounty-points-code').textContent=batch.bounty;
-  $('batch-title').textContent='Daily all-player leaderboard';$('batch-meta').textContent=`${batch.gameDate} · ${batch.fileCount} uploaded screenshots · Submitted by ${batch.profileName||batch.playerKey}`;
-  $('evidence-title').textContent=`${batch.bounty} · ${batch.gameDate}`;$('evidence-meta').textContent=`${batch.fileCount} screenshots · ${batch.profileName||batch.playerKey}`;$('evidence-code').textContent=batch.bounty;
+  document.querySelectorAll('.final-check').forEach(input=>input.checked=false);$('review-note').value=data.reviewNote||'';
+  $('batch-title').textContent=/^VSD/.test(batch.bounty)?'Daily Alliance Duel leaderboard':/^VSW/.test(batch.bounty)?'Weekly Alliance Duel leaderboard':/^DN/.test(batch.bounty)?'Alliance donations':'Bounty evidence review';$('batch-meta').textContent=`${batch.gameDate} · ${batch.fileCount} uploaded screenshots · Submitted by ${batch.profileName||'Member'}`;
+  $('evidence-title').textContent=`${batch.bounty} · ${batch.gameDate}`;$('evidence-meta').textContent=`${batch.fileCount} screenshots · ${batch.profileName||'Member'}`;$('evidence-code').textContent=batch.bounty;
   document.querySelectorAll('.r4-queue-item').forEach(button=>button.classList.toggle('active',button.dataset.batch===batch.id));
   renderPages();renderRows();renderSummary();evidence(currentPage);suggestPageMatches();status('Live submission loaded. Yellow dots need review; green checks appear only after the data is confirmed.');
  }catch(error){status(error.message);}
@@ -536,52 +550,70 @@ let queueLoading=false;
 async function load(){
  if(queueLoading)return;queueLoading=true;$('refresh').disabled=true;$('queue-count').textContent='…';status('Loading submissions for R4 review…');
  try{
-  const rows=await call({action:'review-list'}),profiles=await Promise.all(rows.map(row=>call({action:'profile',playerKey:row.playerKey}).catch(()=>null)));$('queue').replaceChildren();$('queue-count').textContent=rows.length;
-  rows.forEach((row,index)=>{row.profileName=profiles[index]?.name||'Member';const button=el('button');button.className='r4-queue-item';button.dataset.batch=row.id;button.append(el('span','Pending review'),el('strong',row.bounty),el('small',`${row.gameDate} · ${row.fileCount} screenshots · ${row.profileName}`));button.onclick=()=>openBatch(row);$('queue').append(button);});
+  const rows=await call({action:'review-list'});$('queue').replaceChildren();$('queue-count').textContent=rows.length;
+  rows.forEach((row,index)=>{row.profileName=row.profileName||'Member';const button=el('button');button.className='r4-queue-item';button.dataset.batch=row.id;button.append(el('span','Pending review'),el('strong',row.bounty),el('small',`${row.gameDate} · ${row.fileCount} screenshots · ${row.profileName}`));button.onclick=()=>openBatch(row);$('queue').append(button);});
   status(`${rows.length} live submission${rows.length===1?'':'s'} awaiting review.`);if(!rows.length){$('queue').append(el('p','No submissions are awaiting review.'));}
  }catch(error){$('queue-count').textContent='unavailable';$('queue').replaceChildren(el('p','The review queue could not be loaded. This does not mean there are no submissions.'));status('Unable to load submissions. Click Refresh queue to retry. If this continues, sign in again. Saved screenshots are not affected.');}
  finally{queueLoading=false;$('refresh').disabled=false;}
 }
 
-async function saveDraft(){if(!validReward())throw Error('Enter whole bounty points from 0 to 10,000.');draft=await call({action:'save-review',batchId:active.id,revision:draft.revision,rows:draft.rows,rewardPoints:rewardPoints(),rewardRevision:draft.rewardRevision??0});draft.rows=draft.rows.map(normalizeRow);dirty=false;renderRows();return draft;}
+async function saveDraft(){
+ if(!active||!draft||!validReward())throw Error('Enter whole bounty points from 0 to 10,000.');
+ const batch=active,reviewDraft=draft;
+ if(saveJobs.has(batch.id)){await saveJobs.get(batch.id);if(active!==batch||draft!==reviewDraft)return null;return saveDraft();}
+ const rows=JSON.stringify(reviewDraft.rows),points=rewardPoints(),note=$('review-note').value;
+ const promise=call({action:'save-review',batchId:batch.id,revision:reviewDraft.revision,rows:JSON.parse(rows),reviewNote:note,rewardPoints:points,rewardRevision:reviewDraft.rewardRevision??0});saveJobs.set(batch.id,promise);
+ try{
+  const saved=await promise;
+  reviewDraft.revision=saved.revision;reviewDraft.rewardRevision=saved.rewardRevision??reviewDraft.rewardRevision;
+  reviewDraft.rewardEligible=saved.rewardEligible??reviewDraft.rewardEligible;reviewDraft.rewardPoints=saved.rewardPoints??points;reviewDraft.reviewNote=saved.reviewNote??note;
+  if(active!==batch||draft!==reviewDraft)return null;
+  dirty=JSON.stringify(reviewDraft.rows)!==rows||rewardPoints()!==points||$('review-note').value!==note;
+  // Do not replace row objects: pending callbacks and newer edits belong to this draft.
+  renderRows();return reviewDraft;
+ }finally{if(saveJobs.get(batch.id)===promise)saveJobs.delete(batch.id);}
+}
+$('review-note').oninput=markChanged;
 $('bounty-points').oninput=()=>{dirty=true;renderSummary();};
-$('save').onclick=async()=>{try{$('save').disabled=true;await saveDraft();status('Private R4 review draft saved. Scores and rewards remain unpublished.');}catch(error){status(error.message);}finally{$('save').disabled=false;}};
+$('save').onclick=async()=>{try{$('save').disabled=true;if(await saveDraft())status(dirty?'Earlier changes saved. Newer edits still need saving.':'Private R4 review draft saved. Scores and rewards remain unpublished.');}catch(error){status(error.message);}finally{$('save').disabled=false;}};
 const rereadNames=el('button','Re-read unmatched names on this page');rereadNames.type='button';rereadNames.id='reread-names';$('extract').after(rereadNames);
 const refreshMatches=el('button','Refresh player suggestions');refreshMatches.type='button';refreshMatches.id='refresh-player-matches';rereadNames.after(refreshMatches);
 refreshMatches.onclick=async()=>{if(!active||!draft)return;if(!alliancesReady()){confirmAlliancesForMatch(null);return;}matchingRequest++;candidateCache.clear();profileCache.clear();refreshMatches.disabled=true;renderRows();try{await suggestPageMatches();}finally{refreshMatches.disabled=false;}};
 $('extract').onclick=async()=>{
- if(extracting||!active)return;if(draft.rows.length&&!confirm('Replace the current draft rows with new screenshot suggestions? Unsaved matching work will be lost.'))return;
+ if(extracting||!active)return;if(reviewBusy)return;
  extracting=true;$('extract').disabled=true;const suggestions=[];let ocr,readingPage=0;const batch=active,reviewDraft=draft,emptyPages=[];$('extract-status').textContent='Loading OCR engine and language files. The first run may take longer…';
  try{
   ocr=await createLeaderboardOcr((stage,percent)=>{$('extract-status').textContent=readingPage?`Reading screenshot ${readingPage} of ${batch.fileCount} · ${stage} ${percent}% · ${suggestions.length} rows found`:`Preparing OCR · ${stage} ${percent}%`;});
   for(let page=1;page<=batch.fileCount;page++){
    if(active!==batch||draft!==reviewDraft)throw Error('The selected submission changed. Return to this submission to continue.');
    readingPage=page;$('extract-status').textContent=`Reading screenshot ${page} of ${batch.fileCount} · ${suggestions.length} rows found…`;
-   const rows=await ocr.read(await evidenceUrl(page),page);if(!rows.length)emptyPages.push(page);
+   const rows=await ocr.read(await evidenceUrl(page,batch.id),page);if(!rows.length)emptyPages.push(page);
    suggestions.push(...rows.map(normalizeRow));
-   if(suggestions.length){reviewDraft.rows=[...suggestions];dirty=true;selected=-1;renderPages();renderRows();renderSummary();}
+   // Reread results stay separate until every requested page has finished.
   }
+  if(active!==batch||draft!==reviewDraft)throw Error('The selected submission changed; its draft was not replaced.');
+  if(suggestions.length){reviewDraft.rows=mergeReread(reviewDraft.rows,suggestions);markChanged();selected=-1;candidateCache.clear();renderRows();suggestPageMatches();}
   $('extract-status').textContent=suggestions.length?`OCR complete: ${suggestions.length} unconfirmed rows from ${batch.fileCount} screenshots.${emptyPages.length?' No rows detected on pages '+emptyPages.join(', ')+'. Check those originals manually.':''} Check names, alliances and scores, then Save draft. Nothing is approved automatically.`:'OCR finished but could not detect leaderboard rows. Your existing draft has been kept. Check the screenshot layout or add rows manually.';
  }
- catch(error){$('extract-status').textContent=`OCR stopped on screenshot ${readingPage||1} of ${batch.fileCount}. ${suggestions.length} rows were read${suggestions.length?' and remain in this draft; save them before leaving':''}. ${error.message} Nothing was confirmed or awarded.`;}
+ catch(error){$('extract-status').textContent=`OCR stopped on screenshot ${readingPage||1} of ${batch.fileCount}. ${suggestions.length} rows were read${suggestions.length?' in a temporary reading only':''}. ${error.message} Your existing draft and confirmations were kept. Nothing was confirmed or awarded.`;}
  finally{try{await ocr?.terminate();}catch{}extracting=false;$('extract').disabled=false;}
 };
 function showPreview(){
- const report=issues(draft.rows),out=$('preview-content');out.replaceChildren(el('div','FINAL REVIEW'),el('h2','Approval preview'),el('p',`${active.bounty}: ${report.included.length} included score rows. ${draft.rows.length-report.included.length} excluded.`),el('p',`${report.unmatched} unmatched, ${report.pending} awaiting confirmation, ${report.duplicates} duplicate conflicts.`),el('p',`Bounty reward: ${validReward()?rewardPoints():'Invalid'} points for the submitter. Suggested default: 10. This preview does not award points.`));
- for(const row of report.included.slice(0,50))out.append(el('p',`${rowConfirmed(row)?'✓':'●'} ${row.playerName||row.name} · ${row.playerAlliance||row.alliance||'Alliance unknown'} → ${row.playerKey||'UNMATCHED'} · ${formatScore(row.score)} points`));
- if(report.included.length>50)out.append(el('p',`…and ${report.included.length-50} more rows.`));$('preview-dialog').showModal();
+ const report=issues(draft.rows),out=$('preview-content');out.replaceChildren(el('div','FINAL REVIEW'),el('h2','Approval preview'),el('p',`${active.bounty}: ${report.included.length} included score rows. ${draft.rows.length-report.included.length} excluded.`),el('p',`${report.unmatched} unmatched, ${report.pending} awaiting confirmation, ${report.duplicates} duplicate conflicts.`),el('p',`Bounty reward: ${draft.rewardEligible===false?0:validReward()?rewardPoints():'Invalid'} points for the submitter.${draft.rewardEligible===false?' This submitter is excluded from bounty rewards.':''} This preview does not award points.`));
+ for(const row of report.included)out.append(el('p',`${rowConfirmed(row)?'✓':'●'} ${row.playerName||row.name} · ${row.playerAlliance||row.alliance||'Alliance unknown'}${row.playerKey?'':' · No player matched'} · ${formatScore(row.score)} points`));
+ $('preview-dialog').showModal();
 }
 $('preview').onclick=showPreview;$('decision-preview').onclick=showPreview;$('close-preview').onclick=()=>$('preview-dialog').close();
 document.querySelectorAll('.final-check').forEach(input=>input.onchange=renderDecision);
 $('approve-review').onclick=async()=>{
- if(!decisionReady()||!confirm(`Approve this submission, award ${rewardPoints()} bounty points to the submitter, and publish confirmed NvSP player scores?`))return;
- const button=$('approve-review');button.disabled=true;
+ if(!decisionReady()||!confirm(`Approve this submission, award ${draft.rewardEligible===false?0:rewardPoints()} bounty points to the submitter, save confirmed player histories for both alliances, and publish NvSP scores?`))return;
+ const batch=active,reviewDraft=draft;reviewBusy=true;const button=$('approve-review');button.disabled=true;$('workspace').inert=true;
  try{
-  if(dirty)await saveDraft();
+  if(dirty)await saveDraft();if(active!==batch||draft!==reviewDraft||dirty)throw Error('Save all current edits before approval.');
   const result=await call({action:'approve-review',batchId:active.id,revision:draft.revision,rewardRevision:draft.rewardRevision??0,note:clean($('review-note').value)});
   directoryCache.clear();profileCache.clear();dirty=false;active=null;draft=null;$('workspace').hidden=true;
-  status(`Approved. ${result.published} NvSP scores published; ${result.opponentRowsRetained} opponent rows retained as private evidence. +${result.pointsAwarded} bounty points awarded.`);await load();
- }catch(error){status(error.message);renderDecision();}
+  status(`Approved. ${result.published} NvSP scores published; ${result.opponentRowsRetained} opponent scores saved to private player histories. +${result.pointsAwarded} bounty points awarded.`);await load();
+ }catch(error){status(error.message);}finally{reviewBusy=false;$('workspace').inert=false;renderDecision();}
 };
 $('reject-review').onclick=async()=>{
  const note=clean($('review-note').value);if(note.length<3){status('Add a review note explaining why the submission is rejected.');$('review-note').focus();return;}
@@ -601,7 +633,7 @@ $('confirm-page').onclick=async()=>{
  const plan=planPageConfirmation(pageRows(),draft.rows,r=>candidateCache.get(candidateKey(r)),rowConfirmed);if(!plan.ready.length)return;
  const page=currentPage;for(const {row,profile} of plan.ready){if(profile){row.playerKey=profile.key;row.playerName=profile.name;row.playerAlliance=profile.alliance||'';profileCache.set(profile.key,profile);}row.playerChecked=row.allianceChecked=row.scoreChecked=true;}
  markChanged();renderRows();$('confirm-page').disabled=true;status('Saving '+plan.ready.length+' confirmed rows…');
- try{await saveDraft();status('✓ '+plan.ready.length+' rows confirmed and draft saved on page '+page+'.'+(plan.unresolved?' '+plan.unresolved+' still need attention.':' Page complete.')+' Scores have not been published.');}
+ try{if(!await saveDraft())return;status((dirty?'Newer edits still need saving. ':'')+'✓ '+plan.ready.length+' rows confirmed and draft saved on page '+page+'.'+(plan.unresolved?' '+plan.unresolved+' still need attention.':' Page complete.')+' Scores have not been published.');}
  catch(error){status('Rows are checked but could not be saved. '+error.message+' Use Save review draft to retry.');renderRows();}
 };
 $('clear-page').onclick=()=>{for(const row of pageRows()){row.playerChecked=false;row.allianceChecked=false;row.scoreChecked=false;}markChanged();renderRows();status('Confirmation checks cleared for this screenshot page.');};
@@ -621,7 +653,7 @@ window.addEventListener('nova-train-player',event=>showDirectoryProfile(event.de
 
 
 
-import {attachEnhancedNames} from './enhanced-name-review.js?v=careful-20261003';
+import {attachEnhancedNames} from './enhanced-name-review.js?v=workflow-20261003';
 attachEnhancedNames({after:rereadNames,call,getContext:()=>active&&draft&&!extracting?{batchId:active.id,page:currentPage,draft,rows:pageRows()}:null,onApply:count=>{candidateCache.clear();markChanged();renderRows();status(count+' screenshot names updated. Player matches and scores kept; save the review draft to retain these readings.');suggestPageMatches();}});
 
-attachEnhancedNames({button:rereadNames,label:'Review new screenshot readings',call,getContext:()=>active&&draft?{batchId:active.id,page:currentPage,draft,rows:pageRows()}:null,read:async context=>{if(extracting)throw Error('Screenshot reading is already running.');extracting=true;$('extract').disabled=true;let reader;try{reader=await createLeaderboardOcr((stage,percent)=>{$('extract-status').textContent='Reading names · '+stage+' '+percent+'%';});return {rows:await reader.read(await evidenceUrl(context.page),context.page)};}finally{try{await reader?.terminate();}catch{}extracting=false;$('extract').disabled=false;}},onApply:count=>{candidateCache.clear();markChanged();renderRows();status(count+' screenshot readings changed by your selection. Player profiles were not renamed. Save draft to keep the readings.');suggestPageMatches();}});
+attachEnhancedNames({button:rereadNames,label:'Review new screenshot readings',call,getContext:()=>active&&draft?{batchId:active.id,page:currentPage,draft,rows:pageRows()}:null,read:async context=>{if(extracting)throw Error('Screenshot reading is already running.');extracting=true;$('extract').disabled=true;let reader;try{reader=await createLeaderboardOcr((stage,percent)=>{$('extract-status').textContent='Reading names · '+stage+' '+percent+'%';});return {rows:await reader.read(await evidenceUrl(context.page,context.batchId),context.page)};}finally{try{await reader?.terminate();}catch{}extracting=false;$('extract').disabled=false;}},onApply:count=>{candidateCache.clear();markChanged();renderRows();status(count+' screenshot readings changed by your selection. Player profiles were not renamed. Save draft to keep the readings.');suggestPageMatches();}});
