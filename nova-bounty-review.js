@@ -1,5 +1,7 @@
+import {renderScreenshotLaneEvidence} from './screenshot-lanes.js?v=lanes-20261004';
+import {openRosterPublisher} from './toolkit-roster-publisher.js?v=dated-20261004';
 import {rosterCandidates,validateMatchingRosters,rosterMatchAvailability} from './toolkit-roster-matches.js?v=unmatched-roster-20261003';
-import {openRosterMatchPicker} from './roster-match-picker.js?v=unmatched-roster-20261003';
+import {openRosterMatchPicker} from './roster-match-picker.js?v=lanes-20261004';
 import {nameReadings,mergeReread,unresolvedEvidence,approvalReward} from './review-safety.js?v=workflow-20261003';
 import {planPageConfirmation} from './page-confirmation.js?v=workflow-20261003';
 import {assessCandidates} from './match-confidence.js?v=workflow-20261003';
@@ -19,6 +21,7 @@ const clean=value=>String(value??'').trim();
 const status=message=>$('status').textContent=message;
 const profileCache=new Map();
 let active=null,draft=null,dirty=false,selected=-1,currentPage=1,extracting=false,reviewBusy=false;
+let rosterPublishAccess=null;
 let imageRequest=0,openRequest=0;const saveJobs=new Map();
 
 function updateClocks(){
@@ -67,14 +70,17 @@ function formatScore(value){if(value==null||String(value).trim()==='')return '';
 
 function alliancesReady(){return !!draft?.rows?.length&&draft.rows.filter(r=>!r.excluded).every(r=>r.allianceSet&&clean(r.alliance)&&clean(r.allianceServer));}
 function renderSetAlliances(){
- const area=$('batch-alliance');area.replaceChildren();area.append(el('span','Step 1 · Confirm the participating alliances'));area.append(el('small','Suggestions come only from the selected alliances’ LW Toolkit rosters. Portal profiles are linked by LW player ID; names alone never establish identity.'));
+ const area=$('batch-alliance');area.replaceChildren();area.append(el('span','Step 1 · Confirm the participating alliances'));area.append(el('small','Match against the selected alliances’ dated Toolkit rosters. Saved player matches and confirmed scores stay in place.'));
  const groups=allianceGroups(draft.rows.filter(r=>!r.excluded));for(const group of groups){const wrap=el('div');wrap.className='r4-set-alliance';const label=el('strong',group.label+' · Server '+(group.rows.find(r=>r.allianceServer)?.allianceServer||'not set')+' · '+group.rows.length+' rows'),edit=el('button','Edit alliance');edit.type='button';const confirmed=group.rows.every(r=>r.allianceSet),confirmGroup=el('button',confirmed?'✓ Alliance confirmed':'Confirm alliance');confirmGroup.type='button';confirmGroup.disabled=confirmed||group.key==='unknown';confirmGroup.onclick=()=>{if(!group.rows.every(r=>r.allianceServer)){confirmAlliancesForMatch(null);return;}for(const r of group.rows){r.alliance=group.label;r.allianceSet=true;}candidateCache.clear();markChanged();renderRows();status(alliancesReady()?'Alliances confirmed. Match players within their alliance, then save your review draft.':'Confirm the remaining alliance before matching players.');suggestPageMatches();};wrap.append(label,confirmGroup,edit);edit.onclick=()=>confirmAlliancesForMatch(null);area.append(wrap);}
  const source=el('div');source.className='r4-toolkit-source';source.setAttribute('role','status');
- const refresh=el('button',matchingRosterState.status==='loading'?'Loading Toolkit rosters…':matchingRosterState.status==='ready'?'Refresh Toolkit rosters':'Load Toolkit rosters');refresh.type='button';refresh.disabled=!alliancesReady()||matchingRosterState.status==='loading';refresh.onclick=async()=>{matchingRequest++;candidateCache.clear();await loadMatchingRosters(true);renderRows();suggestPageMatches();};
+ const refresh=el('button',matchingRosterState.status==='loading'?'Loading published rosters…':matchingRosterState.status==='ready'?'Reload published rosters':'Load published rosters');refresh.type='button';refresh.disabled=!alliancesReady()||matchingRosterState.status==='loading';refresh.onclick=async()=>{matchingRequest++;candidateCache.clear();await loadMatchingRosters(true);renderRows();suggestPageMatches();};
  source.append(refresh);
+ if(rosterPublishAccess===true){const publish=el('button','Publish roster export');publish.type='button';publish.className='r4-roster-publish';publish.onclick=()=>openRosterPublisher({call,onPublished:async()=>{matchingRequest++;candidateCache.clear();await loadMatchingRosters(true);renderRows();suggestPageMatches();}});source.append(publish);}
+ if(rosterPublishAccess===null){rosterPublishAccess='loading';call({action:'hub-access'}).then(access=>{rosterPublishAccess=!!access?.accountsManage;if(draft)renderSetAlliances();}).catch(()=>{rosterPublishAccess=false;});}
+
  if(matchingRosterState.key===matchingRosterKey()&&matchingRosterState.status==='ready'){
-  for(const roster of matchingRosterState.rosters){source.append(el('small',roster.tag+' · Server '+roster.server+' · '+roster.members.length+' members · Retrieved '+new Date(roster.retrievedAt).toLocaleString()));source.append(el('small',roster.sourceTime?'Source observation: '+new Date(roster.sourceTime).toLocaleString():'Membership observation date unavailable. A fresh retrieval does not guarantee current game membership.'));for(const warning of roster.warnings||[])source.append(el('small',typeof warning==='string'?warning:warning.message||'Source membership may be historical.'));}
- }else source.append(el('small',matchingRosterState.key===matchingRosterKey()&&matchingRosterState.status==='error'?matchingRosterState.error:'Load both rosters before matching. Your saved selections and confirmations are kept.'));
+  for(const roster of matchingRosterState.rosters){source.append(el('small','Dated Toolkit roster · '+roster.tag+' · Server '+roster.server+' · '+roster.members.length+' members · Retrieved '+new Date(roster.retrievedAt).toLocaleString()));source.append(el('small',roster.sourceTime?'Source observation: '+new Date(roster.sourceTime).toLocaleString():'This is a dated snapshot. The source does not report when membership was last observed.'));for(const warning of roster.warnings||[])source.append(el('small',typeof warning==='string'?warning:warning.message||'Source membership may be historical.'));}
+ }else source.append(el('small',matchingRosterState.key===matchingRosterKey()&&matchingRosterState.status==='error'?matchingRosterState.error:'Load the published snapshots to see their dates and match players. Your saved review is kept.'));
  area.append(source);
  if(groups.length>2)area.append(el('small','More than two alliance labels were detected. Correct the extra groups to one of the two participating alliances.'));
 }
@@ -100,10 +106,10 @@ async function evidence(page){
  $('image').replaceChildren();$('image-status').textContent=`Loading page ${page}…`;
  try{
   const {url}=await call({action:'evidence',batchId:batch.id,sequence:page});if(!current())return;
-  const image=el('img');image.alt=`Submitted leaderboard screenshot page ${page}`;
-  image.onload=()=>{if(current())$('image-status').textContent=`Original file ${page} of ${batch.fileCount}`;};
+  const image=el('img');image.dataset.batch=batch.id;image.dataset.page=String(page);image.alt=`Submitted leaderboard screenshot page ${page}`;
+  image.onload=()=>{if(current()){$('image-status').textContent=`Original file ${page} of ${batch.fileCount}`;renderLaneEvidence();}};
   image.onerror=()=>{if(current())$('image-status').textContent='Image unavailable. Select the page again to retry.';};
-  image.src=url;$('image').replaceChildren(image);
+  image.crossOrigin='anonymous';image.src=url;$('image').replaceChildren(image);
  }catch(error){if(current())$('image-status').textContent=error.message;}
 }
 async function evidenceUrl(page,batchId=active?.id){return (await call({action:'evidence',batchId,sequence:page})).url;}
@@ -153,7 +159,7 @@ function attachCandidate(row,profile){
  if(!draft?.rows.includes(row)||row.excluded)return false;
  let verified;try{verified=rosterMatchAvailability(candidatesWithinRoster(row,{browse:true}),draft.rows,row).find(p=>p.key===profile.key&&p.uid===profile.uid);}catch(error){status(error.message);return false;}
  if(!verified?.key||verified.linkState!=='linked'||verified.alreadyMatched){status('This player is already matched or is no longer available in this alliance roster. Reopen the player list.');return false;}
- document.querySelector('.r4-match-dialog')?.close();profileCache.set(verified.key,verified);row.playerKey=verified.key;row.playerName=verified.name;row.playerAlliance=verified.alliance||'';resetConfirmations(row,'playerChecked','allianceChecked');markChanged();renderRows();status('Linked '+verified.name+'. Check the score and screenshot alliance, then confirm and save draft.');return true;
+ document.querySelector('.r4-match-dialog')?.close?.();profileCache.set(verified.key,verified);row.playerKey=verified.key;row.playerName=verified.name;row.playerAlliance=verified.alliance||'';resetConfirmations(row,'playerChecked','allianceChecked');markChanged();renderRows();status('Linked '+verified.name+'. Check the score and screenshot alliance, then confirm and save draft.');return true;
 }
 function selectPage(page){if(reviewBusy)return;matchingRequest++;currentPage=page;selected=-1;renderPages();renderRows();renderSummary();evidence(page);$('editor').replaceChildren(el('p','Select a player name to search its LW Toolkit roster.'));suggestPageMatches();}
 
@@ -165,6 +171,13 @@ function editable(label,value,onchange,type='text'){
  const wrapper=el('label',label),input=el('input');input.type=type;input.value=value??'';input.onclick=event=>event.stopPropagation();
  input.oninput=()=>{onchange(input.value);markChanged();};input.onblur=()=>renderRows();wrapper.append(input);return wrapper;
 }
+function renderLaneEvidence(){
+ const candidate=$('image')?.querySelector('img'),image=candidate?.dataset.batch===active?.id&&candidate?.dataset.page===String(currentPage)?candidate:null;
+ for(const holder of document.querySelectorAll('.r4-lane-evidence[data-row]')){
+  const row=draft?.rows[Number(holder.dataset.row)];if(!row||row.page!==currentPage)continue;
+  renderScreenshotLaneEvidence({container:holder,row,rows:pageRows(),image,onOpen:()=>{const full=document.querySelector('.r4-full-evidence');if(full)full.open=true;$('image').scrollIntoView({block:'nearest'});}});
+ }
+}
 function renderRows(){
  if($('rows')?.contains(document.activeElement)&&document.activeElement?.tagName==='INPUT'){renderSummary();return;}
  const tbody=$('rows'),editor=$('editor');if(editor&&tbody.contains(editor)){tbody.closest('.r4-data').append(editor);editor.hidden=true;}tbody.replaceChildren();if(!draft)return;
@@ -172,7 +185,7 @@ function renderRows(){
  const query=$('filter').value.toLowerCase();let visible=0;
  draft.rows.forEach((row,index)=>{
  if(row.page!==currentPage||query&&!`${row.name} ${row.alliance} ${row.playerName}`.toLowerCase().includes(query))return;visible++;
- const tr=el('tr');tr.className=`${rowConfirmed(row)?'confirmed':'pending'}${index===selected?' selected':''}${row.excluded?' excluded-row':''}`;
+ const tr=el('tr');tr.dataset.row=String(index);tr.className=`${rowConfirmed(row)?'confirmed':'pending'}${index===selected?' selected':''}${row.excluded?' excluded-row':''}`;
  const data=el('td'),line=el('div');line.className='r4-single-row';
  const group=allianceGroups(draft.rows).find(g=>g.key===allianceGroup(row.alliance));const alliance=el('span',group?.label||row.alliance||'Not detected');alliance.className='r4-alliance-value';alliance.title='Detected: '+row.alliance+'. Edit this alliance for the whole set above.';
  const ready=readyRows.has(row),suggested=assessCandidates(candidateCache.get(candidateKey(row))||[]).candidate;
@@ -195,9 +208,9 @@ function renderRows(){
 
  const exclude=el('button',row.excluded?'Include row':'Exclude duplicate / pinned row');exclude.type='button';exclude.onclick=()=>{row.excluded=!row.excluded;markChanged();renderRows();};details.append(exclude);
  if(!row.playerKey){const candidates=candidateCache.get(candidateKey(row))||[];for(const profile of candidates){const pick=el('button','Use '+profile.name+' · '+profile.alliance+' · '+profile.strength);pick.type='button';pick.onclick=()=>attachCandidate(row,profile);details.append(pick);}}
- const state=el('span',row.excluded?'Excluded':rowConfirmed(row)?'✓ Confirmed':!alliancesReady()?'Confirm alliances to start':row.playerKey||ready?'Ready to confirm':'Needs a match');state.className='r4-row-state '+(rowConfirmed(row)?'is-confirmed':row.playerKey||ready?'is-ready':'is-unmatched');state.setAttribute('role','status');actions.append(state,confirm,more);const playerCell=el('div');playerCell.className='r4-player-suggestions';playerCell.append(player);const reading=el('small','Screenshot text: '+(row.name||'Unreadable'));reading.dir='auto';playerCell.append(reading);if(row.playerKey){const remove=el('button','Remove match');remove.type='button';remove.className='r4-remove-match';remove.setAttribute('aria-label','Remove match for '+(row.playerName||row.name));remove.onclick=()=>{const previous=row.playerName||row.name;row.playerKey='';row.playerName='';row.playerAlliance='';row.checked=false;resetConfirmations(row,'playerChecked','allianceChecked','scoreChecked');markChanged();renderRows();status('Match removed for '+previous+'. Original screenshot name and score retained. Save review draft to keep this change.');};playerCell.append(remove);}if(!row.playerKey&&!row.excluded&&alliancesReady()){const candidates=candidateCache.get(candidateKey(row));if(candidates){const assessment=assessCandidates(candidates),best=assessment.candidate;playerCell.append(el('small',assessment.label));for(const partial of candidates.filter(p=>p.partialMatch).slice(0,3)){const option=el('button','Partial “'+partial.matchedFragment+'” · Compare '+partial.name);option.type='button';option.className='r4-suggested-player';option.onclick=()=>selectRow(index);playerCell.append(option);}if(best&&!ready){const suggestion=el('button','Compare '+best.name);suggestion.type='button';suggestion.className='r4-suggested-player';suggestion.setAttribute('aria-label','Compare possible player: '+best.name);suggestion.onclick=()=>selectRow(index);playerCell.append(suggestion);}}else playerCell.append(el('small',matchingRosterState.status==='error'?'Toolkit roster unavailable — saved matches kept':'Loading Toolkit roster…'));}line.append(alliance,playerCell,score,actions);data.append(line,details);tr.append(data);tbody.append(tr);
+ const state=el('span',row.excluded?'Excluded':rowConfirmed(row)?'✓ Confirmed':!alliancesReady()?'Confirm alliances to start':row.playerKey||ready?'Ready to confirm':'Needs a match');state.className='r4-row-state '+(rowConfirmed(row)?'is-confirmed':row.playerKey||ready?'is-ready':'is-unmatched');state.setAttribute('role','status');const undo=el('button','Undo');undo.type='button';undo.className='r4-lane-undo';undo.hidden=!rowConfirmed(row);undo.onclick=()=>{resetConfirmations(row,'playerChecked','allianceChecked','scoreChecked');row.checked=false;markChanged();renderRows();status('Confirmation removed. The player match and score are kept. Save the draft to keep this change.');};actions.append(state,confirm,undo,more);const playerCell=el('div');playerCell.className='r4-player-suggestions';playerCell.append(player);const reading=el('small','Screenshot text: '+(row.name||'Unreadable'));reading.dir='auto';playerCell.append(reading);if(row.playerKey){const remove=el('button','Remove match');remove.type='button';remove.className='r4-remove-match';remove.setAttribute('aria-label','Remove match for '+(row.playerName||row.name));remove.onclick=()=>{const previous=row.playerName||row.name;row.playerKey='';row.playerName='';row.playerAlliance='';row.checked=false;resetConfirmations(row,'playerChecked','allianceChecked','scoreChecked');markChanged();renderRows();status('Match removed for '+previous+'. Original screenshot name and score retained. Save review draft to keep this change.');};playerCell.append(remove);}if(!row.playerKey&&!row.excluded&&alliancesReady()){const candidates=candidateCache.get(candidateKey(row));if(candidates){const assessment=assessCandidates(candidates),best=assessment.candidate;playerCell.append(el('small',assessment.label));for(const partial of candidates.filter(p=>p.partialMatch).slice(0,3)){const option=el('button','Partial “'+partial.matchedFragment+'” · Compare '+partial.name);option.type='button';option.className='r4-suggested-player';option.onclick=()=>selectRow(index);playerCell.append(option);}if(best&&!ready){const suggestion=el('button','Compare '+best.name);suggestion.type='button';suggestion.className='r4-suggested-player';suggestion.setAttribute('aria-label','Compare possible player: '+best.name);suggestion.onclick=()=>selectRow(index);playerCell.append(suggestion);}}else playerCell.append(el('small',matchingRosterState.status==='error'?'Toolkit roster unavailable — saved matches kept':'Loading Toolkit roster…'));}const evidence=el('div');evidence.className='r4-lane-evidence';evidence.dataset.row=String(index);const match=el('div');match.className='r4-lane-match';match.append(alliance,playerCell,score);line.append(evidence,match,actions);data.append(line,details);tr.append(data);tbody.append(tr);
  });
- if(!visible){const tr=el('tr'),td=el('td','No rows on this page match.');tr.append(td);tbody.append(tr);}renderSummary();
+ if(!visible){const tr=el('tr'),td=el('td','No rows on this page match.');tr.append(td);tbody.append(tr);}renderLaneEvidence();renderSummary();
 }
 
 function profileLine(label,value){const p=el('p');p.append(el('strong',`${label}: `),document.createTextNode(clean(value)||'Unknown'));return p;}
@@ -289,7 +302,7 @@ function setPlayerPhoto(container,value,name){
  let source='';if(typeof value==='string'&&/^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/.test(value))source=value;
  else{try{const url=new URL(value);if(url.protocol==='https:'&&url.hostname==='lastwar-cdn.akamaized.net')source=url.href;}catch{}}
  if(!source){container.title='No profile photo saved';return;}
- const image=el('img');image.alt=`${name||'Player'} profile photo`;image.referrerPolicy='no-referrer';image.onload=()=>container.replaceChildren(image);image.onerror=()=>{container.title='Profile photo unavailable';};image.src=source;
+ const image=el('img');image.dataset.batch=batch.id;image.dataset.page=String(page);image.alt=`${name||'Player'} profile photo`;image.referrerPolicy='no-referrer';image.onload=()=>container.replaceChildren(image);image.onerror=()=>{container.title='Profile photo unavailable';};image.src=source;
 }
 
 function drawPlayerHR(body,profile,full){
@@ -478,7 +491,7 @@ async function selectRow(index){
  if(!await loadMatchingRosters()){status(matchingRosterState.error||'Load the selected LW Toolkit roster before matching.');return;}
  const isCurrent=()=>active===batch&&draft===review&&matchingRosterKey()===scope&&draft.rows.includes(row)&&!row.excluded;
  if(!isCurrent())return;
- renderRows();openRosterMatchPicker({row,getRows:()=>draft.rows,getCandidates:options=>candidatesWithinRoster(row,options),isCurrent,onSelect:profile=>attachCandidate(row,profile),onViewProfile:(profile,select)=>showDirectoryProfile(profile,'all',{select})});
+ renderRows();const container=document.createElement('div');container.className='r4-lane-picker-mount';$('rows').querySelector('tr[data-row="'+index+'"] td').append(container);openRosterMatchPicker({container,row,getRows:()=>draft.rows,getCandidates:options=>candidatesWithinRoster(row,options),isCurrent,onSelect:profile=>attachCandidate(row,profile),onViewProfile:(profile,select)=>showDirectoryProfile(profile,'all',{select})});
 }
 
 async function openBatch(batch){
@@ -620,3 +633,5 @@ readingToolsBody.append(el('p','Screenshot reading runs on this device without a
 readingTools.append(readingToolsTitle,readingToolsBody);$('extract').closest('.r4-toolbar').append(readingTools);
 $('extract').textContent='Read & match screenshots';
 const readingToolsStyle=el('style');readingToolsStyle.textContent='.r4-reading-tools{flex-basis:100%;margin-top:6px;border-top:1px solid #284854;padding-top:12px}.r4-reading-tools>summary{display:list-item;cursor:pointer;color:#9dbbc6;font-size:13px;font-weight:600;list-style-position:inside;padding:8px 0}.r4-reading-tools>summary:focus-visible{outline:2px solid #04d3dc;outline-offset:3px}.r4-reading-tools-body{display:flex;flex-wrap:wrap;gap:10px;padding:8px 0}.r4-reading-tools-body p{flex-basis:100%;margin:0 0 4px;color:#9dbbc6;font-size:13px}.r4-reading-tools-body button{font-size:13px;padding:9px 13px}';document.head.append(readingToolsStyle);
+
+$('lane-queue-toggle').onclick=()=>{const layout=document.querySelector('.r4-layout');const shown=layout.classList.toggle('r4-show-queue');$('lane-queue-toggle').textContent=shown?'Hide review queue':'Show review queue';};

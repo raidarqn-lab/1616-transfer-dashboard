@@ -1,7 +1,7 @@
 import {rosterMatchAvailability} from './toolkit-roster-matches.js?v=unmatched-roster-20261003';
 
 /** Purely browses the caller's validated Toolkit roster; never fetches contacts. */
-export function openRosterMatchPicker({row, getRows, getCandidates, isCurrent, onSelect, onViewProfile}) {
+export function openRosterMatchPicker({container, row, getRows, getCandidates, isCurrent, onSelect, onViewProfile}) {
  const el = (tag, text, className) => {
   const node = document.createElement(tag);
   if (text !== undefined) node.textContent = text;
@@ -9,7 +9,8 @@ export function openRosterMatchPicker({row, getRows, getCandidates, isCurrent, o
   return node;
  };
  const button = (text, className) => {const node = el('button', text, className); node.type = 'button'; return node;};
- const dialog = el('dialog', undefined, 'r4-match-dialog roster-picker');
+ const dialog = el(container?'section':'dialog', undefined, 'r4-match-dialog roster-picker'+(container?' roster-picker-inline':''));
+ if(container)dialog.close=()=>container.remove();
  dialog.setAttribute('aria-label', 'Match player from alliance roster');
  const header = el('div', undefined, 'roster-picker-heading'), title = el('div');
  title.append(el('small', 'PLAYER MATCH'), el('h3', 'Choose the player'));
@@ -40,7 +41,7 @@ export function openRosterMatchPicker({row, getRows, getCandidates, isCurrent, o
    render(); message.textContent = 'This player is already matched or their profile link changed. Choose another member.'; return false;
   }
   if (onSelect(current) === false) return false;
-  if (dialog.open) dialog.close();
+  if (container||dialog.open) dialog.close();
   return true;
  }
  function render(autoBrowse = false) {
@@ -69,6 +70,7 @@ export function openRosterMatchPicker({row, getRows, getCandidates, isCurrent, o
     identity.append(name);
     if (profile.matchedName && profile.matchedName !== profile.name && mode === 'search') {const alias = el('small', 'Previous name: ' + profile.matchedName); alias.dir = 'auto'; identity.append(alias);}
     identity.append(el('small', profile.alreadyMatched ? 'Already matched' + (profile.matchedPage ? ' · Screenshot ' + profile.matchedPage : '') : profile.linkState === 'linked' ? (mode === 'search' ? profile.strength : 'Not matched in this submission') : profile.linkState === 'duplicate-uid' ? 'Duplicate profiles need resolving before selection' : 'Needs a linked player profile before selection'));
+    if(profile.rosterWarning)identity.append(el('small',profile.rosterWarning,'roster-picker-warning'));
     const actions = el('div', undefined, 'roster-picker-actions');
     if (profile.key && profile.linkState === 'linked') {
      const view = button('View profile'); view.setAttribute('aria-label', 'View profile for ' + profile.name);
@@ -84,7 +86,7 @@ export function openRosterMatchPicker({row, getRows, getCandidates, isCurrent, o
  clear.onclick = () => {input.value = ''; mode = 'unused'; render(); input.focus();};
  suggested.onclick = () => {mode = 'search'; render();}; unused.onclick = () => {mode = 'unused'; render();}; all.onclick = () => {mode = 'all'; render();};
  dialog.onclose = () => dialog.remove();
- document.body.append(dialog); dialog.showModal(); render(true);
+ if(container)container.append(dialog);else{document.body.append(dialog);dialog.showModal();} render(true);
  (mode === 'unused' ? unused : input).focus();
  return dialog;
 }

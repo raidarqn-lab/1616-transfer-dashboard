@@ -21,7 +21,7 @@ export function rosterCandidates(rosters, {server, tag, names, query, browse = f
  if (!roster) throw Error('Load this alliance’s LW Toolkit roster before matching.');
  const readings = [...new Set((names || [query]).map(normalized).filter(Boolean))];
  const fragments = (names || [query]).flatMap(n => String(n || '').normalize('NFKC').split(/[^\p{L}\p{N}\p{M}]+/u)).map(normalized).filter(n => [...n].length >= 2);
- return roster.members.map(member => {
+ const candidates = roster.members.map(member => {
   const known = [...new Set([member.name, member.preferredMatchingName, ...(member.matchingNames || []), ...(member.previousNames || []).map(text), ...(member.aliases || []).map(text)].filter(Boolean))];
   let best = {nameSimilarity: 0};
   for (const name of known) for (const reading of readings) {
@@ -32,11 +32,17 @@ export function rosterCandidates(rosters, {server, tag, names, query, browse = f
    if (partial) score = Math.max(score, .65);
    if (score > best.nameSimilarity) best = {nameSimilarity: score, matchedName: name, partialMatch: partial, matchedFragment: partial ? fragment : undefined};
   }
+  const serverConflict = member.serverContextMatches === false || member.qualityFlags?.includes('ROSTER_SERVER_CONFLICT');
   return {...member, ...best, key: member.contactKey || '', name: member.preferredMatchingName || member.name,
    alliance: roster.tag, server: String(roster.server), allianceMatch: true,
-   eventConflict: member.linkState !== 'linked', rosterSource: 'lw-toolkit',
-   strength: member.linkState === 'duplicate-uid' ? 'Duplicate account ID — resolve profiles first' : member.linkState !== 'linked' ? 'Roster member needs a linked profile' : best.partialMatch ? 'Partial name — compare profile' : best.nameSimilarity === 1 ? 'Exact roster name' : 'Possible roster match'};
+   eventConflict: member.linkState !== 'linked' || !!serverConflict, rosterSource: 'lw-toolkit',
+   rosterWarning: serverConflict ? 'Roster: server ' + roster.server + ' · Player record: server ' + member.reportedServer + '. Review membership before selecting.' : '',
+   strength: member.linkState === 'duplicate-uid' ? 'Duplicate account ID — resolve profiles first' : member.linkState !== 'linked' ? 'Roster member needs a linked profile' : serverConflict ? 'Conflicting server details — compare profile' : best.partialMatch ? 'Partial name — compare profile' : best.nameSimilarity === 1 ? 'Exact roster name' : 'Possible roster match'};
  }).filter(p => browse || p.nameSimilarity >= .65).sort((a,b) => b.nameSimilarity - a.nameSimilarity || a.name.localeCompare(b.name));
+ // A same-name member with unresolved evidence still makes the name ambiguous.
+ // Do not hide that member and auto-confirm another account with that name.
+ if(candidates.some(p=>p.eventConflict&&p.nameSimilarity===1))return candidates.map(p=>p.eventConflict?p:{...p,eventConflict:true,strength:'Matching name needs review — compare profiles'});
+ return candidates;
 }
 
 // Reserve explicit selections across the whole submission, not suggestions or
@@ -66,8 +72,11 @@ export function validateMatchingRosters(result, selections) {
   scopes.add(scope);
   for (const member of roster.members) {
    if (typeof member.uid !== 'string' || !/^\d+$/.test(member.uid) || ids.has(member.uid) || !member.name || rosterScope(member.server,member.tag) !== scope || !['linked','new-contact','duplicate-uid'].includes(member.linkState) || (member.linkState === 'linked' && !member.contactKey)) throw Error('LW Toolkit returned conflicting player identities.');
+   const reportedServer=member.reportedServer??Number(roster.server),sameServer=reportedServer===Number(roster.server),flags=member.qualityFlags??[];
+   if(!Number.isInteger(reportedServer)||reportedServer<1||!Array.isArray(flags)||flags.some(flag=>typeof flag!=='string')||(member.rosterServer!==undefined&&member.rosterServer!==Number(roster.server))||(member.serverContextMatches!==undefined&&member.serverContextMatches!==sameServer)||(!sameServer&&(member.rosterServer!==Number(roster.server)||member.serverContextMatches!==false||!flags.includes('ROSTER_SERVER_CONFLICT')))||(sameServer&&flags.includes('ROSTER_SERVER_CONFLICT')))throw Error('LW Toolkit returned inconsistent player server details.');
    ids.add(member.uid);
   }
+  if(roster.serverConflictCount!==undefined&&roster.serverConflictCount!==roster.members.filter(member=>member.serverContextMatches===false).length)throw Error('LW Toolkit returned an inconsistent server conflict count.');
  }
  return result.rosters;
 }
