@@ -1,4 +1,5 @@
-import {rosterCandidates,validateMatchingRosters} from './toolkit-roster-matches.js?v=toolkit-only-20261003';
+import {rosterCandidates,validateMatchingRosters,rosterMatchAvailability} from './toolkit-roster-matches.js?v=unmatched-roster-20261003';
+import {openRosterMatchPicker} from './roster-match-picker.js?v=unmatched-roster-20261003';
 import {nameReadings,mergeReread,unresolvedEvidence,approvalReward} from './review-safety.js?v=workflow-20261003';
 import {planPageConfirmation} from './page-confirmation.js?v=workflow-20261003';
 import {assessCandidates} from './match-confidence.js?v=workflow-20261003';
@@ -148,7 +149,12 @@ async function suggestPageMatches(){
  for(const row of pageRows().filter(r=>!r.playerKey&&!r.excluded))candidateCache.set(candidateKey(row),candidatesWithinRoster(row).filter(p=>p.key));
  renderRows();$('extract-status').textContent='Toolkit roster matches ready. Confirm exact matches; compare possible matches before choosing.';
 }
-function attachCandidate(row,profile){document.querySelector('.r4-match-dialog')?.close();profileCache.set(profile.key,profile);row.playerKey=profile.key;row.playerName=profile.name;row.playerAlliance=profile.alliance||'';resetConfirmations(row,'playerChecked','allianceChecked');markChanged();renderRows();status('Linked '+profile.name+'. Check the score and screenshot alliance, then confirm and save draft.');}
+function attachCandidate(row,profile){
+ if(!draft?.rows.includes(row)||row.excluded)return false;
+ let verified;try{verified=rosterMatchAvailability(candidatesWithinRoster(row,{browse:true}),draft.rows,row).find(p=>p.key===profile.key&&p.uid===profile.uid);}catch(error){status(error.message);return false;}
+ if(!verified?.key||verified.linkState!=='linked'||verified.alreadyMatched){status('This player is already matched or is no longer available in this alliance roster. Reopen the player list.');return false;}
+ document.querySelector('.r4-match-dialog')?.close();profileCache.set(verified.key,verified);row.playerKey=verified.key;row.playerName=verified.name;row.playerAlliance=verified.alliance||'';resetConfirmations(row,'playerChecked','allianceChecked');markChanged();renderRows();status('Linked '+verified.name+'. Check the score and screenshot alliance, then confirm and save draft.');return true;
+}
 function selectPage(page){if(reviewBusy)return;matchingRequest++;currentPage=page;selected=-1;renderPages();renderRows();renderSummary();evidence(page);$('editor').replaceChildren(el('p','Select a player name to search its LW Toolkit roster.'));suggestPageMatches();}
 
 function checkbox(key,label,row,index){
@@ -321,7 +327,7 @@ function drawPlayerHR(body,profile,full){
  render();
 }
 
-async function showDirectoryProfile(profile,initialTab='all'){
+async function showDirectoryProfile(profile,initialTab='all',matchContext=null){
  profileCache.set(profile.key,profile);const out=$('directory-profile');document.body.append(out);out.replaceChildren();
  const header=el('header'),identity=el('div'),avatar=el('div',(profile.name||'?').trim().slice(0,1).toUpperCase()),title=el('div'),heading=el('h2',profile.name||'Player profile');header.className='player-header';identity.className='player-identity';avatar.className='player-avatar';title.append(el('small','ALLIANCE HUB · PLAYER RECORD'),heading,el('p',`[${profile.alliance||'Unknown'}] · Server ${profile.server||'—'}${profile.allianceRank?' · '+profile.allianceRank:''}`));identity.append(avatar,title);header.append(identity);const close=el('button','Close ×');close.className='player-close';close.onclick=()=>out.close?out.close():out.replaceChildren();header.append(close);out.append(header);out.setAttribute('aria-label',`${profile.name||'Player'} profile`);if(out.showModal&&!out.open)out.showModal();
  const layout=el('div'),tabs=el('nav'),body=el('section');layout.className='player-layout';tabs.className='player-tabs';tabs.setAttribute('role','tablist');tabs.setAttribute('aria-label','Player profile sections');body.className='player-body';body.setAttribute('role','tabpanel');layout.append(tabs,body);out.append(layout);body.textContent='Loading player record…';
@@ -336,13 +342,13 @@ async function showDirectoryProfile(profile,initialTab='all'){
  if(key==='server_plans'){drawServerPlans(body,profile,full);return;}
  if(key==='hr'){drawPlayerHR(body,profile,full);return;}
  if(key==='bounties'){drawPlayerBounties(body,full);return;}
- if(key==='all'){const edit=el('button','Edit player details');edit.className='overview-edit';edit.onclick=()=>{if(!body.querySelector('form'))editPlayerOverview(body,profile,full,updated=>showDirectoryProfile(updated));};body.append(edit);const grid=el('div');grid.className='player-info-grid';grid.append(facts('Player details',[['Player name',profile.name],['Translated name',profile.translatedName],['Alliance',profile.alliance],['Alliance rank',profile.allianceRank],['Hard save',profile.hardSave?(profile.hardSaveLabel||'Active hard-save order'):'No active order'],['Server',profile.server],['Aliases',(profile.aliases||[]).join(' · ')],['Previous in-game names',(profile.previousGameNames||[]).map(n=>typeof n==='string'?n:[n.name,n.date?new Date(n.date).toLocaleDateString():null].filter(Boolean).join(' · ')).join(' / ')]]),facts('Game statistics',[['Hero power (M)',profile.power],['Profession level',profile.profession],['Kills',profile.kills==null?null:formatScore(profile.kills)]]));body.append(grid);const hardSavePair=Array.from(grid.querySelectorAll('dl>div')).find(node=>node.querySelector('dt')?.textContent==='Hard save');if(profile.hardSave&&hardSavePair)hardSavePair.querySelector('dd').prepend(hardSaveMarker(profile),document.createTextNode(' '));return;}
+ if(key==='all'){const edit=el('button','Edit player details');edit.className='overview-edit';edit.onclick=()=>{if(!body.querySelector('form'))editPlayerOverview(body,profile,full,updated=>showDirectoryProfile(updated,'all',matchContext));};body.append(edit);const grid=el('div');grid.className='player-info-grid';grid.append(facts('Player details',[['Player name',profile.name],['Translated name',profile.translatedName],['Alliance',profile.alliance],['Alliance rank',profile.allianceRank],['Hard save',profile.hardSave?(profile.hardSaveLabel||'Active hard-save order'):'No active order'],['Server',profile.server],['Aliases',(profile.aliases||[]).join(' · ')],['Previous in-game names',(profile.previousGameNames||[]).map(n=>typeof n==='string'?n:[n.name,n.date?new Date(n.date).toLocaleDateString():null].filter(Boolean).join(' · ')).join(' / ')]]),facts('Game statistics',[['Hero power (M)',profile.power],['Profession level',profile.profession],['Kills',profile.kills==null?null:formatScore(profile.kills)]]));body.append(grid);const hardSavePair=Array.from(grid.querySelectorAll('dl>div')).find(node=>node.querySelector('dt')?.textContent==='Hard save');if(profile.hardSave&&hardSavePair)hardSavePair.querySelector('dd').prepend(hardSaveMarker(profile),document.createTextNode(' '));return;}
  else body.append(el('p',key==='vs'?'Daily target: 7,200,000 · Six play days each week':key==='donations'?'Weekly target: 35,000 · One weekly donation screenshot':'Approved event results linked to this player.'));
  const rows=(full.activity||[]).filter(item=>key==='all'||item.metric===key);if(!rows.length){empty('No confirmed activity yet','Approved results will appear here. Pending screenshot submissions are kept in review until confirmed.');return;}const table=el('table');table.className='player-activity-table';const head=el('tr');for(const label of ['Event','Game date','Period','Score','Details'])head.append(el('th',label));table.append(head);for(const item of rows){const tr=el('tr');for(const value of [choices.find(c=>c[0]===item.metric)?.[1]||item.metric,item.date,item.period,formatScore(item.score)])tr.append(el('td',value));const cell=el('td'),details=el('details');details.append(el('summary','Full details'));const evidence=(full.bounties||[]).find(b=>b.bounty===item.bounty&&b.gameDate===item.date);details.append(profileLine('Source',item.bounty),profileLine('Record','Confirmed leaderboard score · no bounty reward for being listed'));if(evidence){details.append(profileLine('Screenshots',String(evidence.fileCount||0)),profileLine('Review status',evidence.state),profileLine('Reviewed',evidence.reviewedAt?new Date(evidence.reviewedAt).toLocaleString():'Not recorded'));if(evidence.reviewNote)details.append(el('p',evidence.reviewNote));}cell.append(details);tr.append(cell);table.append(tr);}body.append(table);};
  for(const [key,label] of choices){const button=el('button',label);button.type='button';button.dataset.key=key;button.setAttribute('role','tab');button.onclick=()=>draw(key);tabs.append(button);}draw(initialTab);
  }catch(error){body.replaceChildren(el('h2','Unable to load player record'),el('p',error.message));}
 
- if(draft&&selected>=0){const attach=el('button','Use this player for the selected OCR row');attach.className='primary directory-attach';attach.onclick=()=>{const row=draft.rows[selected];row.playerKey=profile.key;row.playerName=profile.name;row.playerAlliance=profile.alliance||'';resetConfirmations(row,'playerChecked','allianceChecked');markChanged();out.close();document.querySelector('.r4-match-dialog')?.close();renderRows();status(`${profile.name} attached as an unconfirmed match. Confirm the player and alliance after checking the evidence.`);};out.append(attach);}
+ if(matchContext){const attach=el('button','Select this player');attach.type='button';attach.className='primary directory-attach';attach.onclick=()=>{if(matchContext.select()!==false)out.close();};out.append(attach);}
 }
 
 let recordsPage=0,recordsQuery='',rosterOnly=false,duelOnly=false,directoryRequestId=0;
@@ -467,27 +473,12 @@ function confirmAlliancesForMatch(index){
 }
 async function selectRow(index){
  if(!alliancesReady()){confirmAlliancesForMatch(index);return;}
- const batch=active,review=draft,row=draft.rows[index];selected=index;
+ const batch=active,review=draft,row=draft.rows[index],scope=matchingRosterKey();selected=index;
+ if(!row||row.excluded)return;
  if(!await loadMatchingRosters()){status(matchingRosterState.error||'Load the selected LW Toolkit roster before matching.');return;}
- if(active!==batch||draft!==review)return;
- renderRows();const dialog=el('dialog');dialog.className='r4-match-dialog';dialog.setAttribute('aria-label','Match from LW Toolkit roster');
- const close=el('button','Close'),heading=el('h3','Match '+(row.name||'unread name')),intro=el('p',row.alliance+' · Server '+row.allianceServer+' · LW Toolkit roster only'),label=el('label','Search current or previous player name'),input=el('input');input.type='search';input.value=row.name;label.append(input);
- const results=el('div');results.className='search-results';const browse=el('button','Show full roster');close.type=browse.type='button';close.onclick=()=>dialog.close();dialog.onclose=()=>dialog.remove();dialog.append(close,heading,intro,label,browse,results);document.body.append(dialog);dialog.showModal();
- function search(all=false){
-  try{
-   if(active!==batch||draft!==review)throw Error('The review changed. Close this window and open the player again.');
-   const players=candidatesWithinRoster(row,{query:input.value.trim(),browse:all});results.replaceChildren();
-   if(!players.length)results.append(el('p','No close name in this Toolkit roster. Try a shorter name or show the full roster. Nothing has been selected.'));
-   for(const profile of players){const card=el('article');card.className='r4-match-card';const identity=el('div');identity.className='r4-match-identity';identity.append(el('strong',profile.name),el('span',profile.alliance+' · Server '+profile.server),el('small',profile.strength));
-    if(profile.matchedName&&profile.matchedName!==profile.name)identity.append(el('small','Previous name: '+profile.matchedName));
-    const actions=el('div');actions.className='r4-match-card-actions';
-    if(profile.key){const view=el('button','View profile');view.type='button';view.onclick=()=>showDirectoryProfile({...profile});const use=el('button','Use this player');use.type='button';use.className='r4-use-player';use.onclick=()=>{if(active!==batch||draft!==review)return;attachCandidate(row,profile);};actions.append(view,use);}
-    else identity.append(el('small',profile.linkState==='duplicate-uid'?'Multiple portal profiles share this account ID. Resolve the duplicate before matching.':'This roster member has no portal profile linked by LW ID. Link the verified account before confirming.'));
-    card.append(identity,actions);results.append(card);
-   }
-  }catch(error){results.replaceChildren(el('p',error.message));}
- }
- input.oninput=()=>search();browse.onclick=()=>search(true);search();input.focus();
+ const isCurrent=()=>active===batch&&draft===review&&matchingRosterKey()===scope&&draft.rows.includes(row)&&!row.excluded;
+ if(!isCurrent())return;
+ renderRows();openRosterMatchPicker({row,getRows:()=>draft.rows,getCandidates:options=>candidatesWithinRoster(row,options),isCurrent,onSelect:profile=>attachCandidate(row,profile),onViewProfile:(profile,select)=>showDirectoryProfile(profile,'all',{select})});
 }
 
 async function openBatch(batch){

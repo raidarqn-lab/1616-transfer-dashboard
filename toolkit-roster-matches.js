@@ -39,6 +39,23 @@ export function rosterCandidates(rosters, {server, tag, names, query, browse = f
  }).filter(p => browse || p.nameSimilarity >= .65).sort((a,b) => b.nameSimilarity - a.nameSimilarity || a.name.localeCompare(b.name));
 }
 
+// Reserve explicit selections across the whole submission, not suggestions or
+// only confirmed rows. The row being edited may keep its existing selection.
+export function rosterMatchAvailability(candidates, rows, currentRow) {
+ const byKey = new Map(candidates.filter(p => p.key).map(p => [p.key, p]));
+ const usedKeys = new Map(), usedUids = new Map();
+ for (const row of rows || []) {
+  if (row === currentRow || row.excluded || !row.playerKey) continue;
+  usedKeys.set(row.playerKey, row);
+  const uid = byKey.get(row.playerKey)?.uid;
+  if (uid) usedUids.set(uid, row);
+ }
+ return candidates.map(profile => {
+  const assigned = usedKeys.get(profile.key) || usedUids.get(profile.uid);
+  return {...profile, alreadyMatched: !!assigned, matchedPage: assigned?.page ?? null};
+ });
+}
+
 // Reject a response for the old alliance selection instead of reusing its names.
 export function validateMatchingRosters(result, selections) {
  if (result?.source !== 'lw-toolkit' || !Array.isArray(result.rosters) || result.rosters.length !== selections.length) throw Error('LW Toolkit did not return all selected rosters.');
