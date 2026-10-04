@@ -1,6 +1,6 @@
 import {renderScreenshotLaneEvidence} from './screenshot-lanes.js?v=lanes-20261004';
 import {openRosterPublisher} from './toolkit-roster-publisher.js?v=dated-20261004';
-import {rosterCandidates,validateMatchingRosters,rosterMatchAvailability} from './toolkit-roster-matches.js?v=unmatched-roster-20261003';
+import {rosterCandidates,validateMatchingRosters,rosterMatchAvailability} from './toolkit-roster-matches.js?v=dated-20261004';
 import {openRosterMatchPicker} from './roster-match-picker.js?v=lanes-20261004';
 import {nameReadings,mergeReread,unresolvedEvidence,approvalReward} from './review-safety.js?v=workflow-20261003';
 import {planPageConfirmation} from './page-confirmation.js?v=workflow-20261003';

@@ -1,4 +1,4 @@
-import {rosterMatchAvailability} from './toolkit-roster-matches.js?v=unmatched-roster-20261003';
+import {rosterMatchAvailability} from './toolkit-roster-matches.js?v=dated-20261004';
 
 /** Purely browses the caller's validated Toolkit roster; never fetches contacts. */
 export function openRosterMatchPicker({container, row, getRows, getCandidates, isCurrent, onSelect, onViewProfile}) {
