@@ -1,7 +1,9 @@
 export function compareNameReadings(existing,readings){
- return readings.map(read=>{
+ return readings.map(source=>{
+  const read={...source};
+  const options=[...new Set([read.name,...(read.ocrAlternatives||[])].filter(Boolean))];
   const matches=existing.filter(row=>!row.excluded&&Number(row.rank)>0&&Number(row.rank)===Number(read.rank)&&String(row.score)===String(read.score));
-  return {read,row:matches.length===1?matches[0]:null,canApply:matches.length===1&&!matches[0].playerKey&&!!read.name&&read.name!==matches[0].name};
+  return {read,options,row:matches.length===1?matches[0]:null,canApply:matches.length===1&&!matches[0].playerKey&&options.some(name=>name!==matches[0].name)};
  });
 }
 export function attachEnhancedNames({after,button:providedButton,label,read,call,getContext,onApply}){
@@ -19,7 +21,8 @@ export function attachEnhancedNames({after,button:providedButton,label,read,call
    const comparisons=compareNameReadings(context.rows,result.rows??[]),table=el('table'),head=el('tr');for(const text of ['Use','Position','Current screenshot reading','New reading'])head.append(el('th',text));table.append(head);
    const choices=[];
    for(const item of comparisons){const tr=el('tr'),select=el('td'),rank=el('td',item.read.rank||'Unread'),before=el('td',item.row?.name||'No corresponding row'),next=el('td');next.append(el('span',item.read.name||'Still unreadable'));
-    if(item.canApply){const check=el('input');check.type='checkbox';check.setAttribute('aria-label','Use new reading for position '+item.read.rank);select.append(check);choices.push({check,item});}
+    if(item.canApply){const check=el('input');check.type='checkbox';check.setAttribute('aria-label','Use new reading for position '+item.read.rank);select.append(check);choices.push({check,item});
+     if(item.options.length>1){const variants=el('select');variants.setAttribute('aria-label','Choose screenshot reading for position '+item.read.rank);variants.style.cssText='display:block;width:100%;margin-top:8px;background:#113846;color:#e7f6fb;padding:8px;border:1px solid #34717e;border-radius:6px';for(const name of item.options){const option=el('option',name);option.value=name;variants.append(option);}variants.onchange=()=>{item.read.name=variants.value;};next.append(variants,el('small','Readings differ. Choose the spelling visible in the original.'));}}
     else select.textContent=item.row?.playerKey?'Matched':'—';
     if(!item.row)next.append(el('small','Rank and score do not identify an existing row. Check the original screenshot.'));
     if(item.read.ocrNeedsReview)next.append(el('small','Uncertain characters — check the screenshot before using.'));
