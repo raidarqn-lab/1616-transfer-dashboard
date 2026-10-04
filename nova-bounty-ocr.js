@@ -44,7 +44,7 @@ export function detectLeaderboardBands({width,height,data}){
  const runs=[];let start=null;
  for(let y=Math.floor(height*.15);y<Math.floor(height*.9);y++){
   let hits=0;
-  for(const x of [.055,.115,.9]){const i=(y*width+Math.floor(width*x))*4,r=data[i],g=data[i+1],b=data[i+2];if(r>130&&r<240&&b-r>=8&&b-r<65&&g>=r-5&&b>=g)hits++;}
+  for(const x of [.055,.95,.68]){const i=(y*width+Math.floor(width*x))*4,r=data[i],g=data[i+1],b=data[i+2];if((r>130&&r<240&&b-r>=8&&b-r<65&&g>=r-5&&b>=g)||(r>235&&g>190&&b<140)||(r>235&&g>165&&g<235&&b>145&&b<205))hits++;}
   if(hits>=2){if(start===null)start=y;}else if(start!==null){runs.push({top:start,bottom:y});start=null;}
  }
  if(start!==null)runs.push({top:start,bottom:Math.floor(height*.9)});
