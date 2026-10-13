@@ -22,3 +22,27 @@
  #transfer-mock .profile-popup.binder-profile .player-workspace-body{flex:1;min-height:0;padding:20px!important}
 }
 @media(max-width:650px){#transfer-mock .profile-popup.binder-profile .player-workspace-nav button{flex:0 0 auto!important;max-width:100%;white-space:normal;overflow-wrap:normal;word-break:normal}}
+/* Compact list actions and an independent team-note composer. */
+#transfer-mock .roster-notes{display:flex;align-items:center;gap:4px;white-space:nowrap}
+#transfer-mock .roster-notes button{display:inline-flex;align-items:center;justify-content:center;gap:5px;min-width:28px;min-height:30px;margin:0;padding:4px 7px;border:1px solid #ddc7b8;border-radius:7px;background:#fff7eb;color:#a82332;font:13px/1.3 Arial,sans-serif;cursor:pointer}
+#transfer-mock .roster-notes button:hover{background:#f9e3df;border-color:#a82332}
+#transfer-mock .roster-notes button:focus-visible{outline:2px solid #a82332;outline-offset:2px}
+#transfer-mock .quick-notes-dialog{position:fixed;inset:0;margin:auto;width:min(560px,calc(100vw - 32px));max-height:calc(100dvh - 48px);box-sizing:border-box;padding:0;border:1px solid #ddc7b8;border-radius:16px;background:#fffaf2;color:#34352f;box-shadow:0 18px 70px #20161555;overflow:auto;font:15px/1.5 Arial,sans-serif}
+#transfer-mock .quick-notes-dialog::backdrop{background:#17251f77}
+#transfer-mock .quick-notes-dialog header{display:flex;justify-content:space-between;align-items:flex-start;gap:20px;padding:20px 24px;background:#f9e3df;border-bottom:1px solid #ddc7b8}
+#transfer-mock .quick-notes-dialog h2{margin:0;font-size:22px}
+#transfer-mock .quick-notes-dialog header p{margin:4px 0 0;font-size:13px}
+#transfer-mock .quick-notes-dialog button{width:auto;min-height:36px;border:1px solid #d8b5a3;border-radius:8px;padding:7px 12px;background:#fffaf2;color:#a82332;font:inherit;cursor:pointer}
+#transfer-mock .quick-notes-history{max-height:35dvh;overflow:auto;padding:0 24px}
+#transfer-mock .quick-notes-history article{padding:16px 0;border-bottom:1px solid #eadccd}
+#transfer-mock .quick-notes-history p{white-space:pre-wrap;overflow-wrap:anywhere;margin:6px 0}
+#transfer-mock .quick-notes-history small{color:#796b5f;font-size:12px}
+#transfer-mock .quick-note-pinned{font-size:12px;color:#a82332;font-weight:700}
+#transfer-mock .quick-notes-dialog form{padding:20px 24px}
+#transfer-mock .quick-notes-dialog label{display:block;margin-bottom:8px;font-weight:600}
+#transfer-mock .quick-notes-dialog textarea{box-sizing:border-box;width:100%;min-height:110px;padding:12px;border:1px solid #cbb8a9;border-radius:8px;background:#fffefb;color:#34352f;font:inherit;resize:vertical}
+#transfer-mock .quick-notes-dialog textarea:focus{outline:2px solid #a82332;outline-offset:2px}
+#transfer-mock .quick-notes-dialog footer{display:flex;justify-content:flex-end;gap:8px;margin-top:14px}
+#transfer-mock .quick-notes-dialog button[type=submit]{background:#a82332;color:#fffaf2;border-color:#a82332}
+#transfer-mock [data-quick-note-error]{color:#a82332;font-size:13px}
+#transfer-mock [data-quick-note-error]:empty{display:none}
