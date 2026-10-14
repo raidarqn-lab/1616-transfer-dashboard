@@ -1,0 +1,32 @@
+#transfer-mock .prospect-link-button{margin:0 0 14px;padding:9px 16px;border:0;border-radius:9px;background:#b90032;color:#fffaf5;font:600 14px Inter,Arial,sans-serif}
+#transfer-mock .prospect-roster-group{border:1px solid #e1cbb6;border-radius:12px;margin-bottom:18px;overflow:hidden;background:#fffaf2}
+#transfer-mock .prospect-roster-group>header{padding:14px 18px;background:#f2e6d2;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+#transfer-mock .prospect-roster-group>header>div{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+#transfer-mock .prospect-roster-group button{cursor:pointer}
+#transfer-mock .prospect-group-title{background:none;border:0;color:#363b33;font:600 16px Inter,Arial,sans-serif;padding:3px 0;text-align:left;overflow-wrap:anywhere}
+#transfer-mock .prospect-group-count{font-size:12px;color:#786b5b}
+#transfer-mock .prospect-group-preference{font-size:12px;padding:4px 8px;border-radius:6px;background:#e2ece0;color:#326347}
+#transfer-mock [data-prospect-group-edit]{padding:7px 12px;background:#fffaf2;color:#a82332;border:1px solid #d9c2ad;border-radius:8px;font:13px Inter,Arial,sans-serif}
+#transfer-mock .prospect-group-brief{display:flex;gap:8px 16px;align-items:baseline;padding:12px 18px;background:#fbe3e1;border-top:1px solid #efd0c8;font-size:13px;flex-wrap:wrap}
+#transfer-mock .prospect-group-brief strong{color:#a82332;font-size:12px;flex:none}
+#transfer-mock .prospect-group-brief span{white-space:pre-wrap;overflow-wrap:anywhere;flex:1;min-width:150px;color:#4c443a}
+#transfer-mock .prospect-group-dialog{box-sizing:border-box;width:min(650px,calc(100vw - 24px));max-height:90dvh;overflow:auto;border:1px solid #dac2ae;border-radius:16px;padding:24px;background:#fffaf2;color:#3b3b33;font:14px/1.5 Inter,Arial,sans-serif}
+#transfer-mock .prospect-group-dialog::backdrop{background:#211a2266}
+#transfer-mock .prospect-group-dialog header,#transfer-mock .prospect-group-dialog footer{display:flex;gap:12px;align-items:center;justify-content:space-between}
+#transfer-mock .prospect-group-dialog h2{font-size:22px;margin:0 0 12px}
+#transfer-mock .prospect-group-dialog h3{font-size:15px;margin:18px 0 8px}
+#transfer-mock .prospect-group-dialog label{display:block;font-size:13px;font-weight:600;margin:12px 0;color:#75614e}
+#transfer-mock .prospect-group-dialog input,#transfer-mock .prospect-group-dialog select,#transfer-mock .prospect-group-dialog textarea{box-sizing:border-box;width:100%;display:block;margin-top:5px;padding:10px;border:1px solid #c9ae94;border-radius:8px;background:#fffdf8;color:#37392f;font:14px/1.4 Inter,Arial,sans-serif}
+#transfer-mock .prospect-group-dialog textarea{min-height:90px;resize:vertical}
+#transfer-mock .prospect-group-fields{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+#transfer-mock .prospect-group-member{display:flex;gap:12px;align-items:center;justify-content:space-between;padding:9px 0;border-bottom:1px solid #e7d6c6}
+#transfer-mock .prospect-group-member small{display:block;color:#827361;font-size:12px}
+#transfer-mock .prospect-group-member strong{overflow-wrap:anywhere}
+#transfer-mock .prospect-group-dialog button{flex-shrink:0;font:13px Inter,Arial,sans-serif;border:1px solid #cfb39a;border-radius:8px;background:#fffaf2;color:#a82332;padding:8px 12px;cursor:pointer}
+#transfer-mock .prospect-group-dialog button.primary{background:#b90032;color:#fffaf5;border-color:#b90032}
+#transfer-mock .prospect-group-dialog footer{justify-content:flex-end;margin-top:16px}
+#transfer-mock .prospect-group-dialog [data-message]{color:#a82332}
+#transfer-mock .prospect-group-dialog [data-matches]{max-height:220px;overflow:auto}
+@media(max-width:600px){#transfer-mock .prospect-group-fields{grid-template-columns:1fr;gap:0}#transfer-mock .prospect-group-dialog{padding:16px}#transfer-mock .prospect-group-dialog input,#transfer-mock .prospect-group-dialog select,#transfer-mock .prospect-group-dialog textarea{font-size:16px}#transfer-mock .prospect-group-dialog button{min-height:44px}#transfer-mock .prospect-roster-group>header{padding:12px}}
+
+#transfer-mock .prospect-group-table{overflow-x:auto;max-width:100%}
