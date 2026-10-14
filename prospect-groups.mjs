@@ -25,11 +25,11 @@ export function planTransferGroup({players,shared,originalKey='',name,memberIds,
   for(const p of affected)if(expectedPlayers[String(p.id)]!==p._rev)throw Error('A player changed. Close and reopen the group before saving.');
   const changed=affected.filter(p=>String(p.group||'')!==(ids.has(String(p.id))?name:''));
   if(changed.length>99)throw Error('Please change fewer than 100 members at once.');
-  const data=structuredClone(shared.data||{}),details={...(data.groupDetails||{})},leads={...(data.groupLeads||{})};
+  const data={},details={...(shared.data?.groupDetails||{})},leads={...(shared.data?.groupLeads||{})};
   const lead=leads[originalKey];delete details[originalKey];delete leads[originalKey];
   if(ids.size){Object.defineProperty(details,key,{value:{preference,brief:String(brief).trim()},enumerable:true,writable:true,configurable:true});if(ids.has(String(lead)))Object.defineProperty(leads,key,{value:lead,enumerable:true,writable:true,configurable:true});}
   data.groupDetails=details;data.groupLeads=leads;
-  return [...changed.map(p=>({kind:'players',key:String(p.id),baseRev:p._rev||0,value:{group:ids.has(String(p.id))?name:'',history:[{text:'Transfer group changed: '+(p.group||'None')+' → '+(ids.has(String(p.id))?name:'None'),when:now}]}})),{kind:'shared',key:'transferOrganization',baseRev:shared._rev||0,value:{data}}];
+  return [...changed.map(p=>({kind:'players',key:String(p.id),baseRev:p._rev||0,value:{group:ids.has(String(p.id))?name:'',history:[{text:'Transfer group changed: '+(p.group||'None')+' → '+(ids.has(String(p.id))?name:'None'),when:now}]}})),{kind:'shared',key:'transferOrganization',baseRev:shared._rev||0,value:{groupsOnly:true,data}}];
 }
 
 export function installProspectGroups(api) {
