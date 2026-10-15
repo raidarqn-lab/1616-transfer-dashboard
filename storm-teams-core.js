@@ -1,3 +1,4 @@
+import {clearInvalidPairings} from './storm-coverage.js?v=weekly-20261014';
 export function moveTeamMember(boards,player,team,role,{core=[],benched=()=>false}={}){
  if(!player)return 'Choose an alliance member.';
  const fixed=core.find(m=>m.key===player.key);
@@ -9,7 +10,8 @@ export function moveTeamMember(boards,player,team,role,{core=[],benched=()=>fals
  if(team&&boards[team].members.some(m=>m.key===player.key&&m.role===role))return '';
  const old=Object.values(boards).flatMap(p=>p.members).find(m=>m.key===player.key);
  for(const p of Object.values(boards)){p.members=p.members.filter(m=>m.key!==player.key);for(const phase of Object.values(p.assignments||{}))for(const id of Object.keys(phase))phase[id]=phase[id].filter(k=>k!==player.key);}
- if(team)boards[team].members.push({...old,key:player.key,name:player.name,role,attendance:old?.attendance||'unconfirmed'});
+ if(team){const member={...old,key:player.key,name:player.name,role,attendance:old?.attendance||'unconfirmed'};delete member.backupFor;boards[team].members.push(member);}
+ for(const p of Object.values(boards))clearInvalidPairings(p);
  return '';
 }
 export const normalizeName=value=>String(value||'').normalize('NFKC').toLocaleLowerCase().replace(/[^\p{L}\p{N}]/gu,'');
