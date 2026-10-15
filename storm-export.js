@@ -1,4 +1,5 @@
-import {availableBuildings,mapRails,esc,roleCopy} from './storm-core.js?v=map-subs-20260928';
+import {availableBuildings,mapRails,esc,roleCopy} from './storm-core.js?v=weekly-20261014';
+import {coveredPlayer} from './storm-coverage.js?v=weekly-20261014';
 export async function exportPlan(plan,time,format='png'){
  const popup=format==='pdf'?window.open('','_blank'):null;
  if(format==='pdf'&&!popup)throw Error('Allow the print window, then try again.');
@@ -14,7 +15,7 @@ export async function exportPlan(plan,time,format='png'){
  text('Prepared by '+(plan.createdByName||'Leadership')+' · '+(plan.createdAt?.slice(0,10)||'Date not recorded'),45,205,24);
  const mx=820,my=450,mw=1500,mh=mw*img.height/img.width;c.drawImage(img,mx,my,mw,mh);
  text('SUBSTITUTES',35,290,32,'#78e2d6',330);let sy=345;
- for(const m of plan.members.filter(m=>m.role==='reserve')){text(m.name,35,sy,26,'#eef9fc',330);sy+=55;}
+ for(const m of plan.members.filter(m=>m.role==='reserve')){text(m.name,35,sy,26,'#eef9fc',330);const main=coveredPlayer(plan,m);text(main?'Covers '+main.name:'General standby',35,sy+22,18,'#a4cbd3',330);sy+=60;}
  if(!plan.members.some(m=>m.role==='reserve'))text('None listed',35,345,24);
  text('UNASSIGNED',35,970,29,'#78e2d6',330);let uy=1015;
  for(const m of plan.members.filter(m=>m.role==='participant'&&!Object.values(plan.assignments[phase]||{}).flat().includes(m.key))){text(m.name,35,uy,23,'#eef9fc',330);uy+=37;}

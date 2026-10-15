@@ -1,3 +1,4 @@
+import {clearInvalidPairings} from './storm-coverage.js?v=weekly-20261014';
 // Map drops can move players between registered seats and the substitute area.
 export function moveMapMember(plan,phase,key,target,{locked=false}={}){
  const m=plan.members.find(m=>m.key===key);if(!m)return 'Choose a player in this plan.';
@@ -5,13 +6,13 @@ export function moveMapMember(plan,phase,key,target,{locked=false}={}){
   if(m.role==='participant'&&locked)return 'This player has a locked Core seat.';
   if(m.role!=='reserve'&&plan.members.filter(m=>m.role==='reserve').length>=10)return 'All 10 substitute seats are filled.';
   for(const assignments of Object.values(plan.assignments))for(const id of Object.keys(assignments))assignments[id]=assignments[id].filter(k=>k!==key);
-  m.role='reserve';delete m.duty;plan.members=plan.members.filter(x=>x.key!==key).concat(m);return '';
+  m.role='reserve';clearInvalidPairings(plan);delete m.duty;plan.members=plan.members.filter(x=>x.key!==key).concat(m);return '';
  }
  if(m.role==='reserve'){
   if(!target)return 'Drop a substitute onto a building to register them, or into Substitutes to keep them on standby.';
   if(plan.members.filter(m=>m.role==='participant').length>=20)return 'All 20 registered seats are filled. Move a registered player to Substitutes first.';
   const next=structuredClone(plan);next.members.find(m=>m.key===key).role='participant';const error=moveParticipant(next,phase,key,target);if(error)return error;
-  plan.members=next.members;plan.assignments=next.assignments;return '';
+  plan.members=next.members;plan.assignments=next.assignments;clearInvalidPairings(plan);return '';
  }
  return moveParticipant(plan,phase,key,target);
 }
