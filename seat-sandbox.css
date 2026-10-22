@@ -63,3 +63,12 @@
 .seat-sandbox-dialog [data-error]{color:#ad0037}
 @media(max-width:850px){#transfer-mock .sandbox-room{grid-template-columns:190px minmax(0,1fr)}#transfer-mock .sandbox-member{grid-template-columns:1fr 1fr}#transfer-mock .sandbox-member>div:last-child{grid-column:1/-1}#transfer-mock .seat-sandbox{padding:16px}}
 @media(max-width:620px){#transfer-mock .sandbox-room{grid-template-columns:1fr}#transfer-mock .sandbox-groups{max-height:250px}#transfer-mock .sandbox-limits{grid-template-columns:1fr 1fr}#transfer-mock .sandbox-toolbar{width:100%}#transfer-mock .sandbox-toolbar label{width:100%}#transfer-mock .sandbox-toolbar select{max-width:100%}#transfer-mock .sandbox-detail{padding:14px}#transfer-mock .seat-sandbox button,.seat-sandbox-dialog button{min-height:44px}}
+
+#transfer-mock .sandbox-steps{display:flex;gap:16px 32px;flex-wrap:wrap;list-style:none;counter-reset:sandbox-step;margin:0 0 18px;padding:0;font-size:13px}
+#transfer-mock .sandbox-steps li{counter-increment:sandbox-step;display:flex;align-items:center;gap:8px}
+#transfer-mock .sandbox-steps li::before{content:counter(sandbox-step);display:grid;place-items:center;width:24px;height:24px;flex-shrink:0;border-radius:50%;background:#ad0037;color:#fff;font-weight:600}
+#transfer-mock .sandbox-decision{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;background:#f9e8e5;border:1px solid #d99c9f;border-radius:10px;padding:16px;margin:16px 0}
+#transfer-mock .sandbox-decision>div{flex:1 1 240px}
+#transfer-mock .sandbox-decision p{font-size:13px;margin:4px 0 0}
+#transfer-mock .sandbox-decision button{font-weight:600;min-height:46px}
+#transfer-mock .sandbox-decision.is-included,#transfer-mock .sandbox-pill.is-included{background:#e8efdf;border-color:#a2b48e;color:#3e5433}
