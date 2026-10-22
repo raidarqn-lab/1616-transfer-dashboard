@@ -7,3 +7,5 @@ Version 1.0.36 adds a `groupsOnly: true` mode to `transferOrganization` writes. 
 Deploy this bundle to the existing `portal-public` function before releasing the matching frontend. Deploying GitHub Pages alone does not update the Edge Function. The backend change was deployed through the Supabase dashboard before the 1.0.36 frontend release. No schema migration is required.
 
 Run `node --test tests/*.test.mjs` from the repository root. The backend regression tests evaluate the exact domain module from this bundle with fictional records; they cover stale placement references, save/reopen/rename/unlink, metadata retention, invalid payloads, support restrictions, revision conflicts and unchanged placement eligibility.
+
+Version 1.0.37 adds isolated `seatSandbox` shared records. The server accepts specific scenario commands, stamps requester/reviewer identities, requires a different admin/lead to approve an exception, and rejects mixed sandbox/live writes. The embedded domain must match `seat-sandbox-core.mjs`; the test suite enforces this. See `deployment/seat-sandbox.md` for release and verification details.
