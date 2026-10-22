@@ -182,6 +182,120 @@ function nameImport(state,request,identity,role,assert){
 return {enrichName,nameImport};
 })();
 
+// BEGIN seat-sandbox-core (generated from seat-sandbox-core.mjs)
+const seatSandboxDomain=(()=>{
+// Shared by the browser and the Edge Function bundle. Never mutates player records.
+const SANDBOX_COLOURS = ['Gold', 'Purple', 'Blue', 'White'];
+function sandboxGroupKey(value) {
+  const name=String(value||'').trim();
+  return !name||/^(unknown|solo|not applicable|n\/a)$/i.test(name)?'':name.normalize('NFD').replace(/\p{M}/gu,'').replace(/[đĐ]/g,'d').toLowerCase();
+}
+function sandboxAccepted(p) {
+  return !p.deleted&&!p.general&&!p.prospect&&['Approved','Transferred'].includes(p.status)&&p.transferDirection!=='outbound';
+}
+function sandboxAnticipated(power) {
+  if(power==null||typeof power==='boolean'||String(power).trim()===''||!Number.isFinite(Number(power))||Number(power)<0)return 'Unknown';
+  return Number(power)>=230?'Gold':Number(power)>=180?'Purple':Number(power)>=130?'Blue':'White';
+}
+function sandboxSeat(p) {
+  return sandboxAccepted(p)&&SANDBOX_COLOURS.includes(p.confirmedSeat)?p.confirmedSeat:sandboxAnticipated(p.power);
+}
+function sandboxCandidate(p) {
+  return !p.deleted&&!p.general&&!p.prospect&&['Pending','Under Review','Waitlisted','Approved','Transferred'].includes(p.status)&&p.transferDirection!=='outbound';
+}
+function sandboxGroups(players, scenario={}) {
+  const selected=new Set(scenario.selectedIds||[]),byKey=new Map();
+  for(const p of players.filter(p=>!p.deleted)) {
+    const groupKey=sandboxGroupKey(p.group),key=groupKey?'group:'+groupKey:'player:'+p.id;
+    if(!byKey.has(key))byKey.set(key,{key,groupKey,name:groupKey?String(p.group).trim():p.name,members:[]});
+    byKey.get(key).members.push(p);
+  }
+  return [...byKey.values()].filter(g=>g.members.some(p=>sandboxCandidate(p)||selected.has(String(p.id)))).map(g=>({...g,
+    memberIds:g.members.map(p=>String(p.id)).sort(),
+    anchored:g.members.some(sandboxAccepted),
+    selected:g.members.some(p=>sandboxAccepted(p)||selected.has(String(p.id)))
+  })).sort((a,b)=>Number(b.anchored)-Number(a.anchored)||a.name.localeCompare(b.name,undefined,{numeric:true}));
+}
+function sandboxExceptionState(request,group) {
+  if(!group||request.groupKey!==group.key||JSON.stringify(request.memberIds)!==JSON.stringify(group.memberIds))return 'stale';
+  const p=group.members.find(p=>String(p.id)===request.playerId);
+  if(!p||sandboxAccepted(p))return 'stale';
+  return request.status;
+}
+function sandboxForecast(players,capacities,scenario={}) {
+  const groups=sandboxGroups(players,scenario),included=new Map(),excluded=new Set();
+  for(const g of groups)for(const r of scenario.exceptions||[])if(sandboxExceptionState(r,g)==='approved')excluded.add(r.playerId);
+  // Always rebuild accepted seats from current records; never persist an acceptance snapshot.
+  for(const p of players)if(sandboxAccepted(p))included.set(String(p.id),p);
+  for(const g of groups.filter(g=>g.selected))for(const p of g.members)if(!excluded.has(String(p.id)))included.set(String(p.id),p);
+  const counts=Object.fromEntries([...SANDBOX_COLOURS,'Unknown'].map(c=>[c,{accepted:0,tentative:0}]));
+  const members=[...included.values()];
+  for(const p of members)counts[sandboxSeat(p)][sandboxAccepted(p)?'accepted':'tentative']++;
+  for(const c of SANDBOX_COLOURS){counts[c].capacity=Number.isSafeInteger(capacities?.[c])&&capacities[c]>=0?capacities[c]:null;counts[c].remaining=counts[c].capacity==null?null:counts[c].capacity-counts[c].accepted-counts[c].tentative;}
+  return {groups,members,counts,excluded:[...excluded],accepted:members.filter(sandboxAccepted).length,
+    estimates:members.filter(p=>sandboxAccepted(p)&&!SANDBOX_COLOURS.includes(p.confirmedSeat)).length,
+    nonApplicants:members.filter(p=>!sandboxCandidate(p)).length};
+}
+function applySandboxCommand({previous,command,players,identity,role,now,assert=(ok,message)=>{if(!ok)throw Error(message);}}) {
+  assert(['admin','lead'].includes(role),'Admin or lead access required.');
+  assert(command&&typeof command==='object'&&!Array.isArray(command),'Invalid sandbox command.');
+  const allowed={create:['op','id','name'],rename:['op','id','name'],select:['op','id','groupKey','memberIds','include'],request:['op','id','groupKey','memberIds','playerId','requestId','reason'],review:['op','id','requestId','decision','reviewNote'],restore:['op','id','requestId']};
+  assert(allowed[command.op]&&Object.keys(command).every(k=>allowed[command.op].includes(k)),'Sandbox commands cannot change live records.');
+  assert(typeof command.id==='string'&&/^[a-zA-Z0-9-]{8,100}$/.test(command.id),'Invalid scenario identifier.');
+  const data=JSON.parse(JSON.stringify(previous||{version:1,scenarios:[]}));
+  assert(data.version===1&&Array.isArray(data.scenarios),'Unsupported sandbox version.');
+  const actor=identity.email;
+  let scenario=data.scenarios.find(s=>s.id===command.id);
+  const name=()=>{assert(typeof command.name==='string'&&command.name.trim().length>0&&command.name.trim().length<=80,'Enter a scenario name of 1 to 80 characters.');return command.name.trim();};
+  if(command.op==='create'){
+    assert(!scenario,'Scenario already exists. Refresh the sandbox.');
+    assert(data.scenarios.length<30,'A maximum of 30 sandbox scenarios is supported.');
+    scenario={id:command.id,name:name(),selectedIds:[],exceptions:[],createdBy:actor,createdAt:now};data.scenarios.push(scenario);
+  }else{
+    assert(scenario,'Scenario no longer exists. Refresh the sandbox.');
+    const groups=sandboxGroups(players,scenario);
+    if(command.op==='rename')scenario.name=name();
+    else if(['select','request'].includes(command.op)){
+      const group=groups.find(g=>g.key===command.groupKey);
+      assert(group&&Array.isArray(command.memberIds)&&JSON.stringify(command.memberIds)===JSON.stringify(group.memberIds),'Group membership changed. Refresh and review the whole group.');
+      if(command.op==='select'){
+        assert(typeof command.include==='boolean','Choose whether to include the whole group.');
+        assert(command.include||!group.anchored,'Accepted players and their groups stay in every scenario.');
+        const selected=new Set(scenario.selectedIds.filter(id=>!group.memberIds.includes(id)));
+        if(command.include)group.memberIds.forEach(id=>selected.add(id));scenario.selectedIds=[...selected];
+      }else{
+        const p=group.members.find(p=>String(p.id)===command.playerId);
+        assert(group.groupKey&&p&&!sandboxAccepted(p),'Only unaccepted group members can have a sandbox exception.');
+        assert(typeof command.requestId==='string'&&/^[a-zA-Z0-9-]{8,100}$/.test(command.requestId)&&!scenario.exceptions.some(r=>r.id===command.requestId),'Invalid exception identifier.');
+        assert(!scenario.exceptions.some(r=>r.playerId===command.playerId&&['pending','approved'].includes(sandboxExceptionState(r,group))),'This member already has a pending or approved exception.');
+        assert(typeof command.reason==='string'&&command.reason.trim().length>=3&&command.reason.length<=1000,'Enter a reason of 3 to 1000 characters.');
+        assert(scenario.exceptions.length<500,'This scenario has reached its exception limit.');
+        scenario.exceptions.push({id:command.requestId,groupKey:group.key,groupName:group.name,memberIds:group.memberIds,playerId:String(p.id),playerName:p.name,reason:command.reason.trim(),status:'pending',requestedBy:actor,requestedAt:now});
+      }
+    }else{
+      const request=scenario.exceptions.find(r=>r.id===command.requestId);
+      assert(request,'Exception request not found.');
+      const group=groups.find(g=>g.key===request.groupKey);
+      if(command.op==='restore'){
+        assert(request.status==='approved','Only approved exceptions can be restored.');
+        request.status='restored';request.restoredBy=actor;request.restoredAt=now;
+      }else{
+        assert(sandboxExceptionState(request,group)==='pending','This request is no longer pending. Refresh and review the group.');
+        assert(request.requestedBy!==actor,'A different administrator or transfer lead must review this request.');
+        assert(['approved','rejected'].includes(command.decision),'Choose approve or reject.');
+        assert(typeof command.reviewNote==='string'&&command.reviewNote.length<=1000,'Keep the review note under 1000 characters.');
+        request.status=command.decision;request.reviewedBy=actor;request.reviewedAt=now;request.reviewNote=command.reviewNote.trim();
+      }
+    }
+  }
+  scenario.updatedAt=now;scenario.updatedBy=actor;
+  return {data,updatedAt:now,updatedBy:actor};
+}
+
+return {SANDBOX_COLOURS,sandboxGroupKey,sandboxAccepted,sandboxAnticipated,sandboxSeat,sandboxCandidate,sandboxGroups,sandboxExceptionState,sandboxForecast,applySandboxCommand};
+})();
+// END seat-sandbox-core
+
 const module_5=(()=>{
 const {purgePlayer}=module_6;
 const {resetEvents}=module_7;
@@ -325,8 +439,9 @@ function saveEvents(state,request,identity,role,at=new Date().toISOString()){
   }else if(kind==='access'){
    assert(role==='admin','Administrator access required.');assert(key!==state.adminEmail&&/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(key),'Invalid team email.');assert(['lead','support'].includes(value.role),'Only one administrator is permitted.');assert(['active','disabled'].includes(value.status),'Invalid access status.');next={name:String(value.name||key).slice(0,100),role:value.role,status:value.status,updatedAt:at,updatedBy:email};if(value.updateDisplayName===true){const displayName=String(value.name||'').trim();assert(displayName.length>0&&displayName.length<=100,'Enter a display name of 1 to 100 characters.');const previous=state.members[key]||{};next.name=displayName;events.push({kind:'members',key,value:{...previous,name:displayName,nameHistory:[...(previous.nameHistory||[]),...(previous.name&&previous.name!==displayName?[{from:previous.name,to:displayName,actorId:email,at}]:[])],updatedAt:at}});}
   }else{
-   assert(['capacities','accountLinks','requiredPlayerColumns','settingsHistory','sync','transferOrganization'].includes(key),'Unknown shared setting.');assert(role==='admin'||role==='lead'&&['accountLinks','transferOrganization'].includes(key),'Administrator access required.');next=clone(value);
+   assert(['capacities','accountLinks','requiredPlayerColumns','settingsHistory','sync','transferOrganization','seatSandbox'].includes(key),'Unknown shared setting.');assert(role==='admin'||role==='lead'&&['accountLinks','transferOrganization','seatSandbox'].includes(key),'Administrator access required.');next=clone(value);
    if(key==='transferOrganization'){next=validateOrganization(value,state);next.updatedAt=at;next.updatedBy=email;}
+   if(key==='seatSandbox'){assert(changes.length===1&&Object.keys(value).length===1&&value.command,'Save sandbox changes separately from live records.');next=seatSandboxDomain.applySandboxCommand({previous:old?.data,command:value.command,players:values(state.players),identity,role,now:at,assert});}
    if(key==='accountLinks')assert(Array.isArray(next.data)&&next.data.every(l=>state.players[l.a]&&state.players[l.b]&&!state.purged[hash('player:'+l.a)]&&!state.purged[hash('player:'+l.b)]),'An account link refers to a missing record.');
    if(key==='sync'){next.data.rows=(next.data.rows||[]).filter(r=>state.players[r.id]);for(const run of next.data.runs||[])run.rows=(run.rows||[]).filter(r=>state.players[r.id]);}
   }
@@ -395,7 +510,7 @@ function authorizedReceipt(receipt,state,identity,role){
    kind==='players'?role!=='support'&&(role==='admin'||!state.players[key]?.deleted):
    kind==='pings'?value===null||canReadPing(value,identity.email,role)&&!!state.pings[key]&&canReadPing(state.pings[key],identity.email,role):
    kind==='access'?role==='admin':
-   kind==='shared'?role==='admin'||role==='lead'&&['accountLinks','transferOrganization'].includes(key):
+   kind==='shared'?role==='admin'||role==='lead'&&['accountLinks','transferOrganization','seatSandbox'].includes(key):
    kind==='questionStates'?true:kind==='resetRequests'?role==='admin'||value?.requestedBy===identity.email:role==='admin';
   assert(allowed,'This earlier save is no longer available with your current access. Refresh the portal.');
  }
