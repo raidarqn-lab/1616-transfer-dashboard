@@ -1,4 +1,4 @@
-import {openTeamBoard} from './storm-teams.js?v=compact3-20261023';
+import {openTeamBoard} from './storm-teams.js?v=matrix-20261023';
 import {createPenaltyManager} from './storm-penalties.js?v=20260928';
 import {participation} from './storm-participation.js?v=20260928';
 import {createCoreManager,coreProblems} from './storm-core-roster.js?v=20260928';
@@ -11,7 +11,7 @@ import {weeklyOverview} from './storm-week-ui.js?v=guide-20261014';
 import {currentWeek,shiftWeek} from './storm-week.js?v=weekly-20261014';
 import {clearInvalidPairings} from './storm-coverage.js?v=weekly-20261014';
 export function setupStorm({call}){
- const css=document.createElement('link');css.rel='stylesheet';css.href='./storm-rotation.css?v=rotation-v2-20260928';document.head.append(css);const weeklyCss=document.createElement('link');weeklyCss.rel='stylesheet';weeklyCss.href='./storm-week.css?v=registration-20261014';document.head.append(weeklyCss);const interactionCss=document.createElement('link');interactionCss.rel='stylesheet';interactionCss.href='./storm-interactions.css?v=compact4-20261023';document.head.append(interactionCss);
+ const css=document.createElement('link');css.rel='stylesheet';css.href='./storm-rotation.css?v=rotation-v2-20260928';document.head.append(css);const weeklyCss=document.createElement('link');weeklyCss.rel='stylesheet';weeklyCss.href='./storm-week.css?v=registration-20261014';document.head.append(weeklyCss);const interactionCss=document.createElement('link');interactionCss.rel='stylesheet';interactionCss.href='./storm-interactions.css?v=matrix-20261023';document.head.append(interactionCss);
  const nav=document.createElement('button');nav.dataset.hubView='storm';nav.innerHTML='<svg aria-hidden="true" viewBox="0 0 24 24"><path fill="currentColor" d="m12 2 9 4v6c0 6-9 10-9 10S3 18 3 12V6Zm0 4-6 2v4c0 3 4 6 6 7 2-1 6-4 6-7V8Z"/></svg><span>Desert Storm</span>';document.querySelector('[data-hub-view="vs"]').after(nav);
  const root=document.createElement('section');root.className='hub-section ds';root.dataset.section='storm';root.hidden=true;document.querySelector('main>footer').before(root);
  let items=[],players=[],record=null,plan=null,tab='setup',phase='opening',dirty=false,busy=false,filter='active',message='',search='',group='all',selectedBuilding='hospital-1',memberPage=0,rosterPage=0,nextDuty='support',inspectorOpen=false;
