@@ -23,19 +23,19 @@ function request(data){const g=group(data);return run(data,command('request',{gr
 test('accepted baseline is automatic, groups expand across categories, unknowns do not look like free seats',()=>{
  const players=fixture();players.push({id:9,name:'Unknown',status:'Approved',power:null});
  const f=sandboxForecast(players,capacities,create().scenarios[0]);
- assert.equal(f.accepted,2);assert.equal(f.counts.Blue.accepted,1);assert.equal(f.counts.Purple.tentative,1);assert.equal(f.counts.Unknown.accepted,1);
- assert.deepEqual(f.members.map(p=>p.id).sort(),[1,2,9]);
+ assert.equal(f.accepted,2);assert.equal(f.counts.Blue.accepted,1);assert.equal(f.counts.Purple.tentative,0);assert.equal(f.counts.Unknown.accepted,1);
+ assert.deepEqual(f.members.map(p=>p.id).sort(),[1,9]);
  assert.equal(f.groups.find(g=>g.name==='Harbor').members.length,2);assert(!f.groups.some(g=>g.members.some(p=>[6,7,8].includes(p.id))));
  assert.equal(sandboxSeat({...players[1],confirmedSeat:'White'}),'Purple');
 });
 test('whole groups count once; pending exception counts until independent approval, and restore reunites group',()=>{
  const original=fixture(),before=structuredClone(original);let d=include(create());
- let f=sandboxForecast(original,capacities,d.scenarios[0]);assert.equal(f.counts.Gold.tentative,1);assert.equal(f.counts.Purple.tentative,2);
+ let f=sandboxForecast(original,capacities,d.scenarios[0]);assert.equal(f.counts.Gold.tentative,1);assert.equal(f.counts.Purple.tentative,1);
  d=request(d);assert.equal(sandboxForecast(original,capacities,d.scenarios[0]).counts.Gold.tentative,1);
  assert.throws(()=>run(d,command('review',{requestId:'request-123',decision:'approved',reviewNote:''})),/different administrator/);
  assert.throws(()=>run(d,command('review',{requestId:'request-123',decision:'approved',reviewNote:''}),original,identity,'admin'),/different administrator/);
  d=run(d,command('review',{requestId:'request-123',decision:'approved',reviewNote:'Reviewed'}),original,other);
- f=sandboxForecast(original,capacities,d.scenarios[0]);assert.equal(f.counts.Gold.tentative,0);assert.equal(f.counts.Purple.tentative,2);
+ f=sandboxForecast(original,capacities,d.scenarios[0]);assert.equal(f.counts.Gold.tentative,0);assert.equal(f.counts.Purple.tentative,1);
  assert.equal(d.scenarios[0].exceptions[0].reviewedBy,other.email);assert.equal(d.scenarios[0].exceptions[0].requestedBy,identity.email);
  d=run(d,command('restore',{requestId:'request-123'}));assert.equal(sandboxForecast(original,capacities,d.scenarios[0]).counts.Gold.tentative,1);
  assert.deepEqual(original,before);
@@ -45,7 +45,20 @@ test('new live acceptance overrides an old exception, reanchors the group and is
  const players=fixture();players[3].status='Approved';players[3].confirmedSeat='Gold';
  const f=sandboxForecast(players,capacities,d.scenarios[0]);assert.equal(f.counts.Gold.accepted,1);assert.equal(f.counts.Gold.tentative,0);assert.equal(f.accepted,2);
  assert.equal(sandboxExceptionState(d.scenarios[0].exceptions[0],group(d,players)),'stale');
- const g=group(d,players);assert.throws(()=>run(d,command('select',{groupKey:g.key,memberIds:g.memberIds,include:false}),players),/stay in every scenario/);
+ const g=group(d,players);d=run(d,command('select',{groupKey:g.key,memberIds:g.memberIds,include:false}),players);
+ const after=sandboxForecast(players,capacities,d.scenarios[0]);assert.equal(after.counts.Gold.accepted,1);assert.equal(after.counts.Purple.tentative,0);
+});
+test('partially accepted groups can add and remove remaining members without touching formal approvals',()=>{
+ const players=fixture(),before=structuredClone(players);let d=create();
+ const north=sandboxGroups(players,d.scenarios[0]).find(g=>g.key==='group:north');
+ assert.equal(north.anchored,true);assert.equal(north.selected,false);
+ const toggle=include=>command('select',{groupKey:north.key,memberIds:north.memberIds,include});
+ d=run(d,toggle(true),players);let f=sandboxForecast(players,capacities,d.scenarios[0]);
+ assert.equal(f.counts.Blue.accepted,1);assert.equal(f.counts.Purple.tentative,1);assert.equal(f.members.length,2);
+ d=run(d,toggle(true),players);assert.equal(sandboxForecast(players,capacities,d.scenarios[0]).members.length,2);
+ d=run(d,toggle(false),players);f=sandboxForecast(players,capacities,d.scenarios[0]);
+ assert.deepEqual(f.members.map(p=>p.id),[1]);assert.equal(f.counts.Purple.tentative,0);assert.equal(f.counts.Blue.accepted,1);
+ assert.deepEqual(players,before);
 });
 test('stale membership invalidates approval and rejects actions based on old roster; renamed groups follow selected players',()=>{
  let d=request(include(create()));d=run(d,command('review',{requestId:'request-123',decision:'approved',reviewNote:''}),fixture(),other);

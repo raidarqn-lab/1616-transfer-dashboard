@@ -213,7 +213,7 @@ function sandboxGroups(players, scenario={}) {
   return [...byKey.values()].filter(g=>g.members.some(p=>sandboxCandidate(p)||selected.has(String(p.id)))).map(g=>({...g,
     memberIds:g.members.map(p=>String(p.id)).sort(),
     anchored:g.members.some(sandboxAccepted),
-    selected:g.members.some(p=>sandboxAccepted(p)||selected.has(String(p.id)))
+    selected:g.members.some(p=>selected.has(String(p.id)))
   })).sort((a,b)=>Number(b.anchored)-Number(a.anchored)||a.name.localeCompare(b.name,undefined,{numeric:true}));
 }
 function sandboxExceptionState(request,group) {
@@ -260,7 +260,8 @@ function applySandboxCommand({previous,command,players,identity,role,now,assert=
       assert(group&&Array.isArray(command.memberIds)&&JSON.stringify(command.memberIds)===JSON.stringify(group.memberIds),'Group membership changed. Refresh and review the whole group.');
       if(command.op==='select'){
         assert(typeof command.include==='boolean','Choose whether to include the whole group.');
-        assert(command.include||!group.anchored,'Accepted players and their groups stay in every scenario.');
+        // Removing a trial selection never removes accepted players: the forecast
+        // rebuilds that baseline independently of scenario selections.
         const selected=new Set(scenario.selectedIds.filter(id=>!group.memberIds.includes(id)));
         if(command.include)group.memberIds.forEach(id=>selected.add(id));scenario.selectedIds=[...selected];
       }else{

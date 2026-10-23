@@ -7,7 +7,7 @@ Deploy `backend/portal-public.ts` to the existing `portal-public` Edge Function 
 ## Rules
 
 - Confirmed colours are used for accepted/transferred players; otherwise current THP determines colour. Unknown colours are counted separately and marked as incomplete totals.
-- All accepted and inbound transferred applicants are automatically included once, in every scenario. Their group is anchored; unaccepted linked members remain tentative.
+- All accepted and inbound transferred applicants are automatically included once, in every scenario. Only formally accepted players are automatically counted. Use Add remaining members to sandbox to include the rest of a partially accepted group; removing its trial selection keeps every formal approval.
 - Whole-group selection follows saved player IDs through group renames. The full current membership is expanded on refresh, including linked prospects/contacts/withdrawn players with a visible warning. Deleted players and outbound transfers are not standalone candidates. A selected group can exceed capacity for exploration.
 - Only admins and leads can write. Support can read. Any different admin/lead can approve or reject an exception; nobody can approve their own request, including admins.
 - Pending exceptions do not remove anyone. Approved exceptions exclude the person only in that scenario. Restoring an exception reunites the trial group without further approval.
@@ -22,3 +22,7 @@ Run `node --test tests/*.test.mjs`. Sandbox tests exercise both the pure forecas
 Browser QA uses a temporary harness with fictional players and the real frontend/domain modules. Do not deploy that harness. Verify scenario creation, whole-group selection, requester/reviewer separation, approve/restore, acceptance sync, and responsive rendering. A deployed smoke check should read the new screen and may create one empty planning scenario; it must not change real applications, memberships or seat settings.
 
 The bundle embeds `seat-sandbox-core.mjs` between BEGIN/END markers. The regression test asserts the embedded copy exactly matches the source; regenerate that block whenever editing the core.
+
+## Version 1.0.40
+
+The seat viewer lists the same forecast members used by the capacity totals, by colour. Formal approvals and trial-only members have separate labels; overflow and unknown colours remain visible. Existing explicit whole-group selections are preserved. Merely having an accepted member no longer silently includes every unaccepted group member. Deploy the updated Edge Function before the frontend so removal of a trial selection from a partially accepted group is supported.
