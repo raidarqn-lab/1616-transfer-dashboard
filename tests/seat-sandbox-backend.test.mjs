@@ -29,3 +29,12 @@ test('server rejects stale revisions, support, forged data and mixed sandbox/liv
  assert.throws(()=>save(state,cmd,'lead','lead@example.test',[{kind:'players',key:'1',baseRev:0,value:{status:'Approved'}}]),/separately/);
  assert.throws(()=>server.saveEvents(state,{transactionId:'sandbox-test-123',changes:[{kind:'shared',key:'seatSandbox',baseRev:0,value:{command:cmd}}]},{email:'lead@example.test'},'lead'),/changed since/);
 });
+test('server saves both trial choices for a partially accepted group without changing its approved player',()=>{
+ const state=fixture();state.players[1].status='Approved';state.players[1].confirmedSeat='Gold';
+ const original=structuredClone(state.players);
+ apply(state,{op:'create',id:'scenario-123',name:'Partial group'});
+ const selection={op:'select',id:'scenario-123',groupKey:'group:crew',memberIds:['1','2']};
+ apply(state,{...selection,include:true});assert.deepEqual(state.shared.seatSandbox.data.scenarios[0].selectedIds,['1','2']);
+ apply(state,{...selection,include:false});assert.deepEqual(state.shared.seatSandbox.data.scenarios[0].selectedIds,[]);
+ assert.deepEqual(state.players,original);
+});
