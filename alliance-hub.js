@@ -1,7 +1,7 @@
 import {setupSeasonEvents} from './season-events.js?v=season-availability-20260930';
 import {createWebsiteProfile} from './website-profile.js?v=avatars-20260928';
 import './site-tutorial.js?v=20260928';
-import {setupStorm} from './storm-planner.js?v=matrix-20261023';
+import {setupStorm} from './storm-planner.js?v=matrix2-20261023';
 import {setupShopCalendar} from './shop-calendar.js?v=shop-inline-20260928';
 import {setupTrains} from './train-dashboard.js?v=blitz-20260928';
 import {setupMemberHandoff} from './member-handoff.js?v=20260927';
