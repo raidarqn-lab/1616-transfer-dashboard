@@ -16,3 +16,9 @@ export function moveTeamMember(boards,player,team,role,{core=[],benched=()=>fals
 }
 export const normalizeName=value=>String(value||'').normalize('NFKC').toLocaleLowerCase().replace(/[^\p{L}\p{N}]/gu,'');
 export function screenshotRows(text,players){return text.split(/\r?\n/).map(x=>x.trim()).filter(x=>/\p{L}/u.test(x)&&x.length>1).slice(0,150).map(line=>{const candidates=players.filter(p=>normalizeName(p.name)===normalizeName(line));return {text:line,key:candidates.length===1?candidates[0].key:'',include:false};});}
+
+export function addTeamSelection(boards,players,keys,team,role,options={}){
+ const draft=structuredClone(boards);
+ for(const key of new Set(keys)){const error=moveTeamMember(draft,players.find(p=>p.key===key),team,role,options);if(error)return {error};}
+ return {boards:draft};
+}

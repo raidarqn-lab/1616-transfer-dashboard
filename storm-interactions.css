@@ -1,0 +1,39 @@
+/* Both roles stay visible while dragging; lists scroll rather than paginate. */
+.ds-playbook .ds-canvas-grid{grid-template-columns:370px minmax(0,1fr)}
+.ds-playbook .ds-member-tray{padding:12px;overflow:hidden!important;gap:12px}
+.ds-member-tray>header{background:none!important;padding:0!important;height:auto!important;display:block!important;position:static!important;border:0!important}
+.ds-member-tray>header p{font-size:12px;line-height:1.4;margin:4px 0 10px;color:#bddbd6}
+.ds-member-tray>header button{width:100%;font-size:12px}
+.ds-playbook .ds-member-tray>.ds-roster-lanes{flex:1;min-height:0;display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.ds-starter-lane,.ds-member-tray .ds-map-substitutes{display:flex;flex-direction:column;min-height:0;min-width:0;border:1px dashed #638d86;border-radius:8px;padding:8px;background:#17464b;margin:0}
+.ds .ds-lane-heading{width:100%;font-size:12px;text-align:left;font-weight:750;flex:none;padding:10px 6px;background:#28605f;color:#fff}
+.ds-playbook .ds-member-tray .ds-player-scroll{flex:1;min-height:90px;max-height:none;overflow-y:auto;overscroll-behavior:contain;margin:8px 0;display:flex;flex-direction:column;gap:6px;scrollbar-width:thin;padding:3px}
+.ds-playbook .ds-member-row{padding:0 0 8px;flex:none;min-width:0}
+.ds-playbook .ds-member-row .ds-drag-chip,.ds-playbook .ds-substitute-chips .ds-drag-chip{font-size:13px;line-height:1.3;font-weight:650;width:100%;max-width:100%;white-space:normal;overflow-wrap:anywhere;padding:10px 7px;min-height:42px;text-align:left;flex:none}
+.ds-playbook .ds-member-row small{max-width:100%;white-space:normal;line-height:1.3;margin-top:4px;font-size:10px}
+.ds .ds-drag-chip[data-ds-drop][aria-pressed=true]{outline:3px solid #f0c858;outline-offset:1px}
+.ds-member-tray .ds-return{flex:none;width:100%;min-height:38px;font-size:11px}
+.ds-team-board .ds-team-columns{flex:1 1 auto!important;min-height:320px;grid-template-columns:280px minmax(0,1fr) minmax(0,1fr)}
+.ds-team-board .ds-team-column{min-height:0;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:auto auto auto auto minmax(100px,1fr);gap:6px}
+.ds-team-column>h2,.ds-team-column>.ds-draft-credit,.ds-team-column>.ds-team-notes{grid-column:1/-1}
+.ds-team-column>label{min-width:0;width:auto!important}
+.ds-team-column>label input{width:100%;box-sizing:border-box}
+.ds-team-column>h2{margin:0 0 4px}
+.ds-team-board .ds-team-bucket{display:flex;flex-direction:column;flex:1 1 0;min-height:0;margin:0;padding:8px}
+.ds-team-list{min-height:0;overflow:auto;overscroll-behavior:contain;flex:1;scrollbar-width:thin;padding:4px}
+.ds-team-board .ds-team-zone{position:sticky;top:0;z-index:1;min-height:40px;background:#d9ede3}
+.ds-team-board .ds-team-list .ds-pool-note{display:none}
+.ds-team-board .ds-drag-chip{min-height:38px;font-size:13px}
+.ds-team-board .ds-team-person input[type=checkbox]{width:20px;height:20px;flex:none;accent-color:#4cd5bc;cursor:pointer}
+.ds-bulk-tools{display:grid;grid-template-columns:1fr 1fr;gap:5px;padding:8px 0;flex:none}
+.ds-bulk-tools>span{grid-column:1/-1;font-size:13px;font-weight:700}
+.ds-bulk-tools button{font-size:11px;padding:7px 4px}
+.ds-team-board .ds-team-pool{height:auto;min-height:300px}
+.ds-team-board .ds-team-guide{font-size:12px;padding:8px 12px}
+.ds-team-board .ds-team-guide details{margin-top:4px}
+.ds-team-board .ds-cover-control{padding:0 0 4px;flex-basis:100%;font-size:10px}
+.ds-team-board .ds-cover-control select{padding:4px;font-size:11px}
+.ds-dragging [data-ds-drop]{transition:background .1s}
+.ds-drag-ghost{max-width:250px;white-space:normal}
+@media(max-width:1100px){.ds-playbook .ds-canvas-grid{grid-template-columns:310px minmax(0,1fr)}.ds-playbook .ds-member-tray{padding:8px}.ds-team-columns{grid-template-columns:200px 1fr 1fr;gap:8px}}
+@media(max-width:800px){.ds-playbook .ds-canvas-grid{display:flex;flex-direction:column;overflow:auto}.ds-playbook .ds-member-tray{flex:none;height:290px}.ds-playbook .ds-member-tray>header{display:none!important}.ds-playbook .ds-map-fit{flex:none;min-height:580px}.ds-team-board .ds-team-columns{grid-template-columns:1fr;overflow:visible;flex:0 0 auto!important;min-height:0}.ds-team-board .ds-team-pool{height:500px;flex:none}.ds-team-board .ds-team-column{height:700px;flex:none}.ds-team-board .ds-team-guide ol{display:block}.ds-team-guide li{margin:5px 0}}
