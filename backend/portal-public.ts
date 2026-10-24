@@ -409,9 +409,9 @@ function saveEvents(state,request,identity,role,at=new Date().toISOString()){
    assert(!next.general||!next.prospect,'Choose one contact type.');
    const reasonChanged=changed.some(f=>['rejectionReasonCode','rejectionReasonText'].includes(f));
    if(next.status==='Declined'&&(old?.status!=='Declined'||reasonChanged)){
-    assert(['no_seat','requirements','placement','information','other'].includes(next.rejectionReasonCode),'Select a reason for rejecting this application.');
-    if(next.rejectionReasonCode==='other')assert(typeof next.rejectionReasonText==='string'&&next.rejectionReasonText.trim().length>=8&&next.rejectionReasonText.trim().length<=1000,'Enter an applicant-facing explanation of 8–1,000 characters.');
-    next.rejectionReasonText=next.rejectionReasonCode==='other'?next.rejectionReasonText.trim():'';
+    assert(['no_seat','low_kills','low_profession','low_hq','low_participation','low_power','group_full','conflict','not_specified','other','requirements','placement','information'].includes(next.rejectionReasonCode),'Select a reason for rejecting this application.');
+    assert(typeof next.rejectionReasonText==='string'&&next.rejectionReasonText.trim().length>=8&&next.rejectionReasonText.trim().length<=1000,'Enter an applicant-facing explanation of 8–1,000 characters.');
+    next.rejectionReasonText=next.rejectionReasonText.trim();
     next.rejectionReasonAt=at;next.rejectionReasonBy=name;
    }
    if(next.status!=='Declined'){next.rejectionReasonCode='';next.rejectionReasonText='';delete next.rejectionReasonAt;delete next.rejectionReasonBy;}
