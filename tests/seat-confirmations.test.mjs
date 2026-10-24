@@ -5,7 +5,7 @@ import {languageNames} from '../applicant-messenger-i18n.js';
 import {createManualAuthHandler} from '../deployment/manual-accounts/auth-handler.js';
 const token='a'.repeat(64),request=(body,headers={})=>new Request('https://test.invalid',{method:'POST',headers:{Origin:'https://portal.join1616.com','Content-Type':'application/json',...headers},body:JSON.stringify(body)});
 test('seat projection drops private data; accent-insensitive search and confirmation filters agree',()=>{
- const row=seatRow({id:1,name:'Glåss',server:1626,currentAlliance:'RiZZ',confirmedSeat:'Gold',notes:'private',history:['private'],revision:3});assert.equal(row.notes,undefined);assert.equal(row.history,undefined);assert.equal(row.server,'1626');
+ const row=seatRow({id:1,name:'Glåss',server:1626,currentAlliance:'RiZZ',transferLead:'La brujä',confirmedSeat:'Gold',notes:'private',history:['private'],revision:3});assert.equal(row.notes,undefined);assert.equal(row.history,undefined);assert.equal(row.server,'1626');assert.equal(row.transferLead,'La brujä');
  const rows=[row,seatRow({id:2,name:'Other',confirmedSeat:'Unknown'})];assert.equal(matchingSeatRows(rows,'glass','confirmed').length,1);assert.equal(matchingSeatRows(rows,'','unconfirmed')[0].id,'2');
 });
 test('all eight supported languages translate every seat control and error',()=>{const keys=Object.keys(seatCopy());for(const lang of Object.keys(languageNames))for(const key of keys){assert.ok(seatCopy(lang)[key],lang+':'+key);}assert.notEqual(seatCopy('ko').title,seatCopy('en').title);});

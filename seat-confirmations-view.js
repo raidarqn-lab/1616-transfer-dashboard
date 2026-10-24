@@ -1,9 +1,9 @@
 import {languageNames,messengerCopy,preferredLanguage,formatCopy} from './applicant-messenger-i18n.js?v=2';
-import {seatCopy,seatErrorKey} from './seat-confirmations-i18n.js?v=1';
+import {seatCopy,seatErrorKey} from './seat-confirmations-i18n.js?v=2';
 export const seatColours=['Gold','Purple','Blue','White'];
 const text=value=>typeof value==='string'?value:'';
 const normalize=value=>text(value).normalize('NFKD').replace(/\p{M}/gu,'').toLocaleLowerCase().trim();
-export function seatRow(raw){return {id:String(raw.id),name:text(raw.name),server:String(raw.server??''),currentAlliance:text(raw.currentAlliance),transferGroup:text(raw.transferGroup),status:text(raw.status),confirmedSeat:seatColours.includes(raw.confirmedSeat)?raw.confirmedSeat:'',confirmerId:text(raw.confirmerId),confirmedBy:text(raw.confirmedBy),confirmedAt:text(raw.confirmedAt),revision:raw.revision};}
+export function seatRow(raw){return {id:String(raw.id),name:text(raw.name),server:String(raw.server??''),currentAlliance:text(raw.currentAlliance),transferGroup:text(raw.transferGroup),transferLead:text(raw.transferLead),status:text(raw.status),confirmedSeat:seatColours.includes(raw.confirmedSeat)?raw.confirmedSeat:'',confirmerId:text(raw.confirmerId),confirmedBy:text(raw.confirmedBy),confirmedAt:text(raw.confirmedAt),revision:raw.revision};}
 export function matchingSeatRows(rows,query,filter='all'){return rows.filter(p=>normalize(p.name).includes(normalize(query))&&(filter==='all'||(filter==='confirmed'?!!p.confirmedSeat:!p.confirmedSeat)));}
 const el=(tag,cls,value)=>{const node=document.createElement(tag);if(cls)node.className=cls;if(value!=null)node.textContent=value;return node;};
 export function seatIcon(colour){const ns='http://www.w3.org/2000/svg',svg=document.createElementNS(ns,'svg');svg.setAttribute('viewBox','0 0 24 24');svg.setAttribute('class','seat-icon');svg.setAttribute('aria-hidden','true');svg.dataset.colour=colour;const back=document.createElementNS(ns,'rect');for(const [key,value] of Object.entries({x:6,y:2,width:12,height:13,rx:3}))back.setAttribute(key,String(value));const arms=document.createElementNS(ns,'path');arms.setAttribute('d','M3 10v8h18v-8M6 18v4M18 18v4M3 14h18');svg.append(back,arms);return svg;}
@@ -22,7 +22,7 @@ export function mountSeatConfirmations({root,load,save,signOut,staff=false}){
   list.replaceChildren();if(state!=='ready'){status.textContent=t[state]||t.loadError;return;}
   const matches=matchingSeatRows(rows,search.value,filter);status.textContent=matches.length?formatCopy(common.count,{count:matches.length}):t.empty;
   for(const p of matches){
-   const row=el('li','seat-row');row.dataset.confirmed=String(!!p.confirmedSeat);const identity=el('div','seat-identity');const name=el('strong','',p.name);name.dir='auto';identity.append(name);identity.append(el('span','seat-meta',[p.server?'#'+p.server:common.noServer,p.currentAlliance||common.noServer,p.transferGroup||common.noGroup,common.application.statuses[p.status]||p.status].join(' · ')));
+   const row=el('li','seat-row');row.dataset.confirmed=String(!!p.confirmedSeat);const identity=el('div','seat-identity');const name=el('strong','',p.name);name.dir='auto';identity.append(name);identity.append(el('span','seat-meta',[p.server?'#'+p.server:common.noServer,p.currentAlliance||common.noServer,p.transferGroup||common.noGroup,common.application.statuses[p.status]||p.status,t.transferLead+': '+(p.transferLead||t.noLead)].join(' · ')));
    if(p.confirmedBy&&!confirmers.some(c=>c.id===p.confirmerId&&c.name===p.confirmedBy))identity.append(el('span','seat-saved-by',formatCopy(t.legacy,{name:p.confirmedBy})));
    row.append(identity);const draft=draftFor(p),seat=el('details','seat-picker'),summary=el('summary'),menu=el('div','seat-options');summary.setAttribute('aria-label',t.seat+' · '+p.name);seat.append(summary,menu);row.append(seat);
    function paintSeat(){summary.replaceChildren();if(draft.seat)summary.append(seatIcon(draft.seat));summary.append(el('span','',common.application.statuses[draft.seat]||t.chooseSeat),el('span','seat-arrow','⌄'));}
