@@ -308,7 +308,7 @@ const {enrichName,nameImport}=module_8;
 const {createHash}=external_crypto;
 const hash=text=>createHash('sha256').update(text).digest('hex');
 const KINDS=['players','pings','members','access','shared','purged','resetRequests','questionStates','derivedNames'];
-const PLAYER_FIELDS=['name','server','alliance','power','kills','profession','hqLevel','seat','confirmedSeat','status','general','prospect','transferDirection','outboundDate','group','preference','language','contact','translatedName','aliases','avatarUrl','photoSource','priority','assignedTo','reminders','ownership','ownershipEvents','knownDate','previousName','ownershipNote','currentOwner','salePrice','saleCurrency','deleted','deleteReason','mergedInto','sourceUid','previousGameNames','applicationIds','applicationId','receivedAt'];
+const PLAYER_FIELDS=['name','server','alliance','power','kills','profession','hqLevel','seat','confirmedSeat','status','general','prospect','transferDirection','outboundDate','group','preference','language','contact','translatedName','aliases','avatarUrl','photoSource','priority','assignedTo','reminders','ownership','ownershipEvents','knownDate','previousName','ownershipNote','currentOwner','salePrice','saleCurrency','deleted','deleteReason','mergedInto','sourceUid','previousGameNames','applicationIds','applicationId','receivedAt','rejectionReasonCode','rejectionReasonText'];
 class PortalError extends Error{}
 const assert=(ok,msg)=>{if(!ok)throw new PortalError(msg);};
 const clone=value=>JSON.parse(JSON.stringify(value));
@@ -407,6 +407,14 @@ function saveEvents(state,request,identity,role,at=new Date().toISOString()){
    assert(next.hqLevel==null||Number.isSafeInteger(next.hqLevel)&&next.hqLevel>0,'HQ level must be a positive whole number.');
    for(const f of ['power','kills','profession'])assert(next[f]==null||typeof next[f]==='number'&&Number.isFinite(next[f])&&next[f]>=0,'Invalid '+f+'.');
    assert(!next.general||!next.prospect,'Choose one contact type.');
+   const reasonChanged=changed.some(f=>['rejectionReasonCode','rejectionReasonText'].includes(f));
+   if(next.status==='Declined'&&(old?.status!=='Declined'||reasonChanged)){
+    assert(['no_seat','requirements','placement','information','other'].includes(next.rejectionReasonCode),'Select a reason for rejecting this application.');
+    if(next.rejectionReasonCode==='other')assert(typeof next.rejectionReasonText==='string'&&next.rejectionReasonText.trim().length>=8&&next.rejectionReasonText.trim().length<=1000,'Enter an applicant-facing explanation of 8–1,000 characters.');
+    next.rejectionReasonText=next.rejectionReasonCode==='other'?next.rejectionReasonText.trim():'';
+    next.rejectionReasonAt=at;next.rejectionReasonBy=name;
+   }
+   if(next.status!=='Declined'){next.rejectionReasonCode='';next.rejectionReasonText='';delete next.rejectionReasonAt;delete next.rejectionReasonBy;}
    if(changed.includes('status')&&next.status==='Approved'&&old?.status!=='Approved'&&!old?.approvedAt)next.approvedAt=at;
    if(changed.includes('status')&&next.status==='Transferred'&&!next.transferDirection){next.transferDirection='inbound';next.general=false;next.prospect=false;}
    assert(next.transferDirection==null||['','inbound','outbound'].includes(next.transferDirection),'Choose inbound or outbound transfer.');
