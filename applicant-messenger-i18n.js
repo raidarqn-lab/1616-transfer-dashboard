@@ -11,9 +11,19 @@ const rows={
  vi:['Nhắn tin cho người đăng ký','Tìm người đăng ký. Hướng dẫn bước tiếp theo.','Dùng thông tin bên dưới để trả lời câu hỏi của người đăng ký. Chọn “Sao chép tin nhắn” để sao chép lời nhắn sẵn gửi có mã truy cập đơn đăng ký. Người đăng ký cần mã này tại join1616.com để mở đơn và xem trạng thái. Với đơn bị từ chối, lý do đã lưu sẽ hiển thị bên dưới. Nếu chưa có lý do, hãy liên hệ đội phụ trách chuyển máy chủ.','Ngôn ngữ','Đăng xuất','← Cổng chuyển máy chủ','Tên người đăng ký','Tìm tên người đăng ký…','Làm mới danh sách','Đang tải đơn đăng ký…','Sao chép tin nhắn','Chưa có tin nhắn · hỏi người phụ trách','Máy chủ','Nhóm chuyển máy chủ','Chưa cung cấp','Chưa được xếp nhóm','Đang chuẩn bị tin nhắn…','Đã sao chép tin nhắn cho {name}. Sẵn sàng dán.','Chọn và sao chép tin nhắn này để dán vào cuộc trò chuyện.','Sao chép tin nhắn cho người đăng ký','Tin nhắn cho người đăng ký','Đóng','Đang đăng xuất…','Không tải được danh sách. Vui lòng thử lại.','Không xác minh được quyền truy cập. Vui lòng đăng xuất rồi đăng nhập lại.','Tin nhắn này chưa có. Hãy làm mới danh sách hoặc hỏi người phụ trách.','Chưa có người đăng ký.','Không có người đăng ký khớp với tên này.','Người đăng ký: {count}','Người đăng ký: {count} · “{query}”','Sao chép tin nhắn cho {name}'],
  ar:['مراسلة المتقدمين','ابحث عن المتقدم وشاركه الخطوة التالية.','استخدم المعلومات أدناه للإجابة عن أسئلة المتقدمين. اختر «نسخ الرسالة» لنسخ رد جاهز للإرسال يتضمن رمز الوصول إلى الطلب. يحتاج المتقدم إلى هذا الرمز على join1616.com لفتح طلبه والتحقق من حالته. إذا رُفض الطلب، فسيظهر السبب المحفوظ أدناه. إذا لم يُذكر سبب، فتواصل مع فريق النقل.','اللغة','تسجيل الخروج','العودة إلى بوابة النقل','اسم المتقدم','ابحث عن اسم المتقدم…','تحديث القائمة','جارٍ تحميل الطلبات…','نسخ الرسالة','الرسالة غير متاحة · اسأل مسؤول النقل','الخادم','مجموعة النقل','غير مذكور','لم تُحدَّد مجموعة','جارٍ إعداد الرسالة…','نُسخت الرسالة الخاصة بـ {name}. جاهزة للصق.','حدد هذه الرسالة وانسخها للصقها في المحادثة.','نسخ رسالة المتقدم','رسالة المتقدم','إغلاق','جارٍ تسجيل الخروج…','تعذر تحميل القائمة. حاول مرة أخرى.','تعذر التحقق من صلاحية الوصول. سجّل الخروج ثم سجّل الدخول مجددًا.','رسالة هذا المتقدم غير متاحة. حدّث القائمة أو اسأل مسؤول النقل.','لا توجد طلبات بعد.','لا يوجد متقدم بهذا الاسم.','الطلبات: {count}','الطلبات: {count} · «{query}»','نسخ رسالة {name}']
 };
+const extraFields={
+ en:['Current / original alliance','Anticipated seat colour'],
+ de:['Aktuelle / ursprüngliche Allianz','Voraussichtliche Sitzfarbe'],
+ fr:['Alliance actuelle / d’origine','Couleur de place estimée'],
+ es:['Alianza actual / de origen','Color de plaza estimado'],
+ pt:['Aliança atual / de origem','Cor da vaga prevista'],
+ ko:['현재 / 원래 연맹','예상 좌석 색상'],
+ vi:['Liên minh hiện tại / ban đầu','Màu suất dự kiến'],
+ ar:['التحالف الحالي / الأصلي','لون المقعد المتوقع']
+};
 export function messengerCopy(language='en'){
  const lang=Object.hasOwn(rows,language)?language:'en';
- return {...Object.fromEntries(keys.map((key,i)=>[key,rows[lang][i]])),application:statusCopy(lang)};
+ return {...Object.fromEntries(keys.map((key,i)=>[key,rows[lang][i]])),currentAlliance:extraFields[lang][0],anticipatedSeat:extraFields[lang][1],application:statusCopy(lang)};
 }
 export function formatCopy(template,values){return template.replace(/\{(\w+)\}/g,(_,key)=>String(values[key]??''));}
 export function preferredLanguage(preferences=[]){return preferences.map(tag=>String(tag||'').toLowerCase().replace(/_/g,'-').split('-')[0]).find(lang=>Object.hasOwn(languageNames,lang))||'en';}

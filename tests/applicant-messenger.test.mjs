@@ -3,14 +3,14 @@ import {readFileSync} from 'node:fs';
 import {createManualAuthHandler} from '../deployment/manual-accounts/auth-handler.js';
 import {firebaseVerifier} from '../firebase-verifier.js';
 import {matchingApplicants} from '../applicant-messenger-view.js';
-import {applicantDetails,directoryRow} from '../applicant-messenger-details.js';
+import {applicantDetails,directoryRow,anticipatedApplicantSeat} from '../applicant-messenger-details.js';
 import {staffApplicantDirectory} from '../applicant-messenger-staff.js';
 const token='a'.repeat(64);
 test('staff messenger directory allows existing leads and admins and projects only active applicant message fields',()=>{
  const player={id:1,name:'Example',notes:'private',history:['private'],applicationConfirmations:[{confirmationCode:'1616-DEMO-12345678'}]};
  for(const role of ['admin','lead']){
   const result=staffApplicantDirectory({role,players:[player,...[{deleted:true},{general:true},{prospect:true},{transferDirection:'outbound'},{mergedInto:2},{status:'Transferred'},{status:'Withdrawn'}].map(flags=>({...player,...flags}))]});
-  assert.equal(result.applicants.length,1);assert.deepEqual(Object.keys(result.applicants[0]),['id','name','message','server','transferGroup','status','approval','destinationAlliance','confirmedSeat','rejectionReasonCode','rejectionReasonText']);assert.match(result.applicants[0].message,/1616-DEMO-12345678/);
+  assert.equal(result.applicants.length,1);assert.deepEqual(Object.keys(result.applicants[0]),['id','name','message','server','currentAlliance','anticipatedSeat','transferGroup','status','approval','destinationAlliance','confirmedSeat','rejectionReasonCode','rejectionReasonText']);assert.match(result.applicants[0].message,/1616-DEMO-12345678/);
  }
  for(const role of ['support','applicant_messenger',null])assert.throws(()=>staffApplicantDirectory({role,players:[player]}),/access is required/);
 });
@@ -50,4 +50,14 @@ test('messenger details match applicant-facing decisions and never infer allocat
  assert.equal(applicantDetails({...p,status:'Declined',rejectionReasonCode:'internal_only'},'WaE').rejectionReasonText,null);
  assert.equal(applicantDetails({...p,status:'Unknown'},'WaE').status,'Unconfirmed');
  const safe=directoryRow({id:1,name:'Fixture',message:'Hello',...detail,notes:'PRIVATE',history:['PRIVATE'],contact:'PRIVATE',extra:'PRIVATE'});assert.equal(JSON.stringify(safe).includes('PRIVATE'),false);
+});
+
+test('saved alliance and anticipated seat stay separate from destination and confirmed seat',()=>{
+ const detail=applicantDetails({alliance:' RiZZ ',power:179.999,status:'Approved',confirmedSeat:'Purple',seat:'Gold'},'WaE');
+ assert.equal(detail.currentAlliance,'RiZZ');assert.equal(detail.anticipatedSeat,'Blue');assert.equal(detail.destinationAlliance,'WaE');assert.equal(detail.confirmedSeat,'Purple');
+ assert.equal(directoryRow({id:1,name:'Example',...detail}).anticipatedSeat,'Blue');assert.equal(directoryRow({id:1,name:'Example',...detail}).currentAlliance,'RiZZ');
+ assert.equal(directoryRow({anticipatedSeat:'Unknown'}).anticipatedSeat,null);
+ for(const [power,seat] of [[0,'White'],[129.999,'White'],[130,'Blue'],[179.999,'Blue'],[180,'Purple'],[229.999,'Purple'],[230,'Gold'],['180.5','Purple']])assert.equal(anticipatedApplicantSeat(power),seat);
+ for(const power of [null,undefined,'',' ',NaN,Infinity,-1,'Unknown',true])assert.equal(anticipatedApplicantSeat(power),null);
+ const declined=applicantDetails({alliance:'TSRF',power:150,status:'Declined',confirmedSeat:'Blue'},'WaE');assert.equal(declined.currentAlliance,'TSRF');assert.equal(declined.anticipatedSeat,'Blue');assert.equal(declined.confirmedSeat,null);
 });
