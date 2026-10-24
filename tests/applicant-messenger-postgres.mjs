@@ -1,5 +1,6 @@
 const {PGlite}=await import(process.env.PGLITE_MODULE||'@electric-sql/pglite');
 import fs from 'node:fs/promises';
+import {anticipatedApplicantSeat} from '../applicant-messenger-details.js';
 import {fileURLToPath} from 'node:url';
 const root=fileURLToPath(new URL('../',import.meta.url));
 const db=new PGlite();
@@ -30,6 +31,13 @@ try {
  await db.exec(original.rows[0].source.replace(' || transfer_private.applicant_messenger_details(p.key,p.payload)',''));
  await db.exec(await fs.readFile(root+'/backend/applicant-messenger-details.sql','utf8'));
  await db.exec(await fs.readFile(root+'/backend/applicant-messenger-details.sql','utf8'));
+ await db.exec(await fs.readFile(root+'/backend/applicant-messenger-alliance-seat.sql','utf8'));
+ await db.exec(await fs.readFile(root+'/backend/applicant-messenger-alliance-seat.sql','utf8'));
  await db.exec('begin;'+verify+'rollback;');
+ for(const power of [null,'',' ',true,false,-1,-0,0,129.999,130,179.999,180,229.999,230,'180.5','1e999','Unknown']){
+  const result=await db.query('select transfer_private.applicant_messenger_details($1,$2::jsonb) as details',['fixture',JSON.stringify({alliance:' RiZZ ',power,status:'Pending'})]);
+  if(result.rows[0].details.anticipatedSeat!==anticipatedApplicantSeat(power)||result.rows[0].details.currentAlliance!=='RiZZ')throw Error('SQL/JS alliance-seat parity failed for '+JSON.stringify(power));
+ }
+ console.log('PASS: alliance and anticipated-seat parity, missing/invalid power, exact band edges and repeat migration.');
  console.log('PASS: old-to-new detail migration, repeat migration and schema rollback.');
 } catch(error){console.error(error.message);console.error(error.where||'');process.exitCode=1;}finally{await db.close();}
