@@ -1,3 +1,4 @@
+import {seatCopy} from './seat-confirmations-i18n.js?v=1';
 import {directoryRow} from './applicant-messenger-details.js?v=2';
 import {languageNames,messengerCopy,formatCopy,preferredLanguage,localizedApplicantMessage} from './applicant-messenger-i18n.js?v=2';
 export const searchName=value=>String(value||'').normalize('NFKD').replace(/\p{M}/gu,'').toLocaleLowerCase().trim();
@@ -30,6 +31,7 @@ export function mountApplicantMessenger({root,load,signOut,clipboard=navigator.c
   root.querySelectorAll('[data-i18n]').forEach(el=>{el.textContent=t[el.dataset.i18n];});
   search.placeholder=t.search;list.setAttribute('aria-label',t.title);root.querySelector('.directory').setAttribute('aria-label',t.title);
   const back=root.querySelector('.back-to-hub');if(back)back.textContent=t.back;
+  const seatTab=root.querySelector('[data-seat-tab]');if(seatTab)seatTab.textContent=seatCopy(language).title;
   if(picker)picker.value=language;setNotice(noticeKey,noticeValues);render();
  }
  if(picker){for(const [value,label] of Object.entries(languageNames)){const option=document.createElement('option');option.value=value;option.textContent=label;picker.append(option);}picker.onchange=()=>{language=preferredLanguage([picker.value]);try{localStorage.setItem(storageKey,language);}catch{}root.querySelectorAll('dialog').forEach(d=>d.remove());setNotice('');translate();};}

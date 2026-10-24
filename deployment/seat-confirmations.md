@@ -1,0 +1,27 @@
+# Seat confirmations
+
+`seat-confirmations.html` implements the selected Directory rows layout alongside Applicant Messenger. Both pages share the existing `applicant_messenger` role. Transfer Hub administrators and leads also have access; support and member accounts do not gain access.
+
+Rows show name, server, current/original alliance, transfer group, application status, confirmed colour, and confirmer. Gold, Purple, Blue and White use chair icons. Unconfirmed rows are yellow; saved confirmations are green with a trailing check. All/Unconfirmed/Confirmed filters and name search operate locally. Controls and messages use the existing eight languages, including RTL Arabic.
+
+The confirmer list contains active Messenger accounts and Transfer Hub administrators/leads. Messenger names are assigned in Transfer Hub → Settings → Team Access. **Save display name only** updates the dropdown name without resetting credentials or ending sessions. Historical confirmation names remain preserved. Existing confirmations remain green even if their original confirmer is no longer active; an active confirmer must be selected to change them.
+
+## Data and concurrency
+
+Only Pending, Under Review, Approved, and Waitlisted applications are eligible. Contacts, prospects, withdrawn, rejected, transferred, merged and deleted records are excluded. Seat colours are confirmations, never estimates; no status or destination alliance is changed.
+
+The service-only account RPC dispatches to a private, narrowly scoped seat function. Read responses contain only basic row fields, confirmation metadata and opaque confirmer IDs/display names. Messages, contact details, notes, staff emails, usernames, and full records are not returned.
+
+Saves validate the current authenticated actor, active selected confirmer, four allowed colours, row revision, and approved-seat capacity. The portal control row uses the existing global commit lock. Changes increment record/global revisions, write the existing portal transaction stream, preserve unrelated fields and append an internal audit entry. Authenticated actor and nominated confirmer are recorded separately. Retries use an idempotency key; concurrent edits return a conflict.
+
+## Deployment
+
+1. Apply `backend/seat-confirmations.sql` to the active project `dycbjythqwumyzseskfh`. It patches the existing dispatcher with a guarded, repeatable injection and preserves authentication branches and grants. No player records are modified during installation.
+2. Build with `node deployment/manual-accounts/build.mjs` and deploy `deployment/manual-accounts/index.bundled.ts` to the existing `nova-auth` Edge Function, preserving its environment and gateway settings.
+3. Publish the frontend through the repository's existing GitHub Pages process.
+
+## Verification
+
+`node --test tests/*.test.mjs` covers role/auth argument isolation, translation completeness, filtering, privacy projection and existing portal behavior. Run `tests/seat-confirmations-postgres.mjs` with `PGLITE_MODULE` pointing to PGlite for transactional tests of revocation, confirmed-by validation, capacity, audit attribution, stale edits, repeated saves and migration idempotence. The existing `tests/applicant-messenger-postgres.mjs` also remains required.
+
+Rollback the frontend and auth bundle to the preceding revision if needed. The private database functions can remain installed without being exposed by the prior auth handler. Do not erase existing seat confirmations or audit history.
