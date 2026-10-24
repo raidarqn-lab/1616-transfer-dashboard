@@ -7,7 +7,7 @@ import {setupShopCalendar} from './shop-calendar.js?v=shop-inline-20260928';
 import {setupTrains} from './train-dashboard.js?v=blitz-20260928';
 import {setupMemberHandoff} from './member-handoff.js?v=20260927';
 import {setupLeaderInvitations} from './leader-invitations.js?v=individual-20260927';
-import {setupManualAccounts} from './manual-accounts-ui.js?v=messenger-20261024';
+import {setupManualAccounts} from './manual-accounts-ui.js?v=transfer-admin-20261024';
 import {setupEventSchedule,renderEventSchedule,openEventEditor,eventSaved,eventRecurrencePayload} from './event-schedule.js?v=repeat-editor-20260927';
 import {user} from './live-session.js?v=messenger-20261024';
 import {bountyConnection as config} from './nova-bounty-config.js';
