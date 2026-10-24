@@ -1,6 +1,9 @@
+import {loginManual,logoutManual,clearManualSession} from './manual-session.js?v=manual-20261023';
 import { firebaseConfig } from './firebase-config.js';
 import { createPortalTransport } from './supabase-transport.mjs';
 const button = document.getElementById('sign-in');
+const manualForm=document.getElementById('manual-sign-in');
+manualForm.onsubmit=async event=>{event.preventDefault();const submit=manualForm.querySelector('button');submit.disabled=true;report('Signing in…');try{await loginManual(manualForm.elements.username.value.trim().toLowerCase(),manualForm.elements.password.value);location.replace(returnTarget||'./alliance-hub.html');}catch(error){report(error.message,true);}finally{manualForm.elements.password.value='';submit.disabled=false;}};
 const signOutButton = document.getElementById('sign-out');
 const status = document.getElementById('status');
 const identity = document.getElementById('identity');
@@ -8,7 +11,7 @@ const signedIn = document.getElementById('signed-in');
 // Only return to known workspaces on this origin; never trust an external redirect.
 let returnTarget=null;
 try{const requested=new URLSearchParams(location.search).get('returnTo');if(requested){const target=new URL(requested,location.href);if(target.origin===location.origin&&['/alliance-hub.html','/live.html'].includes(target.pathname))returnTarget=target.pathname+target.search+target.hash;}}catch{}
-if(returnTarget){document.querySelector('h1').textContent='Sign in to continue';document.querySelector('.panel > p').textContent='Use your leadership Google account. We’ll return you to your workspace after sign-in.';}
+if(returnTarget){document.querySelector('h1').textContent='Sign in to continue';document.querySelector('.panel > p').textContent='Use your leadership username and password, or Google. We’ll return you to your workspace.';}
 
 function report(message, error = false) {
   status.textContent = message;
@@ -52,7 +55,7 @@ if (!['http:', 'https:'].includes(location.protocol)) {
     button.onclick = async () => {
       button.disabled = true;
       report('Complete sign-in in the Google window.');
-      try { await sdk.signInWithPopup(auth, provider); }
+      try { clearManualSession();await sdk.signInWithPopup(auth, provider); }
       catch (error) { report(explain(error), true); }
       finally { button.disabled = false; }
     };
@@ -68,7 +71,7 @@ if (!['http:', 'https:'].includes(location.protocol)) {
     };
     signOutButton.onclick = async () => {
       signOutButton.disabled = true;
-      try { await sdk.signOut(auth); }
+      try { await logoutManual();await sdk.signOut(auth); }
       catch (error) { report(explain(error), true); }
       finally { signOutButton.disabled = false; }
     };
