@@ -19,6 +19,19 @@ export function createManualAuthHandler({rpc,verifyGoogle,derive=passwordKey}){
    const bytes=new Uint8Array(size);let offset=0;for(const chunk of chunks){bytes.set(chunk,offset);offset+=chunk.length;}
    const input=JSON.parse(new TextDecoder().decode(bytes));if(!input||typeof input!=='object'||Array.isArray(input))return reply(400,{error:'Invalid request.'});
    const {action}=input;
+   const seatErrors={access_denied:[403,'Applicant Messenger or Transfer Hub lead access is required.'],invalid_name:[400,'Enter a display name of 1–100 characters.'],invalid_confirmer:[409,'This confirmer is no longer available. Refresh the list.'],invalid_confirmation:[400,'Choose a seat colour and confirmer before saving.'],applicant_unavailable:[409,'This application is no longer available for seat confirmation.'],record_changed:[409,'This applicant changed. Refresh the list before saving.'],capacity_unavailable:[409,'Ask the administrator to set seat capacities in Transfer Hub.'],capacity_full:[409,'No seats of this colour remain. Contact the transfer team.'],unavailable:[503,'Seat confirmations are temporarily unavailable.']};
+   const seatReply=result=>{if(!result.error)return reply(200,result);const [status,message]=seatErrors[result.error]||[503,'The save could not be confirmed. Refresh before retrying.'];return reply(status,{error:message,code:result.error});};
+   if(['seat-confirmations-list','seat-confirmations-save'].includes(action)){
+    const args={};const manual=(req.headers.get('x-nova-session')||'').replace(/^Bearer /,'');
+    if(manual){if(!/^[a-f0-9]{64}$/.test(manual))return reply(401,{error:'Please sign in again.',code:'access_denied'});args.token=manual;}
+    else{const token=req.headers.get('x-portal-token');if(!token)return reply(401,{error:'Please sign in again.',code:'access_denied'});
+     if(/^np_[a-f0-9]{64}$/.test(token)){args.staffEmail=(await rpc('session',{token:token.slice(3)})).user?.leaderEmail;}
+     else args.staffEmail=(await verifyGoogle(token)).email;
+     if(!args.staffEmail)return seatReply({error:'access_denied'});
+    }
+    if(action==='seat-confirmations-save')Object.assign(args,{playerId:input.playerId,seat:input.seat,confirmerId:input.confirmerId,revision:input.revision,transactionId:input.transactionId});
+    return seatReply(await rpc(action,args));
+   }
    if(action==='login'){
     const username=String(input.username||'').trim().toLowerCase(),password=input.password;
     if(!/^[a-z0-9_]{3,32}$/.test(username)||typeof password!=='string'||password.length<12||password.length>128)return reply(401,{error:'Check your username and password, or ask the owner to reset it.'});
@@ -36,13 +49,14 @@ export function createManualAuthHandler({rpc,verifyGoogle,derive=passwordKey}){
     if(!/^[a-f0-9]{64}$/.test(token))return reply(401,{error:'Please sign in again.'});
     const result=await rpc(action,{token});return result.error?reply(result.error==='access_denied'?403:401,{error:result.error==='access_denied'?'Applicant Messenger access is required.':'Please sign in again.'}):reply(200,result);
    }
-   if(!['hub-login-search','hub-login-save','hub-login-disable'].includes(action))return reply(400,{error:'Use the username and password assigned by the owner. Ask the owner for a reset.'});
+   if(!['hub-login-search','hub-login-save','hub-login-disable','hub-login-rename'].includes(action))return reply(400,{error:'Use the username and password assigned by the owner. Ask the owner for a reset.'});
    const token=req.headers.get('x-portal-token');if(!token)return reply(401,{error:'Sign in to manage logins.'});
    let staffEmail;
    if(/^np_[a-f0-9]{64}$/.test(token)){const session=await rpc('session',{token:token.slice(3)});staffEmail=session.user?.leaderEmail;}
    else staffEmail=(await verifyGoogle(token)).email;
    if(!staffEmail)return reply(403,{error:'Account administration requires owner access.'});
    const args={staffEmail};
+   if(action==='hub-login-rename')return seatReply(await rpc(action,{staffEmail,accountId:input.accountId,displayName:input.displayName}));
    if(action==='hub-login-search')args.query=String(input.query||'').slice(0,100);
    if(action==='hub-login-disable')args.accountId=input.accountId;
    if(action==='hub-login-save'){
