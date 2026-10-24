@@ -31,10 +31,10 @@ export function createManualAuthHandler({rpc,verifyGoogle,derive=passwordKey}){
     if(result.error||!result.token)return reply(401,{error:'Sign-in could not be completed. Try again.'});
     return reply(200,result);
    }
-   if(['session','logout'].includes(action)){
+   if(['session','logout','applicant-messenger-list'].includes(action)){
     const token=(req.headers.get('x-nova-session')||'').replace(/^Bearer /,'');
     if(!/^[a-f0-9]{64}$/.test(token))return reply(401,{error:'Please sign in again.'});
-    const result=await rpc(action,{token});return result.error?reply(401,{error:'Please sign in again.'}):reply(200,result);
+    const result=await rpc(action,{token});return result.error?reply(result.error==='access_denied'?403:401,{error:result.error==='access_denied'?'Applicant Messenger access is required.':'Please sign in again.'}):reply(200,result);
    }
    if(!['hub-login-search','hub-login-save','hub-login-disable'].includes(action))return reply(400,{error:'Use the username and password assigned by the owner. Ask the owner for a reset.'});
    const token=req.headers.get('x-portal-token');if(!token)return reply(401,{error:'Sign in to manage logins.'});
@@ -50,7 +50,7 @@ export function createManualAuthHandler({rpc,verifyGoogle,derive=passwordKey}){
     // Check owner authorization before spending CPU hashing or accepting a mutation.
     await rpc('hub-login-search',{staffEmail,query:'__permission_check__'});
     const salt=[...crypto.getRandomValues(new Uint8Array(32))].map(x=>x.toString(16).padStart(2,'0')).join('');
-    Object.assign(args,{accountId:input.accountId||null,playerKey:input.playerKey||null,targetEmail:input.targetEmail||null,username:input.username,reason:input.reason,salt,hash:await derive(input.password,salt)});
+    Object.assign(args,{accountType:input.accountType||null,displayName:input.displayName||null,accountId:input.accountId||null,playerKey:input.playerKey||null,targetEmail:input.targetEmail||null,username:input.username,reason:input.reason,salt,hash:await derive(input.password,salt)});
    }
    return reply(200,await rpc(action,args));
   }catch(error){
@@ -81,7 +81,7 @@ export function firebaseVerifier({projectId,apiKey,fetcher=fetch,clock=()=>Date.
 
 const url=Deno.env.get('SUPABASE_URL');
 const service=JSON.parse(Deno.env.get('SUPABASE_SECRET_KEYS')||'{}').default;
-const safeMessages=['Access denied','Enter at least two characters','Account not found','Use 3–32 lowercase letters, numbers or underscores','Enter a reason of 8–500 characters','Leadership access is not active','Leadership player link does not match','Player profile not found','Select a Sapphire player','Select a player or leader','Account changed; search again','Account identity does not match'];
+const safeMessages=['Access denied','Enter at least two characters','Account not found','Use 3–32 lowercase letters, numbers or underscores','Enter a reason of 8–500 characters','Leadership access is not active','Leadership player link does not match','Player profile not found','Select a Sapphire player','Select a player or leader','Account changed; search again','Account identity does not match','Enter a display name of 1–100 characters'];
 async function rpc(action,args){
  const response=await fetch(url+'/rest/v1/rpc/nova_manual_accounts',{method:'POST',headers:{apikey:service,'Content-Type':'application/json'},body:JSON.stringify({action,args}),signal:AbortSignal.timeout(15000)});
  const result=await response.json();if(!response.ok){const e=Error('Account service failed');if(safeMessages.includes(result?.message))e.safeMessage=result.message==='Access denied'?'Only the owner can manage logins.':result.message;if(result?.code==='23505')e.safeMessage='That username or player already has a login. Search for it or choose another username.';throw e;}return result;
