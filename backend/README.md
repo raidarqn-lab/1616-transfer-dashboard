@@ -9,3 +9,9 @@ Deploy this bundle to the existing `portal-public` function before releasing the
 Run `node --test tests/*.test.mjs` from the repository root. The backend regression tests evaluate the exact domain module from this bundle with fictional records; they cover stale placement references, save/reopen/rename/unlink, metadata retention, invalid payloads, support restrictions, revision conflicts and unchanged placement eligibility.
 
 Version 1.0.37 adds isolated `seatSandbox` shared records. The server accepts specific scenario commands, stamps requester/reviewer identities, requires a different admin/lead to approve an exception, and rejects mixed sandbox/live writes. The embedded domain must match `seat-sandbox-core.mjs`; the test suite enforces this. See `deployment/seat-sandbox.md` for release and verification details.
+
+## Alliance guidelines
+
+Apply `alliance-guidelines.sql` to the existing active project. It extends the existing authenticated hub-content routes for kind `alliance-guidelines`, retaining other handlers, and adds only the assigned alliance’s published snapshot to the existing private applicant-status projection. No Edge Function changes or additional credentials are required. R4 leaders edit their assigned alliances; the master can edit all five. Separate draft and published content, optimistic revisions, and private audit history are retained. New tables use RLS with no public table grants.
+
+`verify-alliance-guidelines.sql` checks alliance boundaries, draft privacy, publication, stale revisions, revoked access and applicant status using synthetic fixtures in a rolled-back transaction. No actual rules are seeded. Each document stores English, Spanish, Portuguese, French, Arabic, Vietnamese, Korean and German copies. Drafts may be incomplete; publishing requires introduction and rules in every language. Applicants receive the published language map and display their selected language, with RTL layout for Arabic.
