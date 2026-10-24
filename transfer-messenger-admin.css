@@ -1,0 +1,25 @@
+.transfer-messenger-admin{max-width:800px}
+.transfer-messenger-admin p{font-size:14px;line-height:1.6;color:#756150}
+.transfer-messenger-admin .hub-card{margin-top:24px;padding-top:20px;border-top:1px solid #e2cfb9}
+.transfer-messenger-admin .hub-search{display:flex;gap:12px;align-items:end}
+.transfer-messenger-admin label,.transfer-messenger-dialog label{display:grid;gap:7px;font-size:13px;font-weight:600}
+.transfer-messenger-admin .hub-search label{flex:1}
+.transfer-messenger-admin input,.transfer-messenger-dialog input{box-sizing:border-box;width:100%;padding:11px;border:1px solid #d8c4b0;border-radius:8px;background:#fffcf6;color:#3b3530;font:14px system-ui}
+.transfer-messenger-admin .search-results{display:grid;gap:10px}
+.transfer-messenger-admin .member-account-row{display:grid;gap:6px;text-align:left;padding:16px;border:1px solid #e2cfb9;border-radius:10px;background:#fffcf6}
+.transfer-messenger-admin .member-account-row span{font-size:12px;color:#756150}
+.transfer-messenger-dialog{box-sizing:border-box;width:min(580px,calc(100vw - 28px));max-height:88dvh;overflow:auto;padding:0;border:1px solid #dcc5b1;border-radius:18px;background:#fffaf2;color:#3b3530;font:14px system-ui;box-shadow:0 24px 80px #22151d55}
+.transfer-messenger-dialog::backdrop{background:#211b2488}
+.transfer-messenger-dialog .admin-dialog-bar{display:flex;align-items:center;justify-content:space-between;padding:16px 24px;border-bottom:1px solid #e7d8c8}
+.transfer-messenger-dialog .hub-card{padding:24px}
+.transfer-messenger-dialog h2{margin:0 0 8px;font-size:23px}
+.transfer-messenger-dialog p,.transfer-messenger-dialog small{line-height:1.6;color:#756150}
+.transfer-messenger-dialog form{display:grid;gap:12px}
+.transfer-messenger-dialog [hidden]{display:none!important}
+.transfer-messenger-dialog .hub-actions{display:flex;gap:10px;margin-top:8px;flex-wrap:wrap}
+.transfer-messenger-dialog button{padding:10px 16px;border:1px solid #d8c4b0;border-radius:8px;background:#f1e7da;color:#624735;font:inherit;cursor:pointer}
+.transfer-messenger-dialog button.primary{background:#a82332;border-color:#a82332;color:#fffaf2}
+.transfer-messenger-dialog button.danger{color:#a82332}
+.transfer-messenger-dialog button:disabled{opacity:.5;cursor:wait}
+.transfer-messenger-dialog [data-result]{white-space:pre-line;overflow-wrap:anywhere}
+@media(max-width:600px){.transfer-messenger-admin .hub-search{align-items:stretch;flex-direction:column}.transfer-messenger-dialog .hub-card{padding:18px}}

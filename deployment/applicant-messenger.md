@@ -4,7 +4,7 @@ Owner-managed, password-only logins that can search the active applicant list an
 
 ## Owner workflow
 
-Alliance Hub → Administration → Logins & passwords → **Create Applicant Messenger login**. Enter a display name, username, password and reason. Share the credentials privately. The owner enters new credentials; deployment does not create accounts or send messages. Search the username later to reset or disable it. Reset/disable invalidates existing sessions.
+Transfer Hub → Settings → Applicant Messengers → **Create Applicant Messenger login**. Enter a display name, username, password and reason. Share the credentials privately. The owner enters new credentials; deployment does not create accounts or send messages. Search the username later to reset or disable it. Reset/disable invalidates existing sessions.
 
 Sign in at `https://portal.join1616.com/sign-in.html`. This account type goes directly to `applicant-messenger.html`, including when a sign-in URL asks for the full portal. Copying rechecks authorization and the current message. The page clears its list on an authorization failure and also refreshes when returning to the tab and every minute while visible.
 
