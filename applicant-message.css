@@ -1,5 +1,9 @@
 #transfer-mock .applicant-message-copy{flex:none;width:28px;height:28px;padding:5px;border:0;border-radius:5px;background:transparent;color:#a82332;display:inline-grid;place-items:center;cursor:pointer}
-#transfer-mock .applicant-message-copy svg{width:16px;height:16px}
+/* Center both actions on the first name line, including rows with aliases. */
+#transfer-mock .player-name-cell .applicant-message-copy,
+#transfer-mock .player-name-cell .player-ping{box-sizing:border-box;width:28px;height:28px;padding:5px;display:inline-grid;place-items:center;margin-top:-5.6px;margin-bottom:-5.6px;line-height:1}
+#transfer-mock .player-name-cell .applicant-message-copy svg,
+#transfer-mock .player-name-cell .player-ping svg{display:block;width:16px;height:16px}
 #transfer-mock .applicant-message-copy:hover{background:#f3e1d6}
 #transfer-mock .applicant-message-copy:focus-visible{outline:2px solid #a82332;outline-offset:2px}
 #transfer-mock .applicant-message-copy:disabled{opacity:.4;cursor:default}
@@ -12,4 +16,4 @@
 #transfer-mock .applicant-copy-dialog p{font-size:14px;line-height:1.5}
 #transfer-mock .applicant-copy-dialog textarea{display:block;box-sizing:border-box;width:100%;font-family:inherit;font-size:16px;line-height:1.5;background:#fffdf8;color:#49372c;border:1px solid #d8bcaa;padding:12px;margin:14px 0;resize:vertical}
 #transfer-mock .applicant-copy-dialog button{padding:9px 16px;background:#a82332;color:#fffaf2;border:0;border-radius:8px;font:inherit;cursor:pointer}
-@media(pointer:coarse){#transfer-mock .applicant-message-copy{width:44px;height:44px}}
+@media(pointer:coarse){#transfer-mock .player-name-cell .applicant-message-copy,#transfer-mock .player-name-cell .player-ping{width:44px;height:44px;margin-top:-13.6px;margin-bottom:-13.6px}}
