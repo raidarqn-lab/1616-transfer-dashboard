@@ -1,38 +1,54 @@
-import {directoryRow,rejectionFallback} from './applicant-messenger-details.js';
+import {directoryRow} from './applicant-messenger-details.js';
+import {languageNames,messengerCopy,formatCopy,preferredLanguage,localizedApplicantMessage} from './applicant-messenger-i18n.js';
 export const searchName=value=>String(value||'').normalize('NFKD').replace(/\p{M}/gu,'').toLocaleLowerCase().trim();
 export function matchingApplicants(applicants,query){const needle=searchName(query);return applicants.filter(p=>searchName(p.name).includes(needle));}
 export function mountApplicantMessenger({root,load,signOut,clipboard=navigator.clipboard}){
- const search=root.querySelector('#applicant-search'),list=root.querySelector('#applicants'),status=root.querySelector('#directory-status'),notice=root.querySelector('#copy-status'),refresh=root.querySelector('#refresh');
- let applicants=[],generation=0,copying=false,closed=false;
- const clear=()=>{applicants=[];list.replaceChildren();root.querySelectorAll('dialog').forEach(d=>d.remove());notice.textContent='';};
+ const search=root.querySelector('#applicant-search'),list=root.querySelector('#applicants'),status=root.querySelector('#directory-status'),notice=root.querySelector('#copy-status'),refresh=root.querySelector('#refresh'),picker=root.querySelector('#messenger-language');
+ const storageKey='1616-applicant-messenger-language-v1';
+ let saved='';try{saved=localStorage.getItem(storageKey);}catch{}
+ let language=preferredLanguage([saved,...(navigator.languages||[navigator.language])]),t=messengerCopy(language);
+ let applicants=[],generation=0,copying=false,closed=false,state='loading',noticeKey='',noticeValues={};
+ const clear=()=>{applicants=[];list.replaceChildren();root.querySelectorAll('dialog').forEach(d=>d.remove());noticeKey='';notice.textContent='';};
+ const setNotice=(key,values={})=>{noticeKey=key;noticeValues=values;notice.textContent=key?formatCopy(t[key],values):'';};
  function render(){
-  list.replaceChildren();const rows=matchingApplicants(applicants,search.value);
-  status.textContent=rows.length?`${rows.length} applicant${rows.length===1?'':'s'}${search.value.trim()?` matching “${search.value.trim()}”`:''}`:search.value.trim()?'No applicants match this name.':'No applicants yet.';
-  for(const p of rows){const row=document.createElement('li'),name=document.createElement('strong'),heading=document.createElement('div');heading.className='applicant-heading';name.textContent=p.name;heading.append(name);row.append(heading);
-   if(p.message){const button=document.createElement('button');button.type='button';button.textContent='Copy message';button.setAttribute('aria-label',`Copy message for ${p.name}`);button.disabled=copying;button.onclick=()=>copy(p.id,button);heading.append(button);}
-   else{const hint=document.createElement('span');hint.className='unavailable';hint.textContent='Message unavailable · ask a transfer lead';heading.append(hint);}
+  list.replaceChildren();const rows=matchingApplicants(applicants,search.value),a=t.application;
+  status.textContent=state!=='ready'?t[state]:rows.length?formatCopy(t[search.value.trim()?'matching':'count'],{count:rows.length,query:search.value.trim()}):search.value.trim()?t.noMatch:t.empty;
+  if(state!=='ready')return;
+  for(const p of rows){const row=document.createElement('li'),name=document.createElement('strong'),heading=document.createElement('div');heading.className='applicant-heading';name.textContent=p.name;name.dir='auto';heading.append(name);row.append(heading);
+   if(p.message){const button=document.createElement('button');button.type='button';button.textContent=t.copy;button.setAttribute('aria-label',formatCopy(t.copyFor,{name:p.name}));button.disabled=copying;button.onclick=()=>copy(p.id,button);heading.append(button);}
+   else{const hint=document.createElement('span');hint.className='unavailable';hint.textContent=t.unavailable;heading.append(hint);}
    const facts=document.createElement('dl');facts.className='applicant-facts';
-   for(const [label,value] of [['Server',p.server||'Not provided'],['Transfer group',p.transferGroup||'No group assigned'],['Application status',p.status==='Declined'?'Rejected':p.status],['Approval',{approved:'Approved',declined:'Not approved',withdrawn:'Withdrawn',pending:'Pending'}[p.approval]],['Destination alliance',p.destinationAlliance||'Not selected yet'],['Confirmed seat',p.confirmedSeat||'Not confirmed yet']]){
-    const box=document.createElement('div'),term=document.createElement('dt'),detail=document.createElement('dd');term.textContent=label;detail.textContent=value;box.append(term,detail);facts.append(box);
+   for(const [label,value] of [[t.server,p.server||t.noServer],[t.group,p.transferGroup||t.noGroup],[a.title,a.statuses[p.status]||a.statuses.Unconfirmed],[a.approval,a[p.approval]||a.pending],[a.alliance,p.destinationAlliance||a.unselected],[a.seat,a.statuses[p.confirmedSeat]||a.unconfirmed]]){
+    const box=document.createElement('div'),term=document.createElement('dt'),detail=document.createElement('dd');term.textContent=label;detail.textContent=value;detail.dir='auto';box.append(term,detail);facts.append(box);
    }row.append(facts);
-   if(p.status==='Declined'){const reason=document.createElement('section'),label=document.createElement('strong'),text=document.createElement('p');reason.className='applicant-rejection';label.textContent='Reason for rejection';text.textContent=p.rejectionReasonText?.trim()||rejectionFallback[p.rejectionReasonCode]||'Contact the transfer team for the reason.';reason.append(label,text);row.append(reason);}
+   if(p.status==='Declined'){const reason=document.createElement('section'),label=document.createElement('strong'),text=document.createElement('p');reason.className='applicant-rejection';label.textContent=a.reason;text.textContent=p.rejectionReasonText?.trim()||a.reasons[p.rejectionReasonCode]||a.noReason;text.dir='auto';reason.append(label,text);row.append(reason);}
    list.append(row);
   }
  }
+ function translate(){
+  t=messengerCopy(language);document.documentElement.lang=language;document.documentElement.dir=language==='ar'?'rtl':'ltr';document.title=t.title+' · 1616';
+  root.querySelectorAll('[data-i18n]').forEach(el=>{el.textContent=t[el.dataset.i18n];});
+  search.placeholder=t.search;list.setAttribute('aria-label',t.title);root.querySelector('.directory').setAttribute('aria-label',t.title);
+  const back=root.querySelector('.back-to-hub');if(back)back.textContent=t.back;
+  if(picker)picker.value=language;setNotice(noticeKey,noticeValues);render();
+ }
+ if(picker){for(const [value,label] of Object.entries(languageNames)){const option=document.createElement('option');option.value=value;option.textContent=label;picker.append(option);}picker.onchange=()=>{language=preferredLanguage([picker.value]);try{localStorage.setItem(storageKey,language);}catch{}root.querySelectorAll('dialog').forEach(d=>d.remove());setNotice('');translate();};}
  async function current(){
   const result=await load();if(!Array.isArray(result?.applicants))throw Error('Unable to load the applicant list.');
   // Retain only the contract fields, even if a future response adds metadata.
   return result.applicants.map(directoryRow);
  }
- async function reload(){const request=++generation;refresh.disabled=true;try{const rows=await current();if(request!==generation||closed)return;applicants=rows;render();}catch(error){if(request!==generation||closed)return;clear();status.textContent=error.message;}finally{if(request===generation)refresh.disabled=false;}}
- function manualCopy(text,name){const dialog=document.createElement('dialog');dialog.setAttribute('aria-label',`Message for ${name}`);const heading=document.createElement('h2');heading.textContent='Copy applicant message';const hint=document.createElement('p');hint.textContent='Select and copy this message to paste it into your conversation.';const input=document.createElement('textarea');input.readOnly=true;input.value=text;input.setAttribute('aria-label','Applicant message');const close=document.createElement('button');close.type='button';close.textContent='Close';close.onclick=()=>dialog.close();dialog.append(heading,hint,input,close);root.append(dialog);dialog.addEventListener('close',()=>{dialog.remove();search.focus();});dialog.showModal();input.focus();input.select();}
- async function copy(id,button){if(copying)return;copying=true;const request=++generation;let failed=false;notice.textContent='Preparing message…';button.disabled=true;try{
+ const errorState=error=>error.code==='missingMessage'?'missingMessage':/access|sign.in|session|unauth|forbidden|permission|token|credential/i.test(error.message||'')?'accessError':'loadError';
+ async function reload(){const request=++generation;refresh.disabled=true;try{const rows=await current();if(request!==generation||closed)return;applicants=rows;state='ready';render();}catch(error){if(request!==generation||closed)return;clear();state=errorState(error);render();}finally{if(request===generation)refresh.disabled=false;}}
+ function manualCopy(text){const dialog=document.createElement('dialog');dialog.setAttribute('aria-label',t.copyTitle);dialog.lang=language;const heading=document.createElement('h2');heading.textContent=t.copyTitle;const hint=document.createElement('p');hint.textContent=t.copyHelp;const input=document.createElement('textarea');input.readOnly=true;input.value=text;input.dir='auto';input.setAttribute('aria-label',t.messageLabel);const close=document.createElement('button');close.type='button';close.textContent=t.close;close.onclick=()=>dialog.close();dialog.append(heading,hint,input,close);root.append(dialog);dialog.addEventListener('close',()=>{dialog.remove();search.focus();});dialog.showModal();input.focus();input.select();}
+ async function copy(id,button){if(copying)return;copying=true;const request=++generation;let failed=false;setNotice('preparing');button.disabled=true;try{
    // Recheck active credentials and current code on every copy, including after revocation.
-   const rows=await current();if(closed||request!==generation)return;applicants=rows;const p=rows.find(p=>p.id===id);if(!p?.message)throw Error('This applicant’s message is unavailable. Refresh the list or ask a transfer lead.');
-   try{await clipboard.writeText(p.message);notice.textContent=`Message for ${p.name} copied. Ready to paste.`;}catch{notice.textContent='Copy the message from the open dialog.';manualCopy(p.message,p.name);}
-  }catch(error){if(request!==generation||closed)return;failed=true;clear();status.textContent=error.message;}finally{copying=false;if(!closed&&!failed&&request===generation)render();refresh.disabled=false;}}
- search.addEventListener('input',render);refresh.addEventListener('click',reload);root.querySelector('#sign-out').onclick=async()=>{closed=true;generation++;clear();status.textContent='Signing out…';await signOut();};
+   const rows=await current();if(closed||request!==generation)return;applicants=rows;const p=rows.find(p=>p.id===id);if(!p?.message)throw Object.assign(Error('Message unavailable'),{code:'missingMessage'});
+   const message=localizedApplicantMessage(p,language);
+   try{await clipboard.writeText(message);if(closed||request!==generation)return;setNotice('copied',{name:p.name});}catch{if(closed||request!==generation)return;setNotice('copyHelp');manualCopy(message);}
+  }catch(error){if(request!==generation||closed)return;failed=true;clear();state=errorState(error);render();}finally{copying=false;if(!closed&&!failed&&request===generation){state='ready';render();}refresh.disabled=false;}}
+ search.addEventListener('input',render);refresh.addEventListener('click',reload);root.querySelector('#sign-out').onclick=async()=>{closed=true;generation++;clear();state='signingOut';render();await signOut();};
  const onVisible=()=>{if(document.visibilityState==='visible'&&!closed)reload();};document.addEventListener('visibilitychange',onVisible);
  const interval=setInterval(()=>{if(document.visibilityState==='visible'&&!closed)reload();},60000);
- reload();return {reload,destroy(){closed=true;generation++;clear();clearInterval(interval);document.removeEventListener('visibilitychange',onVisible);}};
+ translate();reload();return {reload,destroy(){closed=true;generation++;clear();clearInterval(interval);document.removeEventListener('visibilitychange',onVisible);search.removeEventListener('input',render);refresh.removeEventListener('click',reload);if(picker)picker.onchange=null;}};
 }
