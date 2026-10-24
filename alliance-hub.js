@@ -6,10 +6,9 @@ import {setupShopCalendar} from './shop-calendar.js?v=shop-inline-20260928';
 import {setupTrains} from './train-dashboard.js?v=blitz-20260928';
 import {setupMemberHandoff} from './member-handoff.js?v=20260927';
 import {setupLeaderInvitations} from './leader-invitations.js?v=individual-20260927';
-import {setupMemberRecovery} from './member-recovery.js?v=recovery-form-20260927';
-import {setupMemberAdmin} from './member-admin.js?v=linked-members-v2-20260927';
+import {setupManualAccounts} from './manual-accounts-ui.js?v=manual-20261023';
 import {setupEventSchedule,renderEventSchedule,openEventEditor,eventSaved,eventRecurrencePayload} from './event-schedule.js?v=repeat-editor-20260927';
-import {user} from './live-session.js';
+import {user} from './live-session.js?v=manual-20261023';
 import {bountyConnection as config} from './nova-bounty-config.js';
 
 const $=id=>document.getElementById(id);
@@ -23,12 +22,12 @@ let access=null,staff=[],selectedEmail='',content=[];
 
 async function hubCall(body){
  if(!user)throw Error('Sign in to the Portal first.');
- const response=await fetch(config.endpoint,{method:'POST',headers:{'Content-Type':'application/json',apikey:config.anonKey,'X-Portal-Token':await user.getIdToken()},body:JSON.stringify(body),signal:AbortSignal.timeout(30000)});
+ const response=await fetch(body.action?.startsWith('hub-login-')?config.endpoint.replace('/nova-bounty','/nova-auth'):config.endpoint,{method:'POST',headers:{'Content-Type':'application/json',apikey:config.anonKey,'X-Portal-Token':await user.getIdToken()},body:JSON.stringify(body),signal:AbortSignal.timeout(30000)});
  const data=await response.json();if(!response.ok)throw Error(data.error||'Unable to complete the Alliance Hub request.');return data;
 }
 function setStatus(message,error=false){const node=$('hub-admin-status');node.textContent=message;node.classList.toggle('error',error);document.querySelectorAll('.admin-dialog-status').forEach(n=>{n.textContent=message;n.classList.toggle('error',error);});}
 function signInUrl(){return './sign-in.html?returnTo='+encodeURIComponent(location.pathname+location.search+location.hash);}
-function showSignIn(){const box=$('hub-access-status');box.className='hub-sign-in';box.innerHTML='<h1>Welcome to the Alliance Hub</h1><p>Sign in with your leadership Google account to continue.</p><a class="hub-sign-in-button">Sign in to Alliance Hub →</a><small>You’ll return to this page after signing in.</small>';box.querySelector('a').href=signInUrl();$('hub-identity').textContent='Not signed in';$('hub-role-name').textContent='Sign-in required';nav.forEach(button=>button.hidden=true);}
+function showSignIn(){const box=$('hub-access-status');box.className='hub-sign-in';box.innerHTML='<h1>Welcome to the Alliance Hub</h1><p>Sign in with your leadership username and password, or Google account.</p><a class="hub-sign-in-button">Sign in to Alliance Hub →</a><small>You’ll return to this page after signing in.</small>';box.querySelector('a').href=signInUrl();$('hub-identity').textContent='Not signed in';$('hub-role-name').textContent='Sign-in required';nav.forEach(button=>button.hidden=true);}
 function show(view){
  if(!user){location.href=signInUrl();return;}
  if(view==='admin'&&!access?.accountsManage){if(!user)location.href='./sign-in.html';return;}
@@ -105,7 +104,7 @@ window.addEventListener('nova-admin-name-changed',async()=>{const identity=await
 function organizeAdmin(){
  const root=document.querySelector('[data-section="admin"]'),layout=root.querySelector('.hub-admin-layout'),cards=[...layout.children];
  const tabs=document.createElement('div');tabs.className='admin-category-tabs';tabs.setAttribute('role','tablist');tabs.setAttribute('aria-label','Administration categories');
- const configs=[['members','Member Admin','Member logins, usernames and account recovery'],['leadership','Leadership & Access','Leadership accounts, author names and portal permissions'],['initiatives','Player Initiatives','Hard-save orders and season departure plans'],['trains','Trains','Manage the conductor cooldown for all train schedules']];
+ const configs=[['members','Logins & passwords','Member logins, usernames and account recovery'],['leadership','Leadership & Access','Leadership accounts, author names and portal permissions'],['initiatives','Player Initiatives','Hard-save orders and season departure plans'],['trains','Trains','Manage the conductor cooldown for all train schedules']];
  const panels=configs.map(([key,label,description])=>{const panel=document.createElement('section');panel.id='admin-category-'+key;panel.className='admin-category-panel';panel.setAttribute('role','tabpanel');panel.setAttribute('aria-labelledby','admin-tab-'+key);const intro=document.createElement('p');intro.className='admin-category-description';intro.textContent=description;panel.append(intro);const button=document.createElement('button');button.id='admin-tab-'+key;button.type='button';button.textContent=label;button.setAttribute('role','tab');button.setAttribute('aria-controls',panel.id);button.onclick=()=>select(key);tabs.append(button);return panel;});
  const select=key=>{if(key==='trains')loadTrainSettings();setStatus('');configs.forEach(([id],i)=>{const active=id===key;panels[i].hidden=!active;tabs.children[i].setAttribute('aria-selected',String(active));tabs.children[i].tabIndex=active?0:-1;});};
  tabs.onkeydown=e=>{if(!['ArrowLeft','ArrowRight','Home','End'].includes(e.key))return;e.preventDefault();let i=[...tabs.children].indexOf(document.activeElement);i=e.key==='Home'?0:e.key==='End'?configs.length-1:(i+(e.key==='ArrowRight'?1:configs.length-1))%configs.length;select(configs[i][0]);tabs.children[i].focus();};
@@ -161,9 +160,9 @@ setupMemberHandoff({call:hubCall});
 
 setupEventSchedule({reload:loadContent,edit:fillContent,save:hubCall,name:()=>access?.displayName||'Leadership'});
 
-setupMemberAdmin({call:hubCall,setStatus});
+setupManualAccounts({call:hubCall});
 
-setupMemberRecovery({call:hubCall});
+
 
 function previewAnnouncementImage(){const form=$('announcement-editor'),box=form.querySelector('[data-announcement-preview]'),img=box.querySelector('img'),message=box.querySelector('[data-image-message]'),url=form.elements.imageUrl.value.trim();box.hidden=!url;if(!url){img.removeAttribute('src');return;}try{if(new URL(url).protocol!=='https:')throw Error();message.textContent='Loading preview…';img.onload=()=>{message.textContent=`${img.naturalWidth} × ${img.naturalHeight} px · Recommended 1600 × 900 px`;};img.onerror=()=>{message.textContent='Image could not load. Use a direct, accessible HTTPS image link.';};img.src=url;}catch{img.removeAttribute('src');message.textContent='Use a valid HTTPS image URL.';}}
 $('announcement-editor').elements.imageUrl.addEventListener('input',()=>{$('announcement-editor').elements.imagePath.value='';$('announcement-image-file').value='';previewAnnouncementImage();});
