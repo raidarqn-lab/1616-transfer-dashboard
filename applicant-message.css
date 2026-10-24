@@ -1,0 +1,15 @@
+#transfer-mock .applicant-message-copy{flex:none;width:28px;height:28px;padding:5px;border:0;border-radius:5px;background:transparent;color:#a82332;display:inline-grid;place-items:center;cursor:pointer}
+#transfer-mock .applicant-message-copy svg{width:16px;height:16px}
+#transfer-mock .applicant-message-copy:hover{background:#f3e1d6}
+#transfer-mock .applicant-message-copy:focus-visible{outline:2px solid #a82332;outline-offset:2px}
+#transfer-mock .applicant-message-copy:disabled{opacity:.4;cursor:default}
+#transfer-mock .applicant-message-copy[data-copied]{background:#dcebdc;color:#285734}
+#transfer-mock .applicant-copy-notice{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);z-index:3500;max-width:calc(100vw - 40px);width:max-content;box-sizing:border-box;padding:12px 18px;border:1px solid #d8bcaa;border-radius:10px;background:#fffaf2;color:#49372c;box-shadow:0 6px 24px #36271e26;font-size:14px;pointer-events:none}
+#transfer-mock .applicant-copy-notice:empty{display:none}
+#transfer-mock .applicant-copy-dialog{box-sizing:border-box;width:min(520px,calc(100vw - 32px));max-height:calc(100dvh - 32px);overflow:auto;border:1px solid #d8bcaa;border-radius:14px;background:#fffaf2;color:#49372c;padding:22px;font-family:inherit}
+#transfer-mock .applicant-copy-dialog::backdrop{background:#18141480}
+#transfer-mock .applicant-copy-dialog h2{font-size:20px;margin:0 0 12px}
+#transfer-mock .applicant-copy-dialog p{font-size:14px;line-height:1.5}
+#transfer-mock .applicant-copy-dialog textarea{display:block;box-sizing:border-box;width:100%;font-family:inherit;font-size:16px;line-height:1.5;background:#fffdf8;color:#49372c;border:1px solid #d8bcaa;padding:12px;margin:14px 0;resize:vertical}
+#transfer-mock .applicant-copy-dialog button{padding:9px 16px;background:#a82332;color:#fffaf2;border:0;border-radius:8px;font:inherit;cursor:pointer}
+@media(pointer:coarse){#transfer-mock .applicant-message-copy{width:44px;height:44px}}
