@@ -4,7 +4,7 @@ import {participation} from './storm-participation.js?v=20260928';
 import {createCoreManager,coreProblems} from './storm-core-roster.js?v=20260928';
 import {loadStormHistory} from './storm-profile.js?v=rotation-v2-20260928';
 import {moveParticipant,moveMapMember,swapPlanMembers,mountDrag} from './storm-drag.js?v=compact3-20261023';
-import {exportPlan} from './storm-export.js?v=compact3-20261023';
+import {exportPlan} from './storm-export.js?v=square-table-20261023';
 import {buildings,availableBuildings,esc,issues,assignmentText,battleMail,mapHtml,connectMap,dutyIcon,roleLegend,substituteZone} from './storm-core.js?v=compact3-20261023';
 import {serverToUtc,serverValue,serverDate} from './shop-calendar-core.js';
 import {weeklyOverview} from './storm-week-ui.js?v=guide-20261014';
