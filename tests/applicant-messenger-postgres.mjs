@@ -26,5 +26,10 @@ try {
  // Verify production migration can be applied twice, and unrelated logins remain intact.
  await db.exec(await fs.readFile(root+'/backend/applicant-messenger.sql','utf8'));
  await db.exec(await fs.readFile(root+'/backend/applicant-messenger.sql','utf8'));
- console.log('PASS: repeat migration and schema rollback.');
+ const original=await db.query("select pg_get_functiondef('public.nova_manual_accounts(text,jsonb)'::regprocedure) as source");
+ await db.exec(original.rows[0].source.replace(' || transfer_private.applicant_messenger_details(p.key,p.payload)',''));
+ await db.exec(await fs.readFile(root+'/backend/applicant-messenger-details.sql','utf8'));
+ await db.exec(await fs.readFile(root+'/backend/applicant-messenger-details.sql','utf8'));
+ await db.exec('begin;'+verify+'rollback;');
+ console.log('PASS: old-to-new detail migration, repeat migration and schema rollback.');
 } catch(error){console.error(error.message);console.error(error.where||'');process.exitCode=1;}finally{await db.close();}

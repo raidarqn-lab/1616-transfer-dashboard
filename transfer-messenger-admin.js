@@ -1,10 +1,10 @@
-import {setupManualAccounts} from './manual-accounts-ui.js?v=transfer-admin-20261024';
+import {setupManualAccounts} from './manual-accounts-ui.js?v=messenger-details-20261024';
 import {bountyConnection as config} from './nova-bounty-config.js';
 
 export function mountTransferMessengerAdmin({accessPanel,user}){
  const role=accessPanel.querySelector('#invite-role');
- const option=document.createElement('option');option.value='applicant_messenger';option.textContent='Applicant Messenger · names and messages only';role.append(option);
- const description=document.createElement('p');description.innerHTML='<strong>Applicant Messenger</strong><br><span class="muted">Can search applicant names and copy prepared application-access messages. Cannot view records, notes or team activity. Signs in with an assigned username and password.</span>';
+ const option=document.createElement('option');option.value='applicant_messenger';option.textContent='Applicant Messenger · application details and messages';role.append(option);
+ const description=document.createElement('p');description.innerHTML='<strong>Applicant Messenger</strong><br><span class="muted">Can search applicants, view their application status and placement details, and copy prepared application-access messages. Private notes and team activity remain hidden. Signs in with an assigned username and password.</span>';
  accessPanel.querySelector('.role-description').append(description);
  const standardFields=[accessPanel.querySelector('#live-invite-name').closest('label'),accessPanel.querySelector('label[for="invite-email"]'),accessPanel.querySelector('#invite-email'),accessPanel.querySelector('[data-send-invite]').closest('.actions'),accessPanel.querySelector('[data-invite-message]')];
  const roleLabel=accessPanel.querySelector('label[for="invite-role"]');

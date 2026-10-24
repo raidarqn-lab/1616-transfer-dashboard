@@ -1,6 +1,6 @@
 # Applicant Messenger
 
-Owner-managed, password-only logins that can search the active applicant list and copy the existing prepared message. These accounts have no linked player or leadership identity. Their API returns only a row ID, applicant name, and message; missing or ambiguous codes produce an unavailable message. Contacts, prospects, transfers, withdrawn, merged and deleted records are excluded, matching the active Applicants view.
+Owner-managed, password-only logins that can search the active applicant list and copy the existing prepared message. These accounts have no linked player or leadership identity. Their API returns an explicit allowlist: row ID, applicant name, server, transfer group, application status, approval, destination alliance, confirmed seat, applicant-facing rejection reason and prepared message; missing or ambiguous codes produce an unavailable message. Contacts, prospects, transfers, withdrawn, merged and deleted records are excluded, matching the active Applicants view.
 
 ## Owner workflow
 
@@ -26,4 +26,10 @@ Sign in at `https://portal.join1616.com/sign-in.html`. This account type goes di
 
 Restore the prior `nova-auth` bundle and frontend first. For an urgent shutdown, disable Applicant Messenger accounts and bump their versions; existing leadership/member accounts are unaffected. Revert the two modified database functions using the saved pre-change definitions. Retain the new columns and constraint while any messenger accounts exist; never drop those accounts or cascade-delete sessions as part of rollback. No automatic grant or account conversion occurs during deployment.
 
-Transfer Hub administrators and leads can open **Applicant Messenger** from the sidebar. Their existing staff session loads the authorized workspace and projects the same active applicant names/messages into the shared directory component. Restricted helper accounts still use only the limited `applicant-messenger-list` endpoint. Staff have a return link to Transfer Hub; helpers do not.
+Transfer Hub administrators and leads can open **Applicant Messenger** from the sidebar. Their existing staff session loads the authorized workspace and projects the same active applicant-facing details/messages into the shared directory component. Restricted helper accounts still use only the limited `applicant-messenger-list` endpoint. Staff have a return link to Transfer Hub; helpers do not.
+
+## Applicant detail update
+
+Apply `backend/applicant-messenger-details.sql` to an existing installation. It adds a private projection helper and narrowly replaces only the directory expression in the deployed account function, with an expected-definition guard. It preserves every authentication branch and grant. Status, approval, alliance, confirmed seat and rejection gates mirror `transfer_application_status`; only the saved applicant-facing reason is exposed. Preferences and anticipated seat colours are never substituted for confirmed assignments.
+
+Validated with 106 JS tests, local PostgreSQL old-to-new/repeated migration checks, and rollback-only production tests including private-field exclusion and session revocation.

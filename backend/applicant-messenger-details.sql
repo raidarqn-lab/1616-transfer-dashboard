@@ -1,0 +1,31 @@
+begin;
+create or replace function transfer_private.applicant_messenger_details(player_key text,p jsonb) returns jsonb
+language plpgsql stable set search_path='' as $$
+declare current_status text; destination text; seat text; reason text; reason_text text;
+begin
+ current_status:=case when coalesce(p->>'general','false')='true' or coalesce(p->>'prospect','false')='true' or p->>'transferDirection'='outbound' then 'Unconfirmed'
+  when p->>'status' in ('Pending','Under Review','Approved','Waitlisted','Declined','Withdrawn','Transferred') then p->>'status' else 'Unconfirmed' end;
+ if current_status not in ('Declined','Withdrawn','Unconfirmed') then
+  select payload#>>array['data','assignments',player_key] into destination from transfer_private.portal_records where kind='shared' and key='transferOrganization';
+  if destination is null or destination not in ('NvSP','NvEM','WaE','DRoN','ECKO') then destination:=null;end if;
+  if p->>'confirmedSeat' in ('Gold','Purple','Blue','White') then seat:=p->>'confirmedSeat';end if;
+ end if;
+ if current_status='Declined' and p->>'rejectionReasonCode' in ('no_seat','low_kills','low_profession','low_hq','low_participation','low_power','group_full','conflict','not_specified','other','requirements','placement','information') then
+  reason:=p->>'rejectionReasonCode';reason_text:=left(p->>'rejectionReasonText',1000);
+ end if;
+ return jsonb_build_object('server',p->>'server','transferGroup',p->>'group','status',current_status,
+  'approval',case when current_status in ('Approved','Transferred') then 'approved' when current_status='Declined' then 'declined' when current_status='Withdrawn' then 'withdrawn' else 'pending' end,
+  'destinationAlliance',destination,'confirmedSeat',seat,'rejectionReasonCode',reason,'rejectionReasonText',reason_text);
+end $$;
+revoke all on function transfer_private.applicant_messenger_details(text,jsonb) from public,anon,authenticated;
+
+-- Replace only the directory projection; preserve all deployed account/auth logic.
+do $patch$
+declare definition text; old_fragment text:=$old$'message',transfer_private.applicant_reference_message(p.payload)) order by lower(p.payload->>'name'),p.key)$old$; new_fragment text:=$new$'message',transfer_private.applicant_reference_message(p.payload)) || transfer_private.applicant_messenger_details(p.key,p.payload) order by lower(p.payload->>'name'),p.key)$new$;
+begin
+ definition:=pg_get_functiondef('public.nova_manual_accounts(text,jsonb)'::regprocedure);
+ if position(new_fragment in definition)>0 then return;end if;
+ if position(old_fragment in definition)=0 then raise exception 'Unexpected messenger directory definition; migration stopped';end if;
+ execute replace(definition,old_fragment,new_fragment);
+end $patch$;
+commit;
