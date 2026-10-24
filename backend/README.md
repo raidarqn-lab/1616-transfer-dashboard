@@ -17,3 +17,9 @@ Apply `alliance-guidelines.sql` to the existing active project. It extends the e
 `verify-alliance-guidelines.sql` checks alliance boundaries, draft privacy, publication, stale revisions, revoked access and applicant status using synthetic fixtures in a rolled-back transaction. No actual rules are seeded. Each document stores English, Spanish, Portuguese, French, Arabic, Vietnamese, Korean and German copies. Drafts may be incomplete; publishing requires introduction and rules in every language. Applicants receive the published language map and display their selected language, with RTL layout for Arabic.
 
 Apply `public-alliance-rules.sql` to expose only published alliance translations and publication time at the public read-only RPC. This supports shareable rules pages without applicant codes. Drafts, audit records, author identities and application data remain private. The hub link opens the corresponding public page.
+
+### Applicant confirmation codes
+
+`applicant-confirmation-codes.sql` adds private, idempotent code issuance for imported applicants. Admin/lead portal saves issue a strong random confirmation code when a player becomes an applicant without an existing application. The existing intake trigger links it to the same player; commit responses include the final record and revision. Prospects, general contacts, outbound, deleted and merged records are excluded. Existing application IDs/codes are retained; stale links require review instead of automatic replacement.
+
+The public application payload contains only applicant-editable fields. Codes remain in the existing private Application details section; no codes are sent automatically. `verify-applicant-confirmation-codes.sql` runs the migration, verifies backfill preservation, lookup/status, retry safety, future conversion, editing and permissions, then rolls back.
