@@ -18,7 +18,7 @@ begin
  if exists(select 1 from nova_evidence_private.member_links where account_id=aid) then raise exception 'Messenger got member access';end if;
  result:=public.nova_manual_accounts('hub-login-search',jsonb_build_object('staffEmail',owner_email,'query','messenger_transaction_only'));
  if result->'accounts'->0->>'accountType' is distinct from 'applicant_messenger' then raise exception 'Owner search missing messenger';end if;
- payload:=jsonb_build_object('name','Messenger Fixture Applicant','notes','PRIVATE NOTES MUST NEVER APPEAR','history',jsonb_build_array('PRIVATE HISTORY'),
+ payload:=jsonb_build_object('name','Messenger Fixture Applicant','server',1626,'group','Glass House 2','status','Pending','notes','PRIVATE NOTES MUST NEVER APPEAR','history',jsonb_build_array('PRIVATE HISTORY'),
   'rawApplication',jsonb_build_object('private','RAW APPLICATION'), 'applicationId','fixture-app',
   'applicationConfirmations',jsonb_build_array(jsonb_build_object('applicationId','fixture-app','confirmationCode','1616-FIXTURE-12345678')));
  insert into transfer_private.portal_records(kind,key,revision,payload) values('players',fixture,1,payload),
@@ -30,13 +30,27 @@ begin
  select count(*) into n from jsonb_array_elements(result->'applicants') x where x->>'id' like fixture||'%';
  if n<>1 then raise exception 'Directory included non-applicants: %',n;end if;
  for item in select value from jsonb_array_elements(result->'applicants') loop
-  if item - array['id','name','message'] <> '{}'::jsonb then raise exception 'Private fields in response';end if;
+  if item - array['id','name','message','server','transferGroup','status','approval','destinationAlliance','confirmedSeat','rejectionReasonCode','rejectionReasonText'] <> '{}'::jsonb then raise exception 'Private fields in response';end if;
  end loop;
  if result::text like '%PRIVATE NOTES%' or result::text like '%PRIVATE HISTORY%' or result::text like '%RAW APPLICATION%' then raise exception 'Private information leaked';end if;
  select value into item from jsonb_array_elements(result->'applicants') where value->>'id'=fixture;
  if item->>'message' is distinct from 'Hi Messenger Fixture Applicant, to edit or check the status of your application, you can go to www.join1616.com and use the confirmation code that you received when applying to transfer to the server. For your reference, this code is 1616-FIXTURE-12345678' then raise exception 'Message wording or code incorrect';end if;
  if transfer_private.applicant_reference_message(payload-'applicationConfirmations') is not null then raise exception 'Invented absent code';end if;
  if transfer_private.applicant_reference_message((payload-'applicationId')||jsonb_build_object('applicationConfirmations',jsonb_build_array(jsonb_build_object('confirmationCode','1616-FIXTURE-12345678'),jsonb_build_object('confirmationCode','1616-SECOND-12345678')))) is not null then raise exception 'Ambiguous code selected';end if;
+
+ if item->>'server' is distinct from '1626' or item->>'transferGroup' is distinct from 'Glass House 2' or item->>'status' is distinct from 'Pending' then raise exception 'Basic applicant details mismatch';end if;
+ if item->>'destinationAlliance' is not null or item->>'confirmedSeat' is not null then raise exception 'Invented allocation';end if;
+ insert into transfer_private.portal_records(kind,key,revision,payload) values('shared','transferOrganization',1,jsonb_build_object('data',jsonb_build_object('assignments',jsonb_build_object(fixture,'WaE'))))
+ on conflict(kind,key) do update set payload=jsonb_set(coalesce(transfer_private.portal_records.payload,'{}'),'{data}',coalesce(transfer_private.portal_records.payload->'data','{}')||jsonb_build_object('assignments',coalesce(transfer_private.portal_records.payload#>'{data,assignments}','{}')||jsonb_build_object(fixture,'WaE')));
+ item:=transfer_private.applicant_messenger_details(fixture,payload||'{"status":"Approved","confirmedSeat":"Blue","seat":"Gold","rejectionReasonCode":"other","rejectionReasonText":"STALE REASON"}');
+ if item->>'destinationAlliance' is distinct from 'WaE' or item->>'confirmedSeat' is distinct from 'Blue' or item->>'approval' is distinct from 'approved' or item->>'rejectionReasonText' is not null then raise exception 'Approval allocation mismatch';end if;
+ update transfer_private.portal_records as rec set payload=rec.payload||'{"status":"Declined","confirmedSeat":"Blue","rejectionReasonCode":"low_kills","rejectionReasonText":"The exact saved applicant-facing message."}' where kind='players' and key=fixture;
+ result:=public.nova_manual_accounts('applicant-messenger-list',jsonb_build_object('token',login->>'token'));
+ select value into item from jsonb_array_elements(result->'applicants') where value->>'id'=fixture;
+ if item->>'rejectionReasonText' is distinct from 'The exact saved applicant-facing message.' or item->>'destinationAlliance' is not null or item->>'confirmedSeat' is not null or item->>'approval' is distinct from 'declined' then raise exception 'Rejected application mismatch';end if;
+ item:=transfer_private.applicant_messenger_details(fixture,payload||'{"status":"Declined","rejectionReasonCode":"internal_only","rejectionReasonText":"PRIVATE DECISION"}');
+ if item->>'rejectionReasonText' is not null then raise exception 'Unknown reason exposed';end if;
+ if has_function_privilege('anon','transfer_private.applicant_messenger_details(text,jsonb)','EXECUTE') then raise exception 'Public detail helper access';end if;
  oldlogin:=login;
  perform public.nova_manual_accounts('hub-login-save',jsonb_build_object('staffEmail',owner_email,'accountType','applicant_messenger','accountId',aid,'displayName','Renamed Messenger','username','messenger_transaction_only','hash',repeat('c',64),'salt',repeat('b',64),'reason','Reset test login'));
  result:=public.nova_manual_accounts('applicant-messenger-list',jsonb_build_object('token',oldlogin->>'token'));

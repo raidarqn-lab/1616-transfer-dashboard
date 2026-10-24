@@ -3,13 +3,14 @@ import {readFileSync} from 'node:fs';
 import {createManualAuthHandler} from '../deployment/manual-accounts/auth-handler.js';
 import {firebaseVerifier} from '../firebase-verifier.js';
 import {matchingApplicants} from '../applicant-messenger-view.js';
+import {applicantDetails,directoryRow} from '../applicant-messenger-details.js';
 import {staffApplicantDirectory} from '../applicant-messenger-staff.js';
 const token='a'.repeat(64);
 test('staff messenger directory allows existing leads and admins and projects only active applicant message fields',()=>{
  const player={id:1,name:'Example',notes:'private',history:['private'],applicationConfirmations:[{confirmationCode:'1616-DEMO-12345678'}]};
  for(const role of ['admin','lead']){
   const result=staffApplicantDirectory({role,players:[player,...[{deleted:true},{general:true},{prospect:true},{transferDirection:'outbound'},{mergedInto:2},{status:'Transferred'},{status:'Withdrawn'}].map(flags=>({...player,...flags}))]});
-  assert.equal(result.applicants.length,1);assert.deepEqual(Object.keys(result.applicants[0]),['id','name','message']);assert.match(result.applicants[0].message,/1616-DEMO-12345678/);
+  assert.equal(result.applicants.length,1);assert.deepEqual(Object.keys(result.applicants[0]),['id','name','message','server','transferGroup','status','approval','destinationAlliance','confirmedSeat','rejectionReasonCode','rejectionReasonText']);assert.match(result.applicants[0].message,/1616-DEMO-12345678/);
  }
  for(const role of ['support','applicant_messenger',null])assert.throws(()=>staffApplicantDirectory({role,players:[player]}),/access is required/);
 });
@@ -39,4 +40,14 @@ test('search supports case, accents and multilingual names without searching hid
 });
 test('main portal respects restricted landing page rather than bootstrapping the full workspace',()=>{
  const html=readFileSync(new URL('../live.html',import.meta.url),'utf8');assert.match(html,/if\(!LIVE.user\)\{location.replace\(LIVE.landingPage\|\|'\.\/sign-in.html'\);return;\}const BOOT=await LIVE.api/);
+});
+
+test('messenger details match applicant-facing decisions and never infer allocation from preferences',()=>{
+ const p={name:'Fixture',server:1626,group:'Glass House 2',status:'Approved',confirmedSeat:'Blue',seat:'Gold',preference:'NvSP',rejectionReasonCode:'other',rejectionReasonText:'Stale private decision',notes:'PRIVATE'};
+ const detail=applicantDetails(p,'WaE');assert.equal(detail.server,'1626');assert.equal(detail.transferGroup,'Glass House 2');assert.equal(detail.destinationAlliance,'WaE');assert.equal(detail.confirmedSeat,'Blue');assert.equal(detail.approval,'approved');assert.equal(detail.rejectionReasonText,null);
+ const none=applicantDetails({...p,confirmedSeat:''},'unknown');assert.equal(none.destinationAlliance,null);assert.equal(none.confirmedSeat,null);
+ const declined=applicantDetails({...p,status:'Declined',rejectionReasonText:'The exact saved applicant message.'},'WaE');assert.equal(declined.rejectionReasonText,'The exact saved applicant message.');assert.equal(declined.destinationAlliance,null);assert.equal(declined.confirmedSeat,null);assert.equal(declined.approval,'declined');
+ assert.equal(applicantDetails({...p,status:'Declined',rejectionReasonCode:'internal_only'},'WaE').rejectionReasonText,null);
+ assert.equal(applicantDetails({...p,status:'Unknown'},'WaE').status,'Unconfirmed');
+ const safe=directoryRow({id:1,name:'Fixture',message:'Hello',...detail,notes:'PRIVATE',history:['PRIVATE'],contact:'PRIVATE',extra:'PRIVATE'});assert.equal(JSON.stringify(safe).includes('PRIVATE'),false);
 });

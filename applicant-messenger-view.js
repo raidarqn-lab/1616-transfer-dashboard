@@ -1,3 +1,4 @@
+import {directoryRow,rejectionFallback} from './applicant-messenger-details.js';
 export const searchName=value=>String(value||'').normalize('NFKD').replace(/\p{M}/gu,'').toLocaleLowerCase().trim();
 export function matchingApplicants(applicants,query){const needle=searchName(query);return applicants.filter(p=>searchName(p.name).includes(needle));}
 export function mountApplicantMessenger({root,load,signOut,clipboard=navigator.clipboard}){
@@ -7,15 +8,21 @@ export function mountApplicantMessenger({root,load,signOut,clipboard=navigator.c
  function render(){
   list.replaceChildren();const rows=matchingApplicants(applicants,search.value);
   status.textContent=rows.length?`${rows.length} applicant${rows.length===1?'':'s'}${search.value.trim()?` matching “${search.value.trim()}”`:''}`:search.value.trim()?'No applicants match this name.':'No applicants yet.';
-  for(const p of rows){const row=document.createElement('li'),name=document.createElement('strong');name.textContent=p.name;row.append(name);
-   if(p.message){const button=document.createElement('button');button.type='button';button.textContent='Copy message';button.setAttribute('aria-label',`Copy message for ${p.name}`);button.disabled=copying;button.onclick=()=>copy(p.id,button);row.append(button);}
-   else{const hint=document.createElement('span');hint.className='unavailable';hint.textContent='Message unavailable · ask a transfer lead';row.append(hint);}list.append(row);
+  for(const p of rows){const row=document.createElement('li'),name=document.createElement('strong'),heading=document.createElement('div');heading.className='applicant-heading';name.textContent=p.name;heading.append(name);row.append(heading);
+   if(p.message){const button=document.createElement('button');button.type='button';button.textContent='Copy message';button.setAttribute('aria-label',`Copy message for ${p.name}`);button.disabled=copying;button.onclick=()=>copy(p.id,button);heading.append(button);}
+   else{const hint=document.createElement('span');hint.className='unavailable';hint.textContent='Message unavailable · ask a transfer lead';heading.append(hint);}
+   const facts=document.createElement('dl');facts.className='applicant-facts';
+   for(const [label,value] of [['Server',p.server||'Not provided'],['Transfer group',p.transferGroup||'No group assigned'],['Application status',p.status==='Declined'?'Rejected':p.status],['Approval',{approved:'Approved',declined:'Not approved',withdrawn:'Withdrawn',pending:'Pending'}[p.approval]],['Destination alliance',p.destinationAlliance||'Not selected yet'],['Confirmed seat',p.confirmedSeat||'Not confirmed yet']]){
+    const box=document.createElement('div'),term=document.createElement('dt'),detail=document.createElement('dd');term.textContent=label;detail.textContent=value;box.append(term,detail);facts.append(box);
+   }row.append(facts);
+   if(p.status==='Declined'){const reason=document.createElement('section'),label=document.createElement('strong'),text=document.createElement('p');reason.className='applicant-rejection';label.textContent='Reason for rejection';text.textContent=p.rejectionReasonText?.trim()||rejectionFallback[p.rejectionReasonCode]||'Contact the transfer team for the reason.';reason.append(label,text);row.append(reason);}
+   list.append(row);
   }
  }
  async function current(){
   const result=await load();if(!Array.isArray(result?.applicants))throw Error('Unable to load the applicant list.');
   // Retain only the contract fields, even if a future response adds metadata.
-  return result.applicants.map(p=>({id:String(p.id),name:String(p.name||''),message:typeof p.message==='string'?p.message:null}));
+  return result.applicants.map(directoryRow);
  }
  async function reload(){const request=++generation;refresh.disabled=true;try{const rows=await current();if(request!==generation||closed)return;applicants=rows;render();}catch(error){if(request!==generation||closed)return;clear();status.textContent=error.message;}finally{if(request===generation)refresh.disabled=false;}}
  function manualCopy(text,name){const dialog=document.createElement('dialog');dialog.setAttribute('aria-label',`Message for ${name}`);const heading=document.createElement('h2');heading.textContent='Copy applicant message';const hint=document.createElement('p');hint.textContent='Select and copy this message to paste it into your conversation.';const input=document.createElement('textarea');input.readOnly=true;input.value=text;input.setAttribute('aria-label','Applicant message');const close=document.createElement('button');close.type='button';close.textContent='Close';close.onclick=()=>dialog.close();dialog.append(heading,hint,input,close);root.append(dialog);dialog.addEventListener('close',()=>{dialog.remove();search.focus();});dialog.showModal();input.focus();input.select();}
