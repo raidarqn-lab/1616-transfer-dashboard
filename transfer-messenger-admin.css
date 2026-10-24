@@ -24,3 +24,7 @@
 .transfer-messenger-dialog button:disabled{opacity:.5;cursor:wait}
 .transfer-messenger-dialog [data-result]{white-space:pre-line;overflow-wrap:anywhere}
 @media(max-width:600px){.transfer-messenger-admin .hub-search{align-items:stretch;flex-direction:column}.transfer-messenger-dialog .hub-card{padding:18px}}
+
+#transfer-mock .transfer-messenger-admin button{padding:10px 16px;border:1px solid #d8c4b0;border-radius:8px;background:#fffcf6;color:#624735;font:inherit;cursor:pointer}
+#transfer-mock .transfer-messenger-admin button.primary{background:#a82332;border-color:#a82332;color:#fffaf2}
+#transfer-mock .transfer-messenger-admin button:disabled{opacity:.5;cursor:wait}
