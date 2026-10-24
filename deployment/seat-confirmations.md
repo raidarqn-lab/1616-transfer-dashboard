@@ -2,7 +2,7 @@
 
 `seat-confirmations.html` implements the selected Directory rows layout alongside Applicant Messenger. Both pages share the existing `applicant_messenger` role. Transfer Hub administrators and leads also have access; support and member accounts do not gain access.
 
-Rows show name, server, current/original alliance, transfer group, application status, confirmed colour, and confirmer. Gold, Purple, Blue and White use chair icons. Unconfirmed rows are yellow; saved confirmations are green with a trailing check. All/Unconfirmed/Confirmed filters and name search operate locally. Controls and messages use the existing eight languages, including RTL Arabic.
+Rows show name, server, current/original alliance, transfer group, assigned group transfer lead, application status, confirmed colour, and confirmer. Gold, Purple, Blue and White use chair icons. Unconfirmed rows are yellow; saved confirmations are green with a trailing check. All/Unconfirmed/Confirmed filters and name search operate locally. Controls and messages use the existing eight languages, including RTL Arabic.
 
 The confirmer list contains active Messenger accounts and Transfer Hub administrators/leads. Messenger names are assigned in Transfer Hub → Settings → Team Access. **Save display name only** updates the dropdown name without resetting credentials or ending sessions. Historical confirmation names remain preserved. Existing confirmations remain green even if their original confirmer is no longer active; an active confirmer must be selected to change them.
 
@@ -25,3 +25,5 @@ Saves validate the current authenticated actor, active selected confirmer, four 
 `node --test tests/*.test.mjs` covers role/auth argument isolation, translation completeness, filtering, privacy projection and existing portal behavior. Run `tests/seat-confirmations-postgres.mjs` with `PGLITE_MODULE` pointing to PGlite for transactional tests of revocation, confirmed-by validation, capacity, audit attribution, stale edits, repeated saves and migration idempotence. The existing `tests/applicant-messenger-postgres.mjs` also remains required.
 
 Rollback the frontend and auth bundle to the preceding revision if needed. The private database functions can remain installed without being exposed by the prior auth handler. Do not erase existing seat confirmations or audit history.
+
+To add group lead names to an existing installation, apply `backend/seat-confirmations-transfer-lead.sql` and publish the frontend. This exposes only the assigned player name from `transferOrganization.data.groupLeads`; deleted, merged, moved or ambiguous leaders show as not assigned. No auth bundle update is needed.
