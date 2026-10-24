@@ -1,3 +1,4 @@
+import {setupAllianceGuidelines} from './alliance-guidelines.js?v=1';
 import {setupSeasonEvents} from './season-events.js?v=season-availability-20260930';
 import {createWebsiteProfile} from './website-profile.js?v=avatars-20260928';
 import './site-tutorial.js?v=20260928';
@@ -16,6 +17,7 @@ const duelNav=document.createElement('button');duelNav.type='button';duelNav.dat
 setupShopCalendar({call:hubCall});
 setupStorm({call:hubCall});
 setupSeasonEvents({call:hubCall});
+setupAllianceGuidelines({call:hubCall});
 const sections=[...document.querySelectorAll('.hub-section')];
 const nav=[...document.querySelectorAll('[data-hub-view]')];
 let access=null,staff=[],selectedEmail='',content=[];
@@ -35,6 +37,7 @@ function show(view){
  nav.forEach(button=>button.classList.toggle('active',button.dataset.hubView===view));
  history.replaceState(null,'','#'+view);document.title=`Alliance Hub · ${view[0].toUpperCase()+view.slice(1)}`;
  if(['records','roster','vs'].includes(view))window.dispatchEvent(new CustomEvent('nova-records-open',{detail:{roster:view!=='records',duel:view==='vs'}}));
+ if(view==='guidelines')window.dispatchEvent(new Event('nova-guidelines-open'));
  if(view==='season')window.dispatchEvent(new Event('nova-season-open'));
  if(view==='storm')window.dispatchEvent(new Event('nova-storm-open'));
  if(view==='trains')window.dispatchEvent(new Event('nova-trains-open'));
