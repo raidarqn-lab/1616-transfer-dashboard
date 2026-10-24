@@ -3,7 +3,16 @@ import {readFileSync} from 'node:fs';
 import {createManualAuthHandler} from '../deployment/manual-accounts/auth-handler.js';
 import {firebaseVerifier} from '../firebase-verifier.js';
 import {matchingApplicants} from '../applicant-messenger-view.js';
+import {staffApplicantDirectory} from '../applicant-messenger-staff.js';
 const token='a'.repeat(64);
+test('staff messenger directory allows existing leads and admins and projects only active applicant message fields',()=>{
+ const player={id:1,name:'Example',notes:'private',history:['private'],applicationConfirmations:[{confirmationCode:'1616-DEMO-12345678'}]};
+ for(const role of ['admin','lead']){
+  const result=staffApplicantDirectory({role,players:[player,...[{deleted:true},{general:true},{prospect:true},{transferDirection:'outbound'},{mergedInto:2},{status:'Transferred'},{status:'Withdrawn'}].map(flags=>({...player,...flags}))]});
+  assert.equal(result.applicants.length,1);assert.deepEqual(Object.keys(result.applicants[0]),['id','name','message']);assert.match(result.applicants[0].message,/1616-DEMO-12345678/);
+ }
+ for(const role of ['support','applicant_messenger',null])assert.throws(()=>staffApplicantDirectory({role,players:[player]}),/access is required/);
+});
 const request=(body,headers={})=>new Request('https://example.test',{method:'POST',headers:{Origin:'https://portal.join1616.com','Content-Type':'application/json',...headers},body:JSON.stringify(body)});
 test('directory takes identity only from the authenticated session header',async()=>{
  const handler=createManualAuthHandler({rpc:async(action,args)=>{assert.equal(action,'applicant-messenger-list');assert.deepEqual(args,{token});return {applicants:[{id:'1',name:'Example',message:'Hello'}]};}});

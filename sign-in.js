@@ -3,7 +3,7 @@ import { firebaseConfig } from './firebase-config.js';
 import { createPortalTransport } from './supabase-transport.mjs';
 const button = document.getElementById('sign-in');
 const manualForm=document.getElementById('manual-sign-in');
-manualForm.onsubmit=async event=>{event.preventDefault();const submit=manualForm.querySelector('button');submit.disabled=true;report('Signing in…');try{const session=await loginManual(manualForm.elements.username.value.trim().toLowerCase(),manualForm.elements.password.value);location.replace(session.user.role==='applicant_messenger'?'./applicant-messenger.html':(returnTarget?.startsWith('/applicant-messenger.html')?'./alliance-hub.html':returnTarget||'./alliance-hub.html'));}catch(error){report(error.message,true);}finally{manualForm.elements.password.value='';submit.disabled=false;}};
+manualForm.onsubmit=async event=>{event.preventDefault();const submit=manualForm.querySelector('button');submit.disabled=true;report('Signing in…');try{const session=await loginManual(manualForm.elements.username.value.trim().toLowerCase(),manualForm.elements.password.value);location.replace(session.user.role==='applicant_messenger'?'./applicant-messenger.html':(returnTarget||'./alliance-hub.html'));}catch(error){report(error.message,true);}finally{manualForm.elements.password.value='';submit.disabled=false;}};
 const signOutButton = document.getElementById('sign-out');
 const status = document.getElementById('status');
 const identity = document.getElementById('identity');
@@ -44,7 +44,7 @@ if (!['http:', 'https:'].includes(location.protocol)) {
     const provider = new sdk.GoogleAuthProvider();
     provider.setCustomParameters({ prompt: 'select_account' });
     sdk.onAuthStateChanged(auth, user => {
-      if(user&&returnTarget){location.replace(returnTarget.startsWith('/applicant-messenger.html')?'./alliance-hub.html':returnTarget);return;}
+      if(user&&returnTarget){location.replace(returnTarget);return;}
       signedIn.hidden = !user;
       document.getElementById('open-portal').hidden = !user;
       button.hidden = !!user;

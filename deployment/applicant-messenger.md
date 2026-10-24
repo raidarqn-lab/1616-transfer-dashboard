@@ -25,3 +25,5 @@ Sign in at `https://portal.join1616.com/sign-in.html`. This account type goes di
 ## Rollback
 
 Restore the prior `nova-auth` bundle and frontend first. For an urgent shutdown, disable Applicant Messenger accounts and bump their versions; existing leadership/member accounts are unaffected. Revert the two modified database functions using the saved pre-change definitions. Retain the new columns and constraint while any messenger accounts exist; never drop those accounts or cascade-delete sessions as part of rollback. No automatic grant or account conversion occurs during deployment.
+
+Transfer Hub administrators and leads can open **Applicant Messenger** from the sidebar. Their existing staff session loads the authorized workspace and projects the same active applicant names/messages into the shared directory component. Restricted helper accounts still use only the limited `applicant-messenger-list` endpoint. Staff have a return link to Transfer Hub; helpers do not.
