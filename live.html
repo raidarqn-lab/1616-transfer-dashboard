@@ -1347,7 +1347,7 @@ adminSettingsSections.access.append(adminAccessPanel);adminSettingsSections.colu
 const adminSettingsHeading=document.createElement('header');adminSettingsHeading.className='admin-settings-heading';adminSettingsHeading.innerHTML='<h2>Settings</h2><p>Administrator controls for the transfer workspace.</p>';
 adminSettingsPanel.append(adminSettingsHeading,adminSettingsTabs,...Object.values(adminSettingsSections));
 if(BOOT.role==='admin'){
- const {mountTransferMessengerAdmin}=await import('./transfer-messenger-admin.js?v=7');
+ const {mountTransferMessengerAdmin}=await import('./transfer-messenger-admin.js?v=8');
  mountTransferMessengerAdmin({accessPanel:adminAccessPanel,user:LIVE.user});
 }
 

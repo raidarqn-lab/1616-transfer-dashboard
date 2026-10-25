@@ -1,4 +1,4 @@
-import {mountHelperAccessMessage} from './messenger-access-message.js?v=3';
+import {mountHelperAccessMessage} from './messenger-access-message.js?v=4';
 const el=(tag,text,className)=>{const node=document.createElement(tag);if(text)node.textContent=text;if(className)node.className=className;return node;};
 export function setupManualAccounts({call,panel=document.getElementById('admin-category-members'),messengerOnly=false}){
  panel.replaceChildren();

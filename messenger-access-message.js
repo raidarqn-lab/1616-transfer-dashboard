@@ -2,7 +2,7 @@ const defaultTiming='We start immediately after reset tomorrow. Please aim to fi
 export function helperAccessMessage({username,displayName,password='',timing=defaultTiming}){
  const credentials=`Username: ${username}\nPassword: ${password||'[INSERT PASSWORD]'}`;
  const fence='`'.repeat(Math.max(3,...(credentials.match(/`+/g)||[]).map(run=>run.length+1)));
- return `You now have access to 1616 transfer support!
+ return `Welcome to 1616 transfer support!
 
 LOGIN
 https://portal.join1616.com/seat-confirmations.html
@@ -15,18 +15,18 @@ Enter your credentials and click “Sign in with password”. Choose your langua
 You should have TWO TABS: Seat confirmations and Applicant Messenger.
 
 SEAT CONFIRMATIONS
-Verify seat colours to see how many players and complete groups will fit. Contacting someone does NOT mean their application is approved.
-1. Select Unconfirmed and find a player.
-2. Click Copy message and send it in-game. It requests their colour and screenshot, and includes their status code.
-3. Confirm they understand transfer seat colours: Gold, Purple, Blue, or White/Gray. Check the screenshot—do not guess.
-4. Click Upload image beside that player.
-5. Select the verified colour (White for White/Gray), choose your display name, and click Save.
+Check seat colours to see which players and groups fit. Contacting someone does NOT mean approval.
+1. Use Available to find a player, then click Claim BEFORE contacting them. Your name shows who is handling it so we avoid duplicate outreach.
+2. Click Copy message and send it privately in-game, then click Message sent (Awaiting reply).
+3. Verify Gold, Purple, Blue or White/Gray from their screenshot—never guess. Click Upload image.
+4. Select the colour (White for White/Gray), choose your display name under Confirmed by, and Save.
 
-Green + checkmark = confirmed; yellow = unconfirmed. Uploading alone does not confirm a seat. Correct mistakes and save again. View image → Replace image updates screenshots.
-Accuracy is VERY important: wrong colours can stop entire groups fitting their server’s seats. Ask me or the listed Transfer lead if unsure.
+Filters: Mine = your people; Available = unclaimed; Awaiting reply = waiting. Cannot continue? Click Release. Already contacted someone? Claim them and mark Message sent. Ask me to reassign if needed.
+Green + checkmark = confirmed; yellow = unconfirmed. Uploading alone does not confirm. Correct errors and save again; View image → Replace image replaces screenshots.
+Accuracy is VERY important: wrong colours can stop whole groups fitting. Ask me or the Transfer lead if unsure.
 
 APPLICANT MESSENGER
-Give applicants their code to access their application status. Find the correct player, click Copy message, and send it privately in-game. The prepared message includes their individual confirmation code and join1616.com, where they can check their status and assigned alliance, if accepted, at any time.
+Find the player, click Copy message and send it privately to them. It includes their code and join1616.com to check application status and their assigned alliance, if accepted.
 
 STRICTLY CONFIDENTIAL
 Keep all applicant information, screenshots, codes and logins confidential. Do not discuss applicants with anyone else or confirm/deny that they applied or their application status—even if asked. Send a player’s message only to that player. Refer others’ questions to me.
