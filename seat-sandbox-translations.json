@@ -1,4 +1,11 @@
 {
+  "THP":["THP", "THP", "THP", "THP", "THP", "THP"],
+  "Kills":["Bajas", "Abates", "Élim.", "Kills", "처치", "Hạ gục"],
+  "HQ":["HQ", "HQ", "HQ", "HQ", "HQ", "HQ"],
+  "Prof":["Prof", "Prof", "Prof", "Prof", "Prof", "Prof"],
+  "Total hero power":["Poder total de héroes", "Poder total dos heróis", "Puissance totale des héros", "Gesamte Heldenstärke", "총 영웅 전투력", "Tổng lực chiến anh hùng"],
+  "HQ level":["Nivel de HQ", "Nível do HQ", "Niveau du QG", "HQ-Level", "본부 레벨", "Cấp HQ"],
+  "Profession level":["Nivel de profesión", "Nível da profissão", "Niveau de profession", "Berufslevel", "직업 레벨", "Cấp nghề"],
   "No transfer group":["Sin grupo de traslado", "Sem grupo de transferência", "Aucun groupe de transfert", "Keine Transfergruppe", "이전 그룹 없음", "Không có nhóm chuyển server"],
   "Seat sandbox":["Simulador de plazas","Simulador de vagas","Simulation des places","Platzsimulation","좌석 시뮬레이션","Mô phỏng suất chuyển"],
   "Group decision room":["Sala de decisiones de grupo","Sala de decisões de grupo","Salle de décision des groupes","Gruppenentscheidungen","그룹 결정실","Phòng quyết định nhóm"],

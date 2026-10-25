@@ -39,13 +39,18 @@
 #transfer-mock .sandbox-roster-group{margin-top:4px}
 #transfer-mock .sandbox-roster-group>header{display:flex;align-items:center;gap:6px;padding:4px 6px;background:#eee3d4;font-size:11px;border-radius:3px}
 #transfer-mock .sandbox-roster-group>header span{font-size:10px;color:#786759}
-#transfer-mock .sandbox-member{display:grid;grid-template-columns:12px minmax(90px,1fr) 68px 65px 56px;gap:5px;align-items:center;padding:3px 5px;border-bottom:1px solid #eadfce;min-height:31px;font-size:11px;line-height:1.25;overflow-wrap:anywhere}
+#transfer-mock .sandbox-member{display:grid;grid-template-columns:12px minmax(0,1fr) 56px;gap:5px;align-items:center;padding:3px 5px;border-bottom:1px solid #eadfce;height:31px;min-height:31px;font-size:11px;line-height:1.25;overflow-wrap:anywhere}
 #transfer-mock .sandbox-member:nth-child(odd){background:#f7f2e9}
 #transfer-mock .sandbox-member[draggable="true"]{cursor:grab;user-select:none}
 #transfer-mock .sandbox-member[draggable="true"]:active{cursor:grabbing}
-#transfer-mock .sandbox-player{display:flex;gap:3px 7px;align-items:baseline;flex-wrap:wrap;min-width:0}
-#transfer-mock .sandbox-player strong{font-weight:600;font-size:12px}
+#transfer-mock .sandbox-player{display:grid;gap:1px;min-width:0}
+#transfer-mock .sandbox-player strong{font-weight:600;font-size:12px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 #transfer-mock .sandbox-player small{font-size:10px;color:#786759;white-space:nowrap}
+#transfer-mock .sandbox-identity{display:flex;align-items:baseline;gap:6px;min-width:0;white-space:nowrap;line-height:12px;height:12px}
+#transfer-mock .sandbox-identity small{overflow:hidden;text-overflow:ellipsis;min-width:0}
+#transfer-mock .sandbox-identity .sandbox-seat{margin-left:auto;flex-shrink:0;font-size:10px;line-height:10px}
+#transfer-mock .sandbox-stats{display:flex;align-items:center;justify-content:space-between;gap:5px;font-size:10px;line-height:11px;white-space:nowrap;font-variant-numeric:tabular-nums}
+#transfer-mock .sandbox-stat-label{color:#786759;font-size:9px}
 #transfer-mock .sandbox-drag{color:#9b8b79;font-size:15px;user-select:none}
 #transfer-mock .is-accepted .sandbox-drag{color:#537345;font-size:12px}
 #transfer-mock .sandbox-player-status,#transfer-mock .sandbox-locked{font-size:10px;color:#786759}
@@ -63,5 +68,5 @@
 .seat-sandbox-dialog label{margin:15px 0}
 .seat-sandbox-dialog footer{justify-content:flex-end;margin-top:15px}
 .seat-sandbox-dialog [data-error]{color:#ad0037}
-@media(max-width:1000px){#transfer-mock .sandbox-member{grid-template-columns:10px minmax(80px,1fr) 62px 50px}#transfer-mock .sandbox-player-status{display:none}}
-@media(max-width:650px){#transfer-mock .seat-sandbox{padding:10px}#transfer-mock .sandbox-board{grid-template-columns:minmax(0,1fr)}#transfer-mock .sandbox-lane{max-height:45vh}#transfer-mock .sandbox-limits{grid-template-columns:1fr 1fr}#transfer-mock .sandbox-member button{min-height:30px}#transfer-mock .sandbox-toolbar{width:100%}}
+@media(max-width:1000px){#transfer-mock .sandbox-member{grid-template-columns:10px minmax(0,1fr) 50px}#transfer-mock .sandbox-player-status{display:none}}
+@media(max-width:650px){#transfer-mock .seat-sandbox{padding:10px}#transfer-mock .sandbox-board{grid-template-columns:minmax(0,1fr)}#transfer-mock .sandbox-lane{max-height:45vh}#transfer-mock .sandbox-limits{grid-template-columns:1fr 1fr}#transfer-mock .sandbox-member{height:37px}#transfer-mock .sandbox-member button{min-height:30px}#transfer-mock .sandbox-toolbar{width:100%}}
