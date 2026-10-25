@@ -20,6 +20,7 @@ try{
  await db.exec(await read('backend/seat-confirmations-transfer-lead.sql'));await db.exec(await read('backend/seat-confirmations-transfer-lead.sql'));
  await db.exec(await read('backend/seat-confirmations-message.sql'));await db.exec(await read('backend/seat-confirmations-message.sql'));
  await db.exec(await read('backend/seat-confirmations-images.sql'));await db.exec(await read('backend/seat-confirmations-images.sql'));
+ await db.exec(await read('backend/seat-confirmations-outreach.sql'));await db.exec(await read('backend/seat-confirmations-outreach.sql'));
  await db.exec(await read('backend/messenger-admin-list.sql'));await db.exec(await read('backend/messenger-admin-list.sql'));
  const call=async(action,args)=>(await db.query('select public.nova_manual_accounts($1,$2::jsonb) as data',[action,JSON.stringify(args)])).rows[0].data;
  const account=await call('hub-login-save',{staffEmail:'owner@test.invalid',accountType:'applicant_messenger',displayName:'Helper name',username:'fixture_helper',hash:'a'.repeat(64),salt:'b'.repeat(64),reason:'Transactional verification'});
@@ -30,7 +31,7 @@ try{
  for(const [key,changes] of [['player',{}],['approved',{status:'Approved'}],['declined',{status:'Declined'}],['prospect',{prospect:true}],['contact',{general:true}],['deleted',{deleted:true}],['merged',{mergedInto:'player'}],['withdrawn',{status:'Withdrawn'}],['transferred',{status:'Transferred'}],['outbound',{transferDirection:'outbound'}]])await db.query('insert into transfer_private.portal_records values ($1,$2,10,$3::jsonb)',['players',key,JSON.stringify({...base,...changes})]);
  await db.exec(`insert into transfer_private.portal_records values('shared','capacities',10,'{"data":{"Gold":1,"Purple":0,"Blue":2,"White":3}}'),('access','support@test.invalid',10,'{"name":"Support","role":"support","status":"active"}'),('access','lead@test.invalid',10,'{"name":"Lead","role":"lead","status":"active"}');`);
  let result=await call('seat-confirmations-list',{token});assert.equal(result.applicants.length,2);assert.equal(result.confirmers.length,3);assert.ok(!JSON.stringify(result).includes('PRIVATE'));assert.ok(!JSON.stringify(result).includes('@'));assert.ok(!JSON.stringify(result).includes('fixture_helper'));
- for(const row of result.applicants)assert.deepEqual(Object.keys(row).sort(),['id','name','message','server','currentAlliance','transferGroup','transferLead','status','confirmedSeat','confirmedBy','confirmerId','confirmedAt','revision','imageVersion'].sort());
+ for(const row of result.applicants)assert.deepEqual(Object.keys(row).sort(),['id','name','message','server','currentAlliance','transferGroup','transferLead','status','confirmedSeat','confirmedBy','confirmerId','confirmedAt','revision','imageVersion','outreach'].sort());
  assert.equal((await call('seat-confirmations-list',{staffEmail:'support@test.invalid'})).error,'access_denied');assert.equal((await call('seat-confirmations-list',{staffEmail:'attacker@test.invalid'})).error,'access_denied');assert.equal((await call('seat-confirmations-list',{staffEmail:'lead@test.invalid'})).applicants.length,2);
  // Group lead is a linked player, distinct from staff and confirmer identities.
  await db.query("insert into transfer_private.portal_records values('players','group-leader',10,$1::jsonb)",[JSON.stringify({...base,general:true,name:'Group leader',notes:'PRIVATE LEADER NOTES'})]);
@@ -75,8 +76,32 @@ try{
   assert.equal((await db.query("select has_table_privilege($1,'transfer_private.seat_images','SELECT') allowed",[role])).rows[0].allowed,false);
   assert.equal((await db.query("select has_function_privilege($1,'transfer_private.seat_image_action(text,jsonb,text,text)','EXECUTE') allowed",[role])).rows[0].allowed,false);
  }
+ // Claims share the global commit lock; a second caller cannot replace the first owner.
+ const outreach=(command,extra={})=>call('seat-outreach',{token,playerId:'player',command,...extra});
+ for(const staffEmail of ['support@test.invalid','attacker@test.invalid'])assert.equal((await outreach('claim',{token:undefined,staffEmail})).error,'access_denied');
+ assert.equal((await outreach('check')).error,'claim_required');
+ let claimed=await outreach('claim');assert.equal(claimed.applicant.outreach.ownerId,by);assert.equal(claimed.applicant.revision,10);
+ const claimVersion=claimed.applicant.outreach.version;
+ assert.equal((await outreach('claim')).applicant.outreach.version,claimVersion);
+ assert.equal((await outreach('claim',{token:undefined,staffEmail:'lead@test.invalid'})).error,'already_claimed');
+ assert.equal((await outreach('release',{token:undefined,staffEmail:'lead@test.invalid',version:claimVersion})).error,'already_claimed');
+ assert.equal((await outreach('reassign',{ownerId:by,version:claimVersion})).error,'access_denied');
+ assert.equal((await outreach('check')).ok,true);
+ assert.equal((await outreach('sent',{version:'stale'})).error,'outreach_changed');
+ const sent=await outreach('sent',{version:claimVersion});assert.equal(sent.applicant.outreach.status,'awaiting');
+ assert.equal((await outreach('release',{version:claimVersion})).error,'outreach_changed');
+ const leadId=(await call('seat-confirmations-list',{staffEmail:'lead@test.invalid'})).currentConfirmerId;
+ const assigned=await outreach('reassign',{token:undefined,staffEmail:'owner@test.invalid',version:sent.applicant.outreach.version,ownerId:leadId});
+ assert.equal(assigned.applicant.outreach.ownerId,leadId);assert.equal(assigned.applicant.outreach.status,'awaiting');
+ assert.equal((await outreach('check')).error,'claim_required');
+ assert.equal((await outreach('release',{token:undefined,staffEmail:'owner@test.invalid',version:assigned.applicant.outreach.version})).applicant.outreach,null);
+ assert.equal((await outreach('claim',{playerId:'deleted'})).error,'applicant_unavailable');
+ assert.equal((await call('seat-confirmations-list',{token})).canManageOutreach,false);
+ assert.equal((await call('seat-confirmations-list',{staffEmail:'owner@test.invalid'})).canManageOutreach,true);
+ for(const role of ['anon','authenticated'])assert.equal((await db.query("select has_table_privilege($1,'transfer_private.seat_outreach','SELECT') allowed",[role])).rows[0].allowed,false);
  const args={token,playerId:'player',seat:'Gold',confirmerId:by,revision:10,transactionId:'fixture-save-one',status:'Approved',notes:'ATTACK'};
  result=await call('seat-confirmations-save',args);assert.equal(result.ok,true);assert.equal(result.applicant.confirmedSeat,'Gold');assert.equal(result.applicant.transferLead,'Group leader');assert.equal(result.applicant.confirmedBy,'Helper name');assert.equal(result.applicant.revision,11);
+ assert.equal((await outreach('claim')).error,'already_confirmed');
  const payload=(await db.query("select payload from transfer_private.portal_records where key='player'")).rows[0].payload;assert.equal(payload.status,'Pending');assert.equal(payload.notes,'PRIVATE');assert.equal(payload.history.length,2);assert.equal(payload.seatConfirmedActor,by);
  assert.equal((await call('seat-confirmations-save',args)).alreadySaved,true);assert.equal((await call('seat-confirmations-save',{...args,transactionId:'fixture-stale'})).error,'record_changed');
  assert.equal((await call('seat-confirmations-save',{...args,confirmerId:'forged',transactionId:'fixture-forged'})).error,'invalid_confirmer');
