@@ -26,3 +26,7 @@ The bundle embeds `seat-sandbox-core.mjs` between BEGIN/END markers. The regress
 ## Version 1.0.40
 
 The seat viewer lists the same forecast members used by the capacity totals, by colour. Formal approvals and trial-only members have separate labels; overflow and unknown colours remain visible. Existing explicit whole-group selections are preserved. Merely having an accepted member no longer silently includes every unaccepted group member. Deploy the updated Edge Function before the frontend so removal of a trial selection from a partially accepted group is supported.
+
+## Version 1.0.57
+
+The applicant roster is one continuous list with every group expanded, groups ordered alphabetically and names ordered alphabetically within each group. Search retains the complete matching group. Group actions resolve their containing roster, and seat-viewer links focus that group in the list. This is a frontend-only update; no Edge Function deployment is needed.
