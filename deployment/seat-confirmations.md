@@ -55,3 +55,13 @@ Apply `backend/messenger-admin-list.sql` after the existing account/seat migrati
 Team Access → Applicant Messenger automatically lists active and disabled messenger accounts. The owner can add accounts, edit display names, reset passwords/change usernames, disable or restore access, and copy individual access messages. The directory returns only account ID, display name, username, account type, leadership flag and active/disabled state. It never returns password material, applicant records or contact details. Requests take the owner identity only from the verified session.
 
 The copied invitation explicitly identifies the two tabs, explains each workflow, and requires confidentiality of applicant identities, status, screenshots, codes and logins—even when others ask. Existing-password placeholders and transient password handling remain unchanged. Typical credentials fit within Discord’s 2,000-character limit.
+
+### Outreach ownership
+
+Apply `backend/seat-confirmations-outreach.sql` after the image migration, rebuild/deploy `nova-auth`, then publish the frontend. Reapply it last if an earlier seat migration is reinstalled. Installation creates an empty private coordination table; it changes no applicants or seat selections.
+
+Claim assigns the signed-in helper, Message sent marks Awaiting reply, and Release makes the applicant available. The portal owner can reassign or release any claim. Confirmed by remains independent. Confirmed seats display Confirmed regardless of the retained contact owner. Claims older than 48 hours show Needs follow-up and never expire automatically. Mine includes completed records owned by the helper; Available and Awaiting reply exclude confirmed seats.
+
+All commands authenticate through the existing seat handler and share its global commit lock, including first claims. Version checks prevent stale release/reassignment. Restricted responses expose names and opaque IDs only. Outreach changes are audited privately and do not alter player revisions, applications, capacity or sandbox selections. Copy message checks current ownership server-side before returning a fresh message; it does not send anything or automatically mark Message sent. Existing downloaded messages cannot be recalled.
+
+Run the standard test suite plus both PostgreSQL scripts. The seat PostgreSQL fixture covers competing claimants, ownership enforcement, stale versions, reassignment, release, completed seats, private table permissions and repeat installation.
