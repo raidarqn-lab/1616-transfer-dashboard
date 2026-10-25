@@ -1,4 +1,4 @@
-import {leadershipRosterHtml} from './seat-sandbox-export.mjs?v=3';
+import {leadershipRosterHtml} from './seat-sandbox-export.mjs?v=4';
 import {SANDBOX_COLOURS,sandboxAccepted,sandboxSeat,sandboxForecast} from './seat-sandbox-core.mjs?v=6';
 
 export function installSeatSandbox(api){
