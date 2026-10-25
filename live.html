@@ -1556,7 +1556,7 @@ render=function(){previousProspectRender();prospectGroups.update();if(view==='pr
 // Sandbox state is intentionally excluded from liveItems() and player autosave.
 let sandboxSaved=BOOT.shared.seatSandbox||{data:{version:1,scenarios:[]},_rev:0};
 const sandboxStyle=document.createElement('link');sandboxStyle.rel='stylesheet';sandboxStyle.href='./seat-sandbox.css?v=8';document.head.append(sandboxStyle);
-const {installSeatSandbox}=await import('./seat-sandbox.mjs?v=11');
+const {installSeatSandbox}=await import('./seat-sandbox.mjs?v=12');
 const sandboxTranslations=await (await fetch('./seat-sandbox-translations.json?v=7')).json();
 for(const [key,values] of Object.entries(sandboxTranslations))['es','pt','fr','de','ko','vi'].forEach((lang,i)=>(interfaceTranslations[lang]??={})[key]=values[i]);
 const sandboxNav=document.createElement('button');sandboxNav.dataset.view='sandbox';sandboxNav.innerHTML='<i data-lucide="flask-conical" aria-hidden="true"></i><span>Seat sandbox</span>';
@@ -1578,7 +1578,7 @@ const seatSandbox=installSeatSandbox({root,host:content,esc,t:translateInterface
   }finally{liveSaving=false;content.inert=false;rail.inert=false;}
  }
 });
-adminSettingsSections.reports.innerHTML=`<h2>Reports</h2><article class="admin-roster-report"><h3>Applicant roster for leadership</h3><p>Create a compact navy-and-white roster of all current applicants, arranged alphabetically by transfer group and by player within each group. Each player appears on one row with server, alliance, total hero power (THP), kills, HQ level, profession level, seat colour, and application status.</p><p>Includes every application status, including declined and withdrawn applicants. Players without a transfer group appear under No transfer group. Contacts, prospects, and deleted records are excluded.</p><p>Export the current roster as a shareable HTML file, or use Print / Save PDF in the preview. Each export includes its creation date and player count.</p><button type="button" class="new-prospect" data-export-leadership-report>Export applicant roster</button></article>`;
+adminSettingsSections.reports.innerHTML=`<h2>Reports</h2><article class="admin-roster-report"><h3>Applicant roster for leadership</h3><p>Create a compact navy-and-white roster of all current applicants, arranged alphabetically by transfer group and by player within each group. Each player appears on one row with server, alliance, total hero power (THP), kills, HQ level, profession level, seat colour, and application status.</p><p>Includes every application status, including declined and withdrawn applicants. Players without a transfer group appear under No transfer group. Contacts, prospects, and deleted records are excluded.</p><p>Download an interactive HTML snapshot with search, sorting, grouping, and filters for transfer group, status, seat colour, server, alliance, THP, kills, HQ, and profession level. It works offline. Print / Save PDF prints the filtered view; the file does not update from the portal. Each export includes its creation date and player count.</p><button type="button" class="new-prospect" data-export-leadership-report>Export applicant roster</button></article>`;
 adminSettingsSections.reports.querySelector('[data-export-leadership-report]').onclick=()=>{
  if(BOOT.role!=='admin'||previewRole!=='admin')return;
  seatSandbox.exportRoster({allApplicantsOnly:true});
