@@ -1,4 +1,4 @@
-import {seatFollowupMessage,freshSeatFollowup} from './seat-confirmations-message.js?v=1';
+import {seatFollowupMessage,freshSeatFollowup} from './seat-confirmations-message.js?v=2';
 import {languageNames,messengerCopy,preferredLanguage,formatCopy} from './applicant-messenger-i18n.js?v=2';
 import {seatCopy,seatErrorKey} from './seat-confirmations-i18n.js?v=2';
 export const seatColours=['Gold','Purple','Blue','White'];
