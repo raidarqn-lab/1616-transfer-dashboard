@@ -17,11 +17,12 @@ export function installSeatSandbox(api){
   catch(e){message=t('Not saved:')+' '+t(e.message);error=true;throw e;}
   finally{busy=false;render();}
  }
- function newScenario(){
-  const rev=api.record()._rev||0,id=crypto.randomUUID();returnFocus=document.activeElement;
-  dialog.innerHTML=`<form><header><h2>${tr('New sandbox scenario')}</h2><button type="button" data-close aria-label="${tr('Close')}">×</button></header><label>${tr('Scenario name')}<input name="scenarioName" maxlength="80" required></label><p data-error role="alert"></p><footer><button type="button" data-close>${tr('Cancel')}</button><button class="primary" type="submit">${tr('Create scenario')}</button></footer></form>`;
+ function scenarioDialog(edit=false){
+  const scenario=edit?current():null;if(edit&&!scenario)return;
+  const rev=api.record()._rev||0,id=scenario?.id||crypto.randomUUID();returnFocus=document.activeElement;
+  dialog.innerHTML=`<form><header><h2>${tr(edit?'Edit scenario':'New sandbox scenario')}</h2><button type="button" data-close aria-label="${tr('Close')}">×</button></header><label>${tr('Scenario name')}<input name="scenarioName" maxlength="80" value="${esc(scenario?.name||'')}" required></label><p data-error role="alert"></p><footer><button type="button" data-close>${tr('Cancel')}</button><button class="primary" type="submit">${tr(edit?'Save changes':'Create scenario')}</button></footer></form>`;
   dialog.querySelectorAll('[data-close]').forEach(b=>b.onclick=close);
-  dialog.querySelector('form').onsubmit=async e=>{e.preventDefault();if(disabled())return;const form=e.currentTarget;form.inert=true;try{await save({op:'create',id,name:form.elements.scenarioName.value},rev);close();}catch(err){dialog.querySelector('[data-error]').textContent=err.message;}finally{form.inert=false;}};
+  dialog.querySelector('form').onsubmit=async e=>{e.preventDefault();if(disabled())return;const form=e.currentTarget;form.inert=true;try{await save({op:edit?'rename':'create',id,name:form.elements.scenarioName.value},rev);close();}catch(err){dialog.querySelector('[data-error]').textContent=err.message;}finally{form.inert=false;}};
   dialog.showModal();dialog.querySelector('input').focus();
  }
  function seatLabel(p){
@@ -51,13 +52,15 @@ export function installSeatSandbox(api){
   const positions=Object.fromEntries([...panel.querySelectorAll('[data-scroll]')].map(el=>[el.dataset.scroll,el.scrollTop]));
   const scenario=current();if(scenario)activeId=scenario.id;
   const result=sandboxForecast(api.players(),api.capacities(),scenario),{counts}=result,noEdit=disabled();
-  panel.innerHTML=`<header class="sandbox-heading"><div><span class="sandbox-eyebrow">${tr('SANDBOX · NO LIVE CHANGES')}</span><h2>${tr('Seat sandbox')}</h2><p>${tr('Drag applicants into Selected players. Seat totals update automatically.')}</p></div><div class="sandbox-toolbar">${scenario?`<label>${tr('Scenario')}<select data-scenario>${scenarios().map(s=>`<option value="${esc(s.id)}" ${s.id===scenario.id?'selected':''}>${esc(s.name)}</option>`).join('')}</select></label>`:''}<button type="button" data-new-scenario ${noEdit?'disabled':''}>${tr('New scenario')}</button><button type="button" data-refresh ${busy||api.busy()?'disabled':''}>${tr('Refresh live data')}</button></div></header>
+  panel.innerHTML=`<header class="sandbox-heading"><div><span class="sandbox-eyebrow">${tr('SANDBOX · NO LIVE CHANGES')}</span><h2>${tr('Seat sandbox')}</h2><p>${tr('Drag applicants into Selected players. Seat totals update automatically.')}</p></div><div class="sandbox-toolbar">${scenario?`<label>${tr('Scenario')}<select data-scenario ${noEdit?'disabled':''}>${scenarios().map(s=>`<option value="${esc(s.id)}" ${s.id===scenario.id?'selected':''}>${esc(s.name)}</option>`).join('')}</select></label><button type="button" data-edit-scenario ${noEdit?'disabled':''}>${tr('Edit scenario')}</button>`:''}<button type="button" data-new-scenario ${noEdit?'disabled':''}>${tr('New scenario')}</button><button type="button" data-refresh ${busy||api.busy()?'disabled':''}>${tr('Refresh live data')}</button></div></header>
+   ${scenario?`<p class="sandbox-notice">${tr('Changes save automatically to')} <strong translate="no">${esc(scenario.name)}</strong>.</p>`:''}
+   <p class="sandbox-message ${error?'is-error':''}" role="status">${esc(message|| (scenario?t('All changes saved.'):''))}</p>
    <div class="sandbox-limits">${SANDBOX_COLOURS.map(c=>{const n=counts[c];return `<article data-seat="${c}"><span class="sandbox-seat"><i aria-hidden="true"></i>${tr(c)}</span><strong class="${n.remaining<0?'sandbox-over':''}">${n.remaining==null?'—':Math.abs(n.remaining)} <small>${tr(n.remaining==null?'Limit unknown':n.remaining<0?'over limit':'left')}</small></strong><small>${n.accepted+n.tentative} / ${n.capacity??'—'} ${tr('filled')}</small></article>`;}).join('')}</div>
    <p class="sandbox-notice">${result.accepted} ${tr('accepted players always included')} · ${tr('Drag individuals, or use Add and Remove.')}</p>
    ${counts.Unknown.accepted+counts.Unknown.tentative?`<p class="sandbox-warning">${counts.Unknown.accepted+counts.Unknown.tentative} ${tr('players have unknown seat colours. Totals are incomplete.')}</p>`:''}
    ${result.estimates?`<p class="sandbox-muted">${result.estimates} ${tr('accepted players use anticipated colours until their seats are confirmed.')}</p>`:''}
    ${!scenario?`<p class="sandbox-warning">${tr('Create a scenario to start adding players.')}</p>`:''}
-   <div class="sandbox-board">${lists(result)}</div><p class="sandbox-message ${error?'is-error':''}" role="status">${esc(message)}</p>`;
+   <div class="sandbox-board">${lists(result)}</div>`;
   panel.querySelectorAll('[data-scroll]').forEach(el=>{el.scrollTop=positions[el.dataset.scroll]||0;});
  }
  async function place(playerId,include){
@@ -72,7 +75,8 @@ export function installSeatSandbox(api){
   const b=e.target.closest('button');if(!b||b.disabled)return;
   if(b.hasAttribute('data-refresh')){busy=true;message=t('Refreshing…');error=false;render();try{await api.refresh();message=t('Live data refreshed.');}catch(err){message=t('Refresh failed:')+' '+t(err.message);error=true;}finally{busy=false;render();}return;}
   if(disabled())return;
-  if(b.hasAttribute('data-new-scenario'))return newScenario();
+  if(b.hasAttribute('data-new-scenario'))return scenarioDialog();
+  if(b.hasAttribute('data-edit-scenario'))return scenarioDialog(true);
   if(b.dataset.place)await place(b.dataset.place,b.dataset.include==='true');
  });
  panel.addEventListener('dragstart',e=>{
