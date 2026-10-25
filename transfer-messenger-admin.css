@@ -28,3 +28,5 @@
 #transfer-mock .transfer-messenger-admin button{padding:10px 16px;border:1px solid #d8c4b0;border-radius:8px;background:#fffcf6;color:#624735;font:inherit;cursor:pointer}
 #transfer-mock .transfer-messenger-admin button.primary{background:#a82332;border-color:#a82332;color:#fffaf2}
 #transfer-mock .transfer-messenger-admin button:disabled{opacity:.5;cursor:wait}
+
+.helper-access-message{border-top:1px solid #e2cfb9;margin-top:18px;padding-top:18px}.helper-access-message>div{display:grid;gap:12px}.helper-access-message>div[hidden]{display:none}.helper-access-message h3{margin:18px 0 0}.helper-access-message textarea{box-sizing:border-box;width:100%;resize:vertical;min-height:220px;padding:12px;border:1px solid #d8c4b0;border-radius:8px;background:#fffcf6;color:#3b3530;font:13px/1.5 system-ui}.helper-access-message p{margin:0}.helper-access-message>button{margin-bottom:6px}
