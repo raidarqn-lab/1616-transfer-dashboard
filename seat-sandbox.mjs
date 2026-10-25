@@ -1,4 +1,4 @@
-import {leadershipRosterHtml} from './seat-sandbox-export.mjs?v=1';
+import {leadershipRosterHtml} from './seat-sandbox-export.mjs?v=2';
 import {SANDBOX_COLOURS,sandboxAccepted,sandboxSeat,sandboxForecast} from './seat-sandbox-core.mjs?v=6';
 
 export function installSeatSandbox(api){
@@ -26,10 +26,10 @@ export function installSeatSandbox(api){
   dialog.querySelector('form').onsubmit=async e=>{e.preventDefault();if(disabled())return;const form=e.currentTarget;form.inert=true;try{await save({op:edit?'rename':'create',id,name:form.elements.scenarioName.value},rev);close();}catch(err){dialog.querySelector('[data-error]').textContent=err.message;}finally{form.inert=false;}};
   dialog.showModal();dialog.querySelector('input').focus();
  }
- function exportRoster(){
+ function exportRoster({allApplicantsOnly=false}={}){
   returnFocus=document.activeElement;
   dialog.classList.add('sandbox-export-dialog');
-  dialog.innerHTML=`<header><h2>Leadership export</h2><button type="button" data-close aria-label="${tr('Close')}">×</button></header><label>Include<select data-export-scope><option value="all">All applicants</option>${current()?'<option value="selected">Selected players in this scenario</option>':''}</select></label><p>One row per player, alphabetically within groups. Choose Print / Save PDF, or download a shareable HTML file.</p><footer><button type="button" data-download-roster>Download HTML</button><button type="button" class="primary" data-print-roster>Print / Save PDF</button></footer><iframe title="Leadership roster preview"></iframe>`;
+  dialog.innerHTML=`<header><h2>Leadership export</h2><button type="button" data-close aria-label="${tr('Close')}">×</button></header><label>Include<select data-export-scope><option value="all">All applicants</option>${!allApplicantsOnly&&current()?'<option value="selected">Selected players in this scenario</option>':''}</select></label><p>Navy-and-white roster with one row per player, alphabetically within groups. Choose Print / Save PDF, or download a shareable HTML file.</p><footer><button type="button" data-download-roster>Download HTML</button><button type="button" class="primary" data-print-roster>Print / Save PDF</button></footer><iframe title="Leadership roster preview"></iframe>`;
   let html='';
   const update=()=>{const selected=dialog.querySelector('[data-export-scope]').value==='selected',scenario=current();const players=selected?sandboxForecast(api.players(),api.capacities(),scenario).members:api.players().filter(p=>!p.deleted&&!p.general&&!p.prospect);html=leadershipRosterHtml(players,{locale:api.locale(),subtitle:selected?'Sandbox scenario: '+scenario.name+' · Selected players · Not final approvals':'All applicants · All statuses · Alphabetical by transfer group'});dialog.querySelector('iframe').srcdoc=html;};
   dialog.querySelector('[data-export-scope]').onchange=update;
@@ -103,5 +103,5 @@ export function installSeatSandbox(api){
  panel.addEventListener('dragleave',e=>{const lane=e.target.closest('[data-drop]');if(lane&&!lane.contains(e.relatedTarget))lane.classList.remove('is-drop-target');});
  panel.addEventListener('drop',async e=>{const lane=e.target.closest('[data-drop]');if(!lane||!dragId)return;e.preventDefault();const id=dragId,include=lane.dataset.drop==='in';clearDrag();await place(id,include);});
  panel.addEventListener('dragend',clearDrag);
- return {render,isOpen:()=>dialog.open,isBusy:()=>busy};
+ return {render,exportRoster,isOpen:()=>dialog.open,isBusy:()=>busy};
 }
