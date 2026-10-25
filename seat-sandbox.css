@@ -70,3 +70,5 @@
 .seat-sandbox-dialog [data-error]{color:#ad0037}
 @media(max-width:1000px){#transfer-mock .sandbox-member{grid-template-columns:10px minmax(0,1fr) 50px}#transfer-mock .sandbox-player-status{display:none}}
 @media(max-width:650px){#transfer-mock .seat-sandbox{padding:10px}#transfer-mock .sandbox-board{grid-template-columns:minmax(0,1fr)}#transfer-mock .sandbox-lane{max-height:45vh}#transfer-mock .sandbox-limits{grid-template-columns:1fr 1fr}#transfer-mock .sandbox-member{height:37px}#transfer-mock .sandbox-member button{min-height:30px}#transfer-mock .sandbox-toolbar{width:100%}}
+
+.seat-sandbox-dialog.sandbox-export-dialog{width:min(1100px,calc(100vw - 24px));max-height:94vh}.sandbox-export-dialog iframe{width:100%;height:60vh;border:1px solid #d9c7b0;margin-top:12px;background:white}.sandbox-export-dialog select{font:inherit;padding:6px}.sandbox-export-dialog p{font-size:12px}
