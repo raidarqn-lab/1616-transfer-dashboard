@@ -39,3 +39,11 @@ Each eligible player has one screenshot in `transfer_private.seat_images`, separ
 JPG/PNG/WebP input is limited to 15 MiB, re-encoded as JPEG with metadata removed, resized to at most 1920 pixels on the long edge, and bounded at 1,200,000 data-URL characters. PostgreSQL validates size and JPEG markers. The `?upload=seat-image` route accepts the bounded image body only for `seat-image-save`; existing auth actions retain their 4 KiB request limit. Lists return only the image version; the image itself is fetched on demand after a fresh access check.
 
 Validation: 122 Node tests, both local PostgreSQL suites, and a browser fixture using fictional players verified upload/view, uploader metadata, and preserving an unsaved Gold selection. No real applicant screenshots or seat colours were changed during verification.
+
+## Helper access messages (v1.0.55)
+
+Transfer Hub → Settings → Team Access → Applicant Messenger includes **Copy access message…** in an active helper's account dialog. Successful login setup/reset opens the message builder automatically with the saved username/display name and the password just entered. Existing accounts use an explicit password placeholder; the owner may enter a known password only for the message. This does not call a password-reset API.
+
+The builder includes the login link, seat-confirmation and screenshot steps, accuracy/approval guidance, and Applicant Messenger instructions. Work timing is editable before copying. Password/message fields are cleared on dialog close, account change, disable, and composer close; nothing is added to local storage or sent to the backend for this feature. Clipboard failure selects the preview for manual copying. Only the existing owner-only messenger administration UI mounts this function.
+
+Validation: 125 Node tests and a local browser fixture verified saved-credential autofill, copying, and clearing credentials when reopening. No live accounts were created or changed. Frontend-only release; no SQL or Edge Function deployment is needed.
