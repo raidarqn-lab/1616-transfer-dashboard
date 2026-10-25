@@ -38,3 +38,14 @@ test('server saves both trial choices for a partially accepted group without cha
  apply(state,{...selection,include:false});assert.deepEqual(state.shared.seatSandbox.data.scenarios[0].selectedIds,[]);
  assert.deepEqual(state.players,original);
 });
+test('individual sandbox commands save just one player choice and preserve live records',()=>{
+ const state=fixture(),original=structuredClone(state.players);
+ apply(state,{op:'create',id:'scenario-123',name:'Individual plan'});
+ apply(state,{op:'member',id:'scenario-123',playerId:'2',include:true});
+ assert.deepEqual(state.shared.seatSandbox.data.scenarios[0].selectedIds,['2']);
+ apply(state,{op:'member',id:'scenario-123',playerId:'2',include:false});
+ assert.deepEqual(state.shared.seatSandbox.data.scenarios[0].selectedIds,[]);
+ assert.throws(()=>save(state,{op:'member',id:'scenario-123',playerId:'999',include:true}),/no longer available/);
+ assert.throws(()=>save(state,{op:'member',id:'scenario-123',playerId:'1',include:true},'support'),/Administrator access/);
+ assert.deepEqual(state.players,original);
+});

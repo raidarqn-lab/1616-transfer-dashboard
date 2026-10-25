@@ -1,96 +1,83 @@
-import {SANDBOX_COLOURS,sandboxAccepted,sandboxCandidate,sandboxSeat,sandboxForecast,sandboxExceptionState} from './seat-sandbox-core.mjs?v=3';
+import {SANDBOX_COLOURS,sandboxAccepted,sandboxSeat,sandboxForecast} from './seat-sandbox-core.mjs?v=6';
 
-export function installSeatSandbox(api) {
-  const {root,host,esc}=api,t=s=>api.t(s),tr=s=>esc(t(s));
-  let activeId='',focusKey='',search='',busy=false,message='',error=false,returnFocus=null;
-  const panel=document.createElement('section');panel.className='seat-sandbox';panel.hidden=true;host.append(panel);
-  const dialog=document.createElement('dialog');dialog.className='seat-sandbox-dialog';root.append(dialog);
-  const scenarios=()=>api.record().data?.scenarios||[];
-  const editable=()=>api.role()!=='support'&&api.previewRole()!=='support';
-  const disabled=()=>busy||api.busy()||!editable();
-  const current=()=>scenarios().find(s=>s.id===activeId)||scenarios()[0];
-  const date=value=>value?new Date(value).toLocaleString(api.locale()):'';
-  const person=email=>api.members().find(m=>m.email===email||m.id===email)?.name||email;
-  function focusButton(key){const section=[...panel.querySelectorAll('[data-roster-group]')].find(el=>el.dataset.rosterGroup===key);section?.querySelector('h3,[tabindex]')?.focus();}
-  function close(){dialog.close();returnFocus?.isConnected?returnFocus.focus():focusButton(focusKey);}
-  dialog.addEventListener('cancel',e=>{if(busy)e.preventDefault();});
-  dialog.addEventListener('close',()=>{if(returnFocus?.isConnected)returnFocus.focus();});
-  async function save(command,baseRev=api.record()._rev||0) {
-    if(disabled())throw Error(t('Admin or lead access required.'));
-    busy=true;message=t('Saving sandbox…');error=false;render();
-    try{await api.save(command,baseRev);activeId=command.id;message=t('Saved to sandbox. Live records unchanged.');}
-    catch(e){message=t('Not saved:')+' '+t(e.message);error=true;throw e;}
-    finally{busy=false;render();}
+export function installSeatSandbox(api){
+ const {root,host,esc}=api,t=s=>api.t(s),tr=s=>esc(t(s));
+ let activeId='',search='',busy=false,message='',error=false,dragId='',returnFocus=null;
+ const panel=document.createElement('section');panel.className='seat-sandbox';panel.hidden=true;host.append(panel);
+ const dialog=document.createElement('dialog');dialog.className='seat-sandbox-dialog';root.append(dialog);
+ const scenarios=()=>api.record().data?.scenarios||[],current=()=>scenarios().find(s=>s.id===activeId)||scenarios()[0];
+ const editable=()=>api.role()!=='support'&&api.previewRole()!=='support',disabled=()=>busy||api.busy()||!editable();
+ const sort=(a,b)=>a.name.localeCompare(b.name,api.locale(),{numeric:true,sensitivity:'base'});
+ function close(){dialog.close();if(returnFocus?.isConnected)returnFocus.focus();else panel.querySelector('[data-new-scenario]')?.focus();}
+ dialog.addEventListener('cancel',e=>{if(busy)e.preventDefault();});
+ async function save(command,baseRev=api.record()._rev||0){
+  if(disabled())throw Error(t('Admin or lead access required.'));
+  busy=true;message=t('Saving sandbox…');error=false;render();
+  try{await api.save(command,baseRev);activeId=command.id;message=t('Saved to sandbox. Live records unchanged.');}
+  catch(e){message=t('Not saved:')+' '+t(e.message);error=true;throw e;}
+  finally{busy=false;render();}
+ }
+ function newScenario(){
+  const rev=api.record()._rev||0,id=crypto.randomUUID();returnFocus=document.activeElement;
+  dialog.innerHTML=`<form><header><h2>${tr('New sandbox scenario')}</h2><button type="button" data-close aria-label="${tr('Close')}">×</button></header><label>${tr('Scenario name')}<input name="scenarioName" maxlength="80" required></label><p data-error role="alert"></p><footer><button type="button" data-close>${tr('Cancel')}</button><button class="primary" type="submit">${tr('Create scenario')}</button></footer></form>`;
+  dialog.querySelectorAll('[data-close]').forEach(b=>b.onclick=close);
+  dialog.querySelector('form').onsubmit=async e=>{e.preventDefault();if(disabled())return;const form=e.currentTarget;form.inert=true;try{await save({op:'create',id,name:form.elements.scenarioName.value},rev);close();}catch(err){dialog.querySelector('[data-error]').textContent=err.message;}finally{form.inert=false;}};
+  dialog.showModal();dialog.querySelector('input').focus();
+ }
+ function seatLabel(p){
+  const colour=sandboxSeat(p),power=p.power==null||p.power===''?null:Number(p.power),confirmed=sandboxAccepted(p)&&SANDBOX_COLOURS.includes(p.confirmedSeat),near=Number.isFinite(power)&&[130,180,230].some(v=>Math.abs(power-v)<=2)&&!confirmed;
+  return `<span class="sandbox-seat ${near?'near-boundary':''}" data-seat="${colour}" title="${tr(confirmed?'Confirmed':near?'Within 2M of a cutoff':'Anticipated')}"><i aria-hidden="true"></i>${tr(colour)}${confirmed?' ✓':''}</span>`;
+ }
+ function row(p,included){
+  const locked=sandboxAccepted(p),noEdit=disabled()||!current(),id=esc(String(p.id)),movable=!noEdit&&!locked;
+  return `<article class="sandbox-member ${locked?'is-accepted':''}" data-player="${id}" draggable="${movable}" title="${tr(locked?'Formally accepted':included?'Drag back to Applicants to remove':'Drag into Selected players to add')}"><span class="sandbox-drag" aria-hidden="true">${locked?'✓':'⠿'}</span><div class="sandbox-player"><strong translate="no">${esc(p.name)}</strong><small>${esc(p.server||'')} · <span translate="no">${esc(p.alliance||'')}</span></small></div>${seatLabel(p)}<span class="sandbox-player-status">${tr(p.status||'Unknown')}</span>${locked?`<span class="sandbox-locked" title="${tr('Formally accepted players always stay included.')}">${tr('Locked')}</span>`:`<button type="button" data-place="${id}" data-include="${!included}" ${noEdit?'disabled':''} aria-label="${tr(included?'Remove':'Add')} · ${esc(p.name)}">${tr(included?'Remove':'Add')}</button>`}</article>`;
+ }
+ function lists(result){
+  const ids=new Set(result.members.map(p=>String(p.id))),groups=result.groups.slice().sort(sort),term=search.trim().toLocaleLowerCase();
+  function grouped(selected){
+   const visible=groups.map(g=>({...g,members:g.members.filter(p=>ids.has(String(p.id))===selected).sort(sort)})).filter(g=>g.members.length&&(selected||[g.name,...g.members.map(p=>p.name)].join(' ').toLocaleLowerCase().includes(term)));
+   return visible.map(g=>`<section class="sandbox-roster-group">${g.groupKey?`<header><strong translate="no">${esc(g.name)}</strong><span>${g.members.length}</span></header>`:''}${g.members.map(p=>row(p,selected)).join('')}</section>`).join('')||`<p class="sandbox-empty-list">${tr(selected?'Drag applicants here':term?'No matching groups or players.':'All applicants are selected')}</p>`;
   }
-  function show(title,body,action,submit) {
-    returnFocus=document.activeElement;
-    dialog.innerHTML=`<form><header><h2>${tr(title)}</h2><button type="button" data-close aria-label="${tr('Close')}">×</button></header>${body}<p class="sandbox-message" data-error role="alert"></p><footer><button type="button" data-close>${tr('Cancel')}</button><button class="primary" type="submit">${tr(action)}</button></footer></form>`;
-    dialog.querySelectorAll('[data-close]').forEach(b=>b.onclick=close);
-    dialog.querySelector('form').onsubmit=async e=>{e.preventDefault();if(busy||api.busy())return;const form=e.currentTarget;form.inert=true;try{await submit(form);close();}catch(err){dialog.querySelector('[data-error]').textContent=t('Not saved:')+' '+t(err.message);}finally{form.inert=false;}};
-    dialog.showModal();dialog.querySelector('input,textarea,select')?.focus();
-  }
-  function newScenario(){const rev=api.record()._rev||0,id=crypto.randomUUID();show('New sandbox scenario',`<p>${tr('Accepted players are included automatically. Sandbox approvals only change this plan.')}</p><label>${tr('Scenario name')}<input name="scenarioName" maxlength="80" required placeholder="${tr('For example: First transfer window')}"></label>`,'Create scenario',form=>save({op:'create',id,name:form.elements.scenarioName.value},rev));}
-  function request(group,p){const scenario=current(),rev=api.record()._rev||0,requestId=crypto.randomUUID();show('Request a sandbox exception',`<p><strong translate="no">${esc(p.name)}</strong> · <span translate="no">${esc(group.name)}</span></p><p>${tr('This member stays in the group and seat forecast until another administrator or lead approves.')}</p><label>${tr('Reason')}<textarea name="reason" minlength="3" maxlength="1000" rows="4" required placeholder="${tr('Explain why this member should be outside this trial group…')}"></textarea></label><p class="sandbox-muted">${tr('Approval changes this scenario only. Live membership and application status stay unchanged.')}</p>`,'Request approval',form=>save({op:'request',id:scenario.id,groupKey:group.key,memberIds:group.memberIds,playerId:String(p.id),requestId,reason:form.elements.reason.value},rev));}
-  function review(request,decision){const scenario=current(),rev=api.record()._rev||0;show(decision==='approved'?'Approve sandbox exception':'Reject sandbox exception',`<p><strong translate="no">${esc(request.playerName)}</strong> · <span translate="no">${esc(request.groupName)}</span></p><blockquote translate="no">${esc(request.reason)}</blockquote><p>${tr(decision==='approved'?'This member will be outside this trial group and excluded from its seat forecast.':'This member will stay with the group.')}</p><p>${tr('Approval changes this scenario only. Live membership and application status stay unchanged.')}</p><label>${tr('Review note (optional)')}<textarea name="reviewNote" maxlength="1000" rows="3"></textarea></label>`,decision==='approved'?'Approve exclusion':'Reject request',form=>save({op:'review',id:scenario.id,requestId:request.id,decision,reviewNote:form.elements.reviewNote.value},rev));}
-  function seatLabel(p){const colour=sandboxSeat(p),power=p.power==null||p.power===''?null:Number(p.power),near=Number.isFinite(power)&&[130,180,230].some(v=>Math.abs(power-v)<=2),confirmed=sandboxAccepted(p)&&SANDBOX_COLOURS.includes(p.confirmedSeat);return `<span class="sandbox-seat ${near&&!confirmed?'near-boundary':''}" data-seat="${colour}" ${near&&!confirmed?`title="${tr('Within 2M of a cutoff')}"`: ''}><i aria-hidden="true"></i>${tr(colour)}</span><small>${tr(confirmed?'Confirmed':'Anticipated')}</small>`;}
-  function groupState(g){return g.selected?'Approved in sandbox':g.anchored?g.members.every(sandboxAccepted)?'Automatically included':'Accepted members only':'Not in plan';}
-  function seatViewer(result){
-    const groupFor=new Map(result.groups.flatMap(g=>g.members.map(p=>[String(p.id),g])));
-    return `<details class="sandbox-seat-viewer"><summary>${tr('Seat viewer')} · ${result.members.length} ${tr('filled')}</summary><div class="sandbox-seat-columns">${[...SANDBOX_COLOURS,...(result.counts.Unknown.accepted+result.counts.Unknown.tentative?['Unknown']:[])].map(c=>{
-      const n=result.counts[c],members=result.members.filter(p=>sandboxSeat(p)===c).sort((a,b)=>Number(sandboxAccepted(b))-Number(sandboxAccepted(a))||a.name.localeCompare(b.name)),filled=members.length;
-      return `<section data-seat="${c}" aria-label="${tr(c)+' '+tr('seats')}"><h4><span class="sandbox-seat"><i aria-hidden="true"></i>${tr(c)}</span><span>${filled}${n.capacity==null?'':' / '+n.capacity} ${tr('filled')}</span></h4><div class="sandbox-seat-occupants">${members.map((p,i)=>`<button type="button" data-seat-group="${esc(groupFor.get(String(p.id))?.key||'')}" class="sandbox-occupant ${sandboxAccepted(p)?'is-accepted':'is-trial'} ${n.capacity!=null&&i>=n.capacity?'is-overflow':''}"><strong translate="no">${esc(p.name)}</strong><small>${tr(sandboxAccepted(p)?'Formally accepted':'Sandbox only')}${n.capacity!=null&&i>=n.capacity?' · '+tr('Over capacity'):''}</small><small translate="no">${esc(groupFor.get(String(p.id))?.groupKey?p.group:'')}</small></button>`).join('')||`<p class="sandbox-muted">${tr('No filled seats')}</p>`}</div><p class="sandbox-open-seats">${n.remaining==null?tr('Limit unknown'):n.remaining<0?Math.abs(n.remaining)+' '+tr('over limit'):n.remaining+' '+tr('open seats')}</p></section>`;
-    }).join('')}</div></details>`;
-  }
-  function drawApplicants(result,scenario){
-    const term=search.trim().toLocaleLowerCase(),noEdit=disabled()||!scenario,exceptions=scenario?.exceptions||[];
-    const includedIds=new Set(result.members.map(p=>String(p.id)));
-    const groups=result.groups.slice().sort((a,b)=>a.name.localeCompare(b.name,api.locale(),{numeric:true,sensitivity:'base'}));
-    const shown=groups.filter(g=>[g.name,...g.members.map(p=>p.name)].join(' ').toLocaleLowerCase().includes(term));
-    return shown.length?shown.map(group=>{
-      const remainingMembers=group.members.filter(p=>!sandboxAccepted(p));
-      const toggle=!remainingMembers.length?`<span class="sandbox-pill">${tr('Locked')}</span>`:`<button type="button" class="${group.selected?'':'primary'}" data-toggle-group ${noEdit?'disabled':''}>${tr(group.selected?'Remove from sandbox':group.anchored?'Add remaining members to sandbox':group.groupKey?'Approve group in sandbox':'Approve player in sandbox')}</button>`;
-      return `<section class="sandbox-detail ${group.groupKey?'':'sandbox-solo'}" data-roster-group="${esc(group.key)}">${group.groupKey?`<header><h3 translate="no" tabindex="-1">${esc(group.name)}</h3><span class="sandbox-count">${group.members.length}</span><span class="sandbox-pill ${group.selected?'is-included':''}">${tr(groupState(group))}</span><div class="sandbox-group-action">${toggle}</div></header>`:''}<div class="sandbox-members">${group.members.slice().sort((a,b)=>a.name.localeCompare(b.name,api.locale(),{numeric:true,sensitivity:'base'})).map(p=>{
-        const r=exceptions.findLast(r=>r.playerId===String(p.id)&&['pending','approved'].includes(sandboxExceptionState(r,group))),excluded=result.excluded.includes(String(p.id)),accepted=sandboxAccepted(p);
-        return `<article class="sandbox-member ${excluded?'is-excluded':''}"><div class="sandbox-player"><strong translate="no" ${!group.groupKey?'tabindex="-1"':''}>${esc(p.name)}</strong><small>${esc(p.server||'')} · <span translate="no">${esc(p.alliance||'')}</span></small></div><span class="sandbox-player-status">${tr(p.status||'Unknown')}</span><div class="sandbox-player-seat">${seatLabel(p)}</div><span class="sandbox-player-plan">${tr(accepted?'Formally accepted':excluded?'Outside this trial group':r?.status==='pending'?'Exception awaiting approval':includedIds.has(String(p.id))?'Included in sandbox':'Not in plan')}</span><div class="sandbox-member-action">${!group.groupKey?toggle:accepted?`<span class="sandbox-pill">${tr('Locked')}</span>`:excluded?`<button type="button" data-restore="${esc(r.id)}" ${noEdit?'disabled':''}>${tr('Restore to trial group')}</button>`:r?`<span class="sandbox-pill">${tr('Awaiting approval')}</span>`:`<button type="button" data-request="${esc(p.id)}" ${noEdit?'disabled':''}>${tr('Request exception')}</button>`}</div></article>`;
-      }).join('')}</div></section>`;
-    }).join(''):`<p>${tr('No matching groups or players.')}</p>`;
-  }
-  function render(){
-    panel.hidden=!api.visible();if(panel.hidden)return;
-    const scenario=current();if(scenario)activeId=scenario.id;
-    const result=sandboxForecast(api.players(),api.capacities(),scenario),{groups,counts}=result;
-    if(!groups.some(g=>g.key===focusKey))focusKey=groups[0]?.key||'';
-    const noEdit=disabled(),exceptions=scenario?.exceptions||[];
-    const status=r=>sandboxExceptionState(r,groups.find(g=>g.key===r.groupKey));
-    const pending=exceptions.filter(r=>status(r)==='pending').length;
-    panel.innerHTML=`<header class="sandbox-heading"><div><span class="sandbox-eyebrow">${tr('SANDBOX · NO LIVE CHANGES')}</span><h2>${tr('Group decision room')}</h2><p>${tr('Choose a group or player, then approve them in this sandbox to count their seats.')}</p></div><div class="sandbox-toolbar">${scenarios().length?`<label>${tr('Scenario')}<select data-scenario>${scenarios().map(s=>`<option value="${esc(s.id)}" ${s.id===scenario.id?'selected':''}>${esc(s.name)}</option>`).join('')}</select></label>`:''}<button type="button" data-new-scenario ${noEdit?'disabled':''}>${tr('New scenario')}</button><button type="button" data-refresh ${busy||api.busy()?'disabled':''}>${tr('Refresh live data')}</button></div></header>
-      <div class="sandbox-notice"><strong>${result.accepted} ${tr('accepted players always included')}</strong><span>${tr('Groups move together. Individual exceptions need approval from someone else.')}</span></div>
-      <div class="sandbox-limits">${SANDBOX_COLOURS.map(c=>{const n=counts[c];return `<article data-seat="${c}"><header><span class="sandbox-seat"><i aria-hidden="true"></i>${tr(c)}</span><small>${n.capacity??'—'} ${tr('total seats')}</small></header><strong class="${n.remaining<0?'sandbox-over':''}">${n.remaining==null?'—':Math.abs(n.remaining)} <small>${tr(n.remaining==null?'Limit unknown':n.remaining<0?'over limit':'left')}</small></strong><div class="sandbox-meter" aria-hidden="true"><span style="width:${n.capacity?Math.min(100,n.accepted/n.capacity*100):0}%"></span><span class="tentative" style="width:${n.capacity?Math.min(Math.max(0,100-n.accepted/n.capacity*100),n.tentative/n.capacity*100):0}%"></span></div><p>${n.accepted} ${tr('formally accepted')} + ${n.tentative} ${tr('sandbox only')}</p></article>`;}).join('')}</div>
-      ${(counts.Unknown.accepted+counts.Unknown.tentative)>0?`<p class="sandbox-warning" role="status">${counts.Unknown.accepted+counts.Unknown.tentative} ${tr('players have unknown seat colours. Totals are incomplete.')}</p>`:''}
-      ${result.estimates?`<p class="sandbox-muted">${result.estimates} ${tr('accepted players use anticipated colours until their seats are confirmed.')}</p>`:''}
-      ${result.nonApplicants?`<p class="sandbox-warning">${result.nonApplicants} ${tr('linked members have a prospect, contact, withdrawn or other inactive status. Their seats are included to keep the group together; their live status is unchanged.')}</p>`:''}
-      ${seatViewer(result)}
-      ${!scenario?`<section class="sandbox-empty"><h3>${tr('Create your first trial plan')}</h3><p>${tr('Accepted players are included automatically. Sandbox approvals only change this plan.')}</p>${editable()?`<button class="primary" type="button" data-new-scenario ${noEdit?'disabled':''}>${tr('New scenario')}</button>`:`<p>${tr('Ask an administrator or transfer lead to create a scenario.')}</p>`}</section>`:''}
-      <div class="sandbox-room"><label>${tr('Find a group or player')}<input type="search" data-search value="${esc(search)}" placeholder="${tr('Search group or player…')}"></label><div class="sandbox-applicants">${drawApplicants(result,scenario)}</div></div>
-      ${scenario?`<section class="sandbox-exceptions"><header><h3>${tr('Group exceptions')} ${pending?`<span class="sandbox-pill">${pending} ${tr('awaiting approval')}</span>`:''}</h3><span>${tr('This scenario only')}</span></header>${exceptions.length?exceptions.slice().reverse().map(r=>{const st=status(r),reviewable=st==='pending'&&r.requestedBy!==api.identity().email&&!noEdit;return `<article><header><strong translate="no">${esc(r.playerName)} · ${esc(r.groupName)}</strong><span class="sandbox-pill">${tr({pending:'Awaiting approval',approved:'Exclusion approved',rejected:'Rejected',restored:'Restored to group',stale:'Needs new review'}[st])}</span></header><p translate="no">${esc(r.reason)}</p><small>${tr('Requested by')} <span translate="no">${esc(person(r.requestedBy))}</span> · ${esc(date(r.requestedAt))}</small>${r.reviewedAt?`<small>${tr('Reviewed by')} <span translate="no">${esc(person(r.reviewedBy))}</span> · ${esc(date(r.reviewedAt))}</small>${r.reviewNote?`<p translate="no">${esc(r.reviewNote)}</p>`:''}`:''}<p class="sandbox-muted">${tr(st==='stale'?'Membership or acceptance changed. This exception no longer removes anyone from the forecast.':st==='pending'?'Member remains included until approval.':st==='approved'?'Excluded from this trial only. Live membership is unchanged.':'Group membership is unchanged.')}</p>${reviewable?`<div class="sandbox-actions"><button type="button" class="primary" data-review="${esc(r.id)}" data-decision="approved">${tr('Approve exclusion')}</button><button type="button" data-review="${esc(r.id)}" data-decision="rejected">${tr('Reject request')}</button></div>`:st==='pending'&&r.requestedBy===api.identity().email?`<small>${tr('Waiting for another administrator or transfer lead.')}</small>`:''}</article>`;}).join(''):`<p>${tr('No proposed splits. Groups stay intact.')}</p>`}</section>`:''}
-      <p class="sandbox-message ${error?'is-error':''}" role="status">${esc(message||(scenario?.updatedAt?t('Last saved')+' '+date(scenario.updatedAt):''))}</p><p class="sandbox-muted">${tr('Seat limits come from Settings. This sandbox has no accept, reject or publish action for live applications.')}</p>`;
-  }
-  panel.addEventListener('input',e=>{if(e.target.matches('[data-search]')){search=e.target.value;panel.querySelector('.sandbox-applicants').innerHTML=drawApplicants(sandboxForecast(api.players(),api.capacities(),current()),current());}});
-  panel.addEventListener('change',e=>{if(e.target.matches('[data-scenario]')){activeId=e.target.value;focusKey='';message='';render();}});
-  panel.addEventListener('click',async e=>{
-    const b=e.target.closest('button');if(!b||b.disabled)return;
-    if(b.dataset.seatGroup){focusKey=b.dataset.seatGroup;search='';render();focusButton(focusKey);return;}
-    if(b.hasAttribute('data-refresh')){busy=true;message=t('Refreshing…');error=false;render();try{await api.refresh();message=t('Live data refreshed.');}catch(e){message=t('Refresh failed:')+' '+t(e.message);error=true;}finally{busy=false;render();}return;}
-    if(disabled())return;
-    const scenario=current(),groups=sandboxForecast(api.players(),api.capacities(),scenario).groups,group=groups.find(g=>g.key===b.closest('[data-roster-group]')?.dataset.rosterGroup);
-    if(group)focusKey=group.key;
-    if(b.hasAttribute('data-new-scenario'))return newScenario();
-    if(b.dataset.request){const p=group?.members.find(p=>String(p.id)===b.dataset.request);if(p)return request(group,p);}
-    if(b.dataset.review){const r=scenario.exceptions.find(r=>r.id===b.dataset.review);if(r)return review(r,b.dataset.decision);}
-    try{
-      if(b.hasAttribute('data-toggle-group')&&group)await save({op:'select',id:scenario.id,groupKey:group.key,memberIds:group.memberIds,include:!group.selected});
-      else if(b.dataset.restore)await save({op:'restore',id:scenario.id,requestId:b.dataset.restore});
-    }catch{/* Visible status retains save error; no optimistic change is applied. */}
-  });
-  return {render,isOpen:()=>dialog.open,isBusy:()=>busy};
+  const available=groups.flatMap(g=>g.members).filter(p=>!ids.has(String(p.id))).length;
+  return `<section class="sandbox-lane" data-drop="out" aria-label="${tr('Applicants')}"><header><h3>${tr('Applicants')} <span>${available}</span></h3><small>${tr('Drag a player to the right')}</small></header><label class="sandbox-search"><span class="sr-only">${tr('Find a group or player')}</span><input type="search" data-search value="${esc(search)}" placeholder="${tr('Search group or player…')}" aria-label="${tr('Find a group or player')}"></label><div class="sandbox-roster" data-scroll="applicants">${grouped(false)}</div></section><section class="sandbox-lane sandbox-selected" data-drop="in" aria-label="${tr('Selected players')}"><header><h3>${tr('Selected players')} <span>${result.members.length}</span></h3><small>${tr('Drag back to remove')}</small></header><div class="sandbox-roster" data-scroll="selected">${grouped(true)}</div></section>`;
+ }
+ function render(){
+  panel.hidden=!api.visible();if(panel.hidden)return;
+  const positions=Object.fromEntries([...panel.querySelectorAll('[data-scroll]')].map(el=>[el.dataset.scroll,el.scrollTop]));
+  const scenario=current();if(scenario)activeId=scenario.id;
+  const result=sandboxForecast(api.players(),api.capacities(),scenario),{counts}=result,noEdit=disabled();
+  panel.innerHTML=`<header class="sandbox-heading"><div><span class="sandbox-eyebrow">${tr('SANDBOX · NO LIVE CHANGES')}</span><h2>${tr('Seat sandbox')}</h2><p>${tr('Drag applicants into Selected players. Seat totals update automatically.')}</p></div><div class="sandbox-toolbar">${scenario?`<label>${tr('Scenario')}<select data-scenario>${scenarios().map(s=>`<option value="${esc(s.id)}" ${s.id===scenario.id?'selected':''}>${esc(s.name)}</option>`).join('')}</select></label>`:''}<button type="button" data-new-scenario ${noEdit?'disabled':''}>${tr('New scenario')}</button><button type="button" data-refresh ${busy||api.busy()?'disabled':''}>${tr('Refresh live data')}</button></div></header>
+   <div class="sandbox-limits">${SANDBOX_COLOURS.map(c=>{const n=counts[c];return `<article data-seat="${c}"><span class="sandbox-seat"><i aria-hidden="true"></i>${tr(c)}</span><strong class="${n.remaining<0?'sandbox-over':''}">${n.remaining==null?'—':Math.abs(n.remaining)} <small>${tr(n.remaining==null?'Limit unknown':n.remaining<0?'over limit':'left')}</small></strong><small>${n.accepted+n.tentative} / ${n.capacity??'—'} ${tr('filled')}</small></article>`;}).join('')}</div>
+   <p class="sandbox-notice">${result.accepted} ${tr('accepted players always included')} · ${tr('Drag individuals, or use Add and Remove.')}</p>
+   ${counts.Unknown.accepted+counts.Unknown.tentative?`<p class="sandbox-warning">${counts.Unknown.accepted+counts.Unknown.tentative} ${tr('players have unknown seat colours. Totals are incomplete.')}</p>`:''}
+   ${result.estimates?`<p class="sandbox-muted">${result.estimates} ${tr('accepted players use anticipated colours until their seats are confirmed.')}</p>`:''}
+   ${!scenario?`<p class="sandbox-warning">${tr('Create a scenario to start adding players.')}</p>`:''}
+   <div class="sandbox-board">${lists(result)}</div><p class="sandbox-message ${error?'is-error':''}" role="status">${esc(message)}</p>`;
+  panel.querySelectorAll('[data-scroll]').forEach(el=>{el.scrollTop=positions[el.dataset.scroll]||0;});
+ }
+ async function place(playerId,include){
+  if(disabled()||!current())return;
+  const result=sandboxForecast(api.players(),api.capacities(),current()),p=result.groups.flatMap(g=>g.members).find(p=>String(p.id)===playerId);
+  if(!p||sandboxAccepted(p)||result.members.some(p=>String(p.id)===playerId)===include)return;
+  try{await save({op:'member',id:current().id,playerId,include});const button=[...panel.querySelectorAll('[data-place]')].find(b=>b.dataset.place===playerId);button?.focus({preventScroll:true});}catch{/* Save status remains visible; no optimistic record changes. */}
+ }
+ panel.addEventListener('input',e=>{if(e.target.matches('[data-search]')){search=e.target.value;const template=document.createElement('template');template.innerHTML=lists(sandboxForecast(api.players(),api.capacities(),current()));panel.querySelector('[data-scroll="applicants"]').innerHTML=template.content.querySelector('[data-scroll="applicants"]').innerHTML;}});
+ panel.addEventListener('change',e=>{if(e.target.matches('[data-scenario]')){activeId=e.target.value;message='';render();}});
+ panel.addEventListener('click',async e=>{
+  const b=e.target.closest('button');if(!b||b.disabled)return;
+  if(b.hasAttribute('data-refresh')){busy=true;message=t('Refreshing…');error=false;render();try{await api.refresh();message=t('Live data refreshed.');}catch(err){message=t('Refresh failed:')+' '+t(err.message);error=true;}finally{busy=false;render();}return;}
+  if(disabled())return;
+  if(b.hasAttribute('data-new-scenario'))return newScenario();
+  if(b.dataset.place)await place(b.dataset.place,b.dataset.include==='true');
+ });
+ panel.addEventListener('dragstart',e=>{
+  const row=e.target.closest('[data-player][draggable="true"]');if(!row||disabled()||!current()){e.preventDefault();return;}
+  dragId=row.dataset.player;e.dataTransfer.setData('text/plain',dragId);e.dataTransfer.effectAllowed='move';row.classList.add('is-dragging');
+ });
+ const clearDrag=()=>{dragId='';panel.querySelectorAll('.is-drop-target,.is-dragging').forEach(el=>el.classList.remove('is-drop-target','is-dragging'));};
+ panel.addEventListener('dragover',e=>{const lane=e.target.closest('[data-drop]');if(!lane||!dragId||disabled())return;e.preventDefault();e.dataTransfer.dropEffect='move';panel.querySelectorAll('[data-drop]').forEach(el=>el.classList.toggle('is-drop-target',el===lane));});
+ panel.addEventListener('dragleave',e=>{const lane=e.target.closest('[data-drop]');if(lane&&!lane.contains(e.relatedTarget))lane.classList.remove('is-drop-target');});
+ panel.addEventListener('drop',async e=>{const lane=e.target.closest('[data-drop]');if(!lane||!dragId)return;e.preventDefault();const id=dragId,include=lane.dataset.drop==='in';clearDrag();await place(id,include);});
+ panel.addEventListener('dragend',clearDrag);
+ return {render,isOpen:()=>dialog.open,isBusy:()=>busy};
 }

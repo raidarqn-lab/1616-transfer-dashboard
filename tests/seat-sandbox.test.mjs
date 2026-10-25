@@ -84,3 +84,27 @@ test('support, forged approvals, accepted removals, duplicate pending requests a
  d=request(include(d));assert.throws(()=>request(d),/identifier|already has/);
  assert.equal(d.scenarios[0].exceptions[0].status,'pending');
 });
+test('individual placement moves only the named member, preserves approvals, and does not expand on membership changes',()=>{
+ const players=fixture(),before=structuredClone(players);let d=create();
+ const move=(playerId,include)=>command('member',{playerId:String(playerId),include});
+ d=run(d,move(4,true),players);
+ assert.equal(d.scenarios[0].selectionMode,'individual');
+ assert.deepEqual(sandboxForecast(players,capacities,d.scenarios[0]).members.map(p=>p.id).sort(),[1,4]);
+ d=run(d,move(4,true),players);assert.equal(d.scenarios[0].selectedIds.length,1);
+ const changed=[...players,{id:20,name:'New friend',group:'Harbor',status:'Pending',power:180}];
+ assert.deepEqual(sandboxForecast(changed,capacities,d.scenarios[0]).members.map(p=>p.id).sort(),[1,4]);
+ d=run(d,move(4,false),players);assert.deepEqual(sandboxForecast(players,capacities,d.scenarios[0]).members.map(p=>p.id),[1]);
+ assert.throws(()=>run(d,move(1,false),players),/always stay included/);
+ assert.throws(()=>run(d,move(999,true),players),/no longer available/);
+ assert.throws(()=>run(d,move(4,true),players,identity,'support'),/Admin or lead/);
+ assert.deepEqual(players,before);
+});
+test('first individual move preserves legacy selections and approved exclusions without requiring new exception approval',()=>{
+ let d=request(include(create()));d=run(d,command('review',{requestId:'request-123',decision:'approved',reviewNote:''}),fixture(),other);
+ const before=sandboxForecast(fixture(),capacities,d.scenarios[0]).members.map(p=>p.id);
+ d=run(d,command('member',{playerId:'2',include:true}));
+ assert.deepEqual(sandboxForecast(fixture(),capacities,d.scenarios[0]).members.map(p=>p.id).sort(),[...before,2].sort());
+ d=run(d,command('member',{playerId:'4',include:true}));
+ assert(sandboxForecast(fixture(),capacities,d.scenarios[0]).members.some(p=>p.id===4));
+ assert.equal(d.scenarios[0].exceptions[0].status,'approved');
+});
