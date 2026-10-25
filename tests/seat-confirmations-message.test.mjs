@@ -6,7 +6,7 @@ test('seat follow-up preserves the exact applicant code in all eight languages',
  for(const language of Object.keys(languageNames)){
   const text=seatFollowupMessage(applicant,language);assert.ok(text.includes(applicant.name));assert.ok(text.includes('join1616.com'));assert.equal(text.split('1616-TEST-12345678').length,2);assert.ok(!text.includes('{code}'));
  }
- const text=seatFollowupMessage(applicant,'en');assert.match(text,/we also wanted to let you know/);assert.match(text,/at any time/);assert.match(text,/if you have been accepted/);assert.match(text,/assigned alliance once it has been selected/);
+ const text=seatFollowupMessage(applicant,'en');assert.match(text,/either directly or through a group/);assert.match(text,/does not mean your application has been approved/);assert.match(text,/how many people we can fit/);assert.match(text,/Gold, Purple, Blue, or White\/Gray/);assert.match(text,/send a screenshot/);assert.match(text,/add this to our records/);assert.match(text,/at any time/);assert.ok(text.endsWith('1616-TEST-12345678'));
 });
 test('missing, malformed, or ambiguous codes never produce a seat follow-up',()=>{
  for(const p of [null,{}, {...applicant,name:''},{...applicant,message:null},{...applicant,message:'1616-short'},{...applicant,message:'For your reference, this code is 1616-TEST-12345678 extra'}])assert.equal(seatFollowupMessage(p),null);

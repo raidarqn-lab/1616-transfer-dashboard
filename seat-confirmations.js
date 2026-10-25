@@ -1,6 +1,6 @@
 import {getManualSession,logoutManual} from './manual-session.js?v=messenger-20261024';
 import {bountyConnection as config} from './nova-bounty-config.js';
-import {mountSeatConfirmations} from './seat-confirmations-view.js?v=3';
+import {mountSeatConfirmations} from './seat-confirmations-view.js?v=4';
 let staff=null;const manual=getManualSession();
 if(manual?.user?.role!=='applicant_messenger'){
  try{
