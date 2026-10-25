@@ -4,3 +4,5 @@
 @media(pointer:coarse){.seat-row button,.seat-row select,.seat-picker summary{min-height:44px}}
 
 .seat-name-line{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.seat-row .seat-copy{font-size:11px;padding:3px 7px;min-height:0;background:#fff;color:#25583f;border:1px solid #cbd5c9;border-radius:4px;white-space:nowrap}.seat-row .seat-copy:hover{background:#eaf1e8}.seat-row .seat-copy:disabled{cursor:default;opacity:.55}@media(pointer:coarse){.seat-row .seat-copy{min-height:44px}}
+
+.seat-name-line{gap:6px}.seat-image-dialog{width:min(720px,calc(100vw - 36px));max-height:90vh;overflow:auto}.seat-image-dialog img{display:block;max-width:100%;max-height:65vh;width:auto;height:auto;margin:12px auto;object-fit:contain}.seat-image-dialog p{font-size:12px}.seat-image-actions{display:flex;gap:10px;justify-content:flex-end}

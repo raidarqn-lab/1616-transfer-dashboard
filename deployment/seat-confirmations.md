@@ -10,7 +10,7 @@ The confirmer list contains active Messenger accounts and Transfer Hub administr
 
 Only Pending, Under Review, Approved, and Waitlisted applications are eligible. Contacts, prospects, withdrawn, rejected, transferred, merged and deleted records are excluded. Seat colours are confirmations, never estimates; no status or destination alliance is changed.
 
-The service-only account RPC dispatches to a private, narrowly scoped seat function. Read responses contain only basic row fields, confirmation metadata and opaque confirmer IDs/display names. Messages, contact details, notes, staff emails, usernames, and full records are not returned.
+The service-only account RPC dispatches to a private, narrowly scoped seat function. Read responses contain only basic row fields, confirmation metadata and opaque confirmer IDs/display names. Contact details, internal notes, staff emails, usernames, and full records are not returned. The applicant reference message is included for the Copy message action.
 
 Saves validate the current authenticated actor, active selected confirmer, four allowed colours, row revision, and approved-seat capacity. The portal control row uses the existing global commit lock. Changes increment record/global revisions, write the existing portal transaction stream, preserve unrelated fields and append an internal audit entry. Authenticated actor and nominated confirmer are recorded separately. Retries use an idempotency key; concurrent edits return a conflict.
 
@@ -29,3 +29,13 @@ Rollback the frontend and auth bundle to the preceding revision if needed. The p
 To add group lead names to an existing installation, apply `backend/seat-confirmations-transfer-lead.sql` and publish the frontend. This exposes only the assigned player name from `transferOrganization.data.groupLeads`; deleted, merged, moved or ambiguous leaders show as not assigned. No auth bundle update is needed.
 
 The Copy message action uses a separate multilingual follow-up template on Seat confirmations. It rechecks authenticated access and the current application code on every click, preserves unsaved seat selections, and falls back to a selectable dialog when clipboard access fails. Apply `backend/seat-confirmations-message.sql` after the group-lead migration before deploying this frontend. Only the existing applicant-reference message is added to the restricted projection; Applicant Messenger copy remains unchanged.
+
+## Private screenshots (v1.0.54)
+
+Apply `backend/seat-confirmations-images.sql` **after** the existing seat migrations, then rebuild/deploy `nova-auth` and publish the frontend. This migration is repeatable and changes no player records. If reinstalling an earlier seat migration, reapply the image migration last to restore its dispatch and projection additions.
+
+Each eligible player has one screenshot in `transfer_private.seat_images`, separate from player payloads and full snapshots. No public URL or direct client table grant is created. Reads and writes use the existing helper/owner/lead authorization; writes revalidate active accounts under the existing commit lock. Replacements require the current image version, support retry idempotency, and record uploader/time plus an audit event. Uploading does not confirm the seat or change application status, record revision, or unsaved choices.
+
+JPG/PNG/WebP input is limited to 15 MiB, re-encoded as JPEG with metadata removed, resized to at most 1920 pixels on the long edge, and bounded at 1,200,000 data-URL characters. PostgreSQL validates size and JPEG markers. The `?upload=seat-image` route accepts the bounded image body only for `seat-image-save`; existing auth actions retain their 4 KiB request limit. Lists return only the image version; the image itself is fetched on demand after a fresh access check.
+
+Validation: 122 Node tests, both local PostgreSQL suites, and a browser fixture using fictional players verified upload/view, uploader metadata, and preserving an unsaved Gold selection. No real applicant screenshots or seat colours were changed during verification.

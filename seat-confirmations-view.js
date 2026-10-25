@@ -1,14 +1,15 @@
+import {prepareSeatImage} from './seat-confirmations-image.js?v=1';
 import {seatFollowupMessage,freshSeatFollowup} from './seat-confirmations-message.js?v=2';
 import {languageNames,messengerCopy,preferredLanguage,formatCopy} from './applicant-messenger-i18n.js?v=2';
-import {seatCopy,seatErrorKey} from './seat-confirmations-i18n.js?v=2';
+import {seatCopy,seatErrorKey} from './seat-confirmations-i18n.js?v=3';
 export const seatColours=['Gold','Purple','Blue','White'];
 const text=value=>typeof value==='string'?value:'';
 const normalize=value=>text(value).normalize('NFKD').replace(/\p{M}/gu,'').toLocaleLowerCase().trim();
-export function seatRow(raw){return {id:String(raw.id),name:text(raw.name),message:text(raw.message),server:String(raw.server??''),currentAlliance:text(raw.currentAlliance),transferGroup:text(raw.transferGroup),transferLead:text(raw.transferLead),status:text(raw.status),confirmedSeat:seatColours.includes(raw.confirmedSeat)?raw.confirmedSeat:'',confirmerId:text(raw.confirmerId),confirmedBy:text(raw.confirmedBy),confirmedAt:text(raw.confirmedAt),revision:raw.revision};}
+export function seatRow(raw){return {id:String(raw.id),name:text(raw.name),message:text(raw.message),server:String(raw.server??''),currentAlliance:text(raw.currentAlliance),transferGroup:text(raw.transferGroup),transferLead:text(raw.transferLead),status:text(raw.status),confirmedSeat:seatColours.includes(raw.confirmedSeat)?raw.confirmedSeat:'',confirmerId:text(raw.confirmerId),confirmedBy:text(raw.confirmedBy),confirmedAt:text(raw.confirmedAt),imageVersion:text(raw.imageVersion),revision:raw.revision};}
 export function matchingSeatRows(rows,query,filter='all'){return rows.filter(p=>normalize(p.name).includes(normalize(query))&&(filter==='all'||(filter==='confirmed'?!!p.confirmedSeat:!p.confirmedSeat)));}
 const el=(tag,cls,value)=>{const node=document.createElement(tag);if(cls)node.className=cls;if(value!=null)node.textContent=value;return node;};
 export function seatIcon(colour){const ns='http://www.w3.org/2000/svg',svg=document.createElementNS(ns,'svg');svg.setAttribute('viewBox','0 0 24 24');svg.setAttribute('class','seat-icon');svg.setAttribute('aria-hidden','true');svg.dataset.colour=colour;const back=document.createElementNS(ns,'rect');for(const [key,value] of Object.entries({x:6,y:2,width:12,height:13,rx:3}))back.setAttribute(key,String(value));const arms=document.createElementNS(ns,'path');arms.setAttribute('d','M3 10v8h18v-8M6 18v4M18 18v4M3 14h18');svg.append(back,arms);return svg;}
-export function mountSeatConfirmations({root,load,save,signOut,staff=false,clipboard=navigator.clipboard}){
+export function mountSeatConfirmations({root,load,save,uploadImage,loadImage,signOut,staff=false,clipboard=navigator.clipboard}){
  const list=root.querySelector('#seat-list'),search=root.querySelector('#seat-search'),refresh=root.querySelector('#refresh'),status=root.querySelector('#seat-status'),notice=root.querySelector('#seat-notice'),picker=root.querySelector('#messenger-language');
  const storageKey='1616-applicant-messenger-language-v1';let savedLanguage='';try{savedLanguage=localStorage.getItem(storageKey)||'';}catch{}
  let language=preferredLanguage([savedLanguage,...(navigator.languages||[navigator.language])]),t=seatCopy(language),common=messengerCopy(language),rows=[],confirmers=[],filter='all',state='loading',noticeKey='',generation=0,closed=false,busy=false;
@@ -23,7 +24,7 @@ export function mountSeatConfirmations({root,load,save,signOut,staff=false,clipb
   list.replaceChildren();if(state!=='ready'){status.textContent=t[state]||t.loadError;return;}
   const matches=matchingSeatRows(rows,search.value,filter);status.textContent=matches.length?formatCopy(common.count,{count:matches.length}):t.empty;
   for(const p of matches){
-   const row=el('li','seat-row');row.dataset.confirmed=String(!!p.confirmedSeat);const identity=el('div','seat-identity');const name=el('strong','',p.name);name.dir='auto';const heading=el('div','seat-name-line');heading.append(name);const copyButton=el('button','seat-copy',common.copy);copyButton.type='button';copyButton.dataset.copySeatMessage=p.id;copyButton.setAttribute('aria-label',formatCopy(common.copyFor,{name:p.name}));copyButton.disabled=busy||!seatFollowupMessage(p,language);if(!p.message)copyButton.title=common.unavailable;copyButton.onclick=()=>copyMessage(p.id);heading.append(copyButton);identity.append(heading);identity.append(el('span','seat-meta',[p.server?'#'+p.server:common.noServer,p.currentAlliance||common.noServer,p.transferGroup||common.noGroup,common.application.statuses[p.status]||p.status,t.transferLead+': '+(p.transferLead||t.noLead)].join(' · ')));
+   const row=el('li','seat-row');row.dataset.confirmed=String(!!p.confirmedSeat);const identity=el('div','seat-identity');const name=el('strong','',p.name);name.dir='auto';const heading=el('div','seat-name-line');heading.append(name);const copyButton=el('button','seat-copy',common.copy);copyButton.type='button';copyButton.dataset.copySeatMessage=p.id;copyButton.setAttribute('aria-label',formatCopy(common.copyFor,{name:p.name}));copyButton.disabled=busy||!seatFollowupMessage(p,language);if(!p.message)copyButton.title=common.unavailable;copyButton.onclick=()=>copyMessage(p.id);heading.append(copyButton);const imageButton=el('button','seat-copy seat-image-button',p.imageVersion?t.viewImage:t.uploadImage);imageButton.type='button';imageButton.setAttribute('aria-label',(p.imageVersion?t.viewImage:t.uploadImage)+' · '+p.name);imageButton.disabled=busy;imageButton.onclick=()=>p.imageVersion?viewImage(p):chooseImage(p);heading.append(imageButton);identity.append(heading);identity.append(el('span','seat-meta',[p.server?'#'+p.server:common.noServer,p.currentAlliance||common.noServer,p.transferGroup||common.noGroup,common.application.statuses[p.status]||p.status,t.transferLead+': '+(p.transferLead||t.noLead)].join(' · ')));
    if(p.confirmedBy&&!confirmers.some(c=>c.id===p.confirmerId&&c.name===p.confirmedBy))identity.append(el('span','seat-saved-by',formatCopy(t.legacy,{name:p.confirmedBy})));
    row.append(identity);const draft=draftFor(p),seat=el('details','seat-picker'),summary=el('summary'),menu=el('div','seat-options');summary.setAttribute('aria-label',t.seat+' · '+p.name);seat.append(summary,menu);row.append(seat);
    function paintSeat(){summary.replaceChildren();if(draft.seat)summary.append(seatIcon(draft.seat));summary.append(el('span','',common.application.statuses[draft.seat]||t.chooseSeat),el('span','seat-arrow','⌄'));}
@@ -50,6 +51,36 @@ export function mountSeatConfirmations({root,load,save,signOut,staff=false,clipb
    try{await clipboard.writeText(result.message);if(closed||request!==generation)return;setNotice('copied',{name:result.name});}
    catch{if(closed||request!==generation)return;setNotice('copyHelp');manualCopy(result.message);}
   }catch(error){if(closed||request!==generation)return;if(error.code==='access_denied'){clear();state='accessError';}setNotice(error.code==='missingMessage'?'missingMessage':seatErrorKey(error.code));}
+  finally{busy=false;if(!closed&&request===generation){refresh.disabled=false;render();}}
+ }
+ function chooseImage(p){
+  if(busy||closed)return;
+  const input=el('input');input.type='file';input.accept='image/jpeg,image/png,image/webp';
+  input.onchange=()=>{if(input.files?.[0])attachImage(p,input.files[0]);};input.click();
+ }
+ async function attachImage(p,file){
+  if(busy||closed)return;busy=true;const request=++generation;refresh.disabled=true;setNotice('uploadingImage');render();
+  try{
+   const image=await prepareSeatImage(file);if(closed||request!==generation)return;
+   const result=await uploadImage({playerId:p.id,image,imageVersion:p.imageVersion,uploadId:crypto.randomUUID()});if(closed||request!==generation)return;
+   if(result.ok!==true||result.playerId!==p.id||typeof result.imageVersion!=='string')throw Error('Invalid response');
+   rows=rows.map(row=>row.id===p.id?{...row,imageVersion:result.imageVersion}:row);setNotice('imageSaved');
+  }catch(error){if(closed||request!==generation)return;if(error.code==='access_denied'){clear();state='accessError';}setNotice(error.code?seatErrorKey(error.code):'imageError');}
+  finally{busy=false;if(!closed&&request===generation){refresh.disabled=false;render();}}
+ }
+ async function viewImage(p){
+  if(busy||closed)return;busy=true;const request=++generation;refresh.disabled=true;setNotice('loadingImage');render();
+  try{
+   const result=await loadImage(p.id);if(closed||request!==generation)return;
+   if(typeof result.image!=='string'||!/^data:image\/jpeg;base64,[A-Za-z0-9+/]+={0,2}$/.test(result.image)||result.image.length>1200000||typeof result.imageVersion!=='string')throw Error('Invalid image response');
+   const current={...p,imageVersion:result.imageVersion};rows=rows.map(row=>row.id===p.id?{...row,imageVersion:result.imageVersion}:row);
+   const dialog=el('dialog','seat-image-dialog');dialog.setAttribute('aria-label',t.screenshot+' · '+p.name);
+   const title=el('h2','',p.name+' · '+t.screenshot),img=el('img');img.alt=t.screenshot+' · '+p.name;img.src=result.image;
+   const date=new Date(result.uploadedAt);const info=el('p','',formatCopy(t.imageBy,{name:result.uploadedBy||'',date:Number.isNaN(date.getTime())?'':date.toLocaleString(language)}));
+   const actions=el('div','seat-image-actions'),replace=el('button','',t.replaceImage),close=el('button','',common.close);
+   replace.type=close.type='button';replace.onclick=()=>{dialog.close();chooseImage(current);};close.onclick=()=>dialog.close();actions.append(replace,close);dialog.append(title,img,info,actions);root.append(dialog);
+   dialog.addEventListener('close',()=>{img.removeAttribute('src');dialog.remove();search.focus();});dialog.showModal();setNotice('');
+  }catch(error){if(closed||request!==generation)return;if(error.code==='access_denied'){clear();state='accessError';}setNotice(error.code?seatErrorKey(error.code):'imageError');}
   finally{busy=false;if(!closed&&request===generation){refresh.disabled=false;render();}}
  }
  async function saveRow(p,draft){if(busy||closed)return;busy=true;const request=++generation;draft.transactionId??=crypto.randomUUID();refresh.disabled=true;setNotice('saving');render();
