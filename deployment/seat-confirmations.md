@@ -27,3 +27,5 @@ Saves validate the current authenticated actor, active selected confirmer, four 
 Rollback the frontend and auth bundle to the preceding revision if needed. The private database functions can remain installed without being exposed by the prior auth handler. Do not erase existing seat confirmations or audit history.
 
 To add group lead names to an existing installation, apply `backend/seat-confirmations-transfer-lead.sql` and publish the frontend. This exposes only the assigned player name from `transferOrganization.data.groupLeads`; deleted, merged, moved or ambiguous leaders show as not assigned. No auth bundle update is needed.
+
+The Copy message action uses a separate multilingual follow-up template on Seat confirmations. It rechecks authenticated access and the current application code on every click, preserves unsaved seat selections, and falls back to a selectable dialog when clipboard access fails. Apply `backend/seat-confirmations-message.sql` after the group-lead migration before deploying this frontend. Only the existing applicant-reference message is added to the restricted projection; Applicant Messenger copy remains unchanged.

@@ -1,19 +1,20 @@
+import {seatFollowupMessage,freshSeatFollowup} from './seat-confirmations-message.js?v=1';
 import {languageNames,messengerCopy,preferredLanguage,formatCopy} from './applicant-messenger-i18n.js?v=2';
 import {seatCopy,seatErrorKey} from './seat-confirmations-i18n.js?v=2';
 export const seatColours=['Gold','Purple','Blue','White'];
 const text=value=>typeof value==='string'?value:'';
 const normalize=value=>text(value).normalize('NFKD').replace(/\p{M}/gu,'').toLocaleLowerCase().trim();
-export function seatRow(raw){return {id:String(raw.id),name:text(raw.name),server:String(raw.server??''),currentAlliance:text(raw.currentAlliance),transferGroup:text(raw.transferGroup),transferLead:text(raw.transferLead),status:text(raw.status),confirmedSeat:seatColours.includes(raw.confirmedSeat)?raw.confirmedSeat:'',confirmerId:text(raw.confirmerId),confirmedBy:text(raw.confirmedBy),confirmedAt:text(raw.confirmedAt),revision:raw.revision};}
+export function seatRow(raw){return {id:String(raw.id),name:text(raw.name),message:text(raw.message),server:String(raw.server??''),currentAlliance:text(raw.currentAlliance),transferGroup:text(raw.transferGroup),transferLead:text(raw.transferLead),status:text(raw.status),confirmedSeat:seatColours.includes(raw.confirmedSeat)?raw.confirmedSeat:'',confirmerId:text(raw.confirmerId),confirmedBy:text(raw.confirmedBy),confirmedAt:text(raw.confirmedAt),revision:raw.revision};}
 export function matchingSeatRows(rows,query,filter='all'){return rows.filter(p=>normalize(p.name).includes(normalize(query))&&(filter==='all'||(filter==='confirmed'?!!p.confirmedSeat:!p.confirmedSeat)));}
 const el=(tag,cls,value)=>{const node=document.createElement(tag);if(cls)node.className=cls;if(value!=null)node.textContent=value;return node;};
 export function seatIcon(colour){const ns='http://www.w3.org/2000/svg',svg=document.createElementNS(ns,'svg');svg.setAttribute('viewBox','0 0 24 24');svg.setAttribute('class','seat-icon');svg.setAttribute('aria-hidden','true');svg.dataset.colour=colour;const back=document.createElementNS(ns,'rect');for(const [key,value] of Object.entries({x:6,y:2,width:12,height:13,rx:3}))back.setAttribute(key,String(value));const arms=document.createElementNS(ns,'path');arms.setAttribute('d','M3 10v8h18v-8M6 18v4M18 18v4M3 14h18');svg.append(back,arms);return svg;}
-export function mountSeatConfirmations({root,load,save,signOut,staff=false}){
+export function mountSeatConfirmations({root,load,save,signOut,staff=false,clipboard=navigator.clipboard}){
  const list=root.querySelector('#seat-list'),search=root.querySelector('#seat-search'),refresh=root.querySelector('#refresh'),status=root.querySelector('#seat-status'),notice=root.querySelector('#seat-notice'),picker=root.querySelector('#messenger-language');
  const storageKey='1616-applicant-messenger-language-v1';let savedLanguage='';try{savedLanguage=localStorage.getItem(storageKey)||'';}catch{}
  let language=preferredLanguage([savedLanguage,...(navigator.languages||[navigator.language])]),t=seatCopy(language),common=messengerCopy(language),rows=[],confirmers=[],filter='all',state='loading',noticeKey='',generation=0,closed=false,busy=false;
  const drafts=new Map();const back=root.querySelector('.back-to-hub');back.hidden=!staff;
- function clear(){rows=[];confirmers=[];drafts.clear();list.replaceChildren();}
- function setNotice(key){noticeKey=key;notice.textContent=t[key]||'';}
+ function clear(){rows=[];confirmers=[];drafts.clear();list.replaceChildren();root.querySelectorAll('dialog').forEach(d=>d.remove());}
+ function setNotice(key,values={}){noticeKey=key;notice.textContent=formatCopy(t[key]||'',values);}
  function draftFor(p){if(!drafts.has(p.id))drafts.set(p.id,{seat:p.confirmedSeat,by:confirmers.some(c=>c.id===p.confirmerId&&c.name===p.confirmedBy)?p.confirmerId:'',initialBy:confirmers.some(c=>c.id===p.confirmerId&&c.name===p.confirmedBy)?p.confirmerId:'',revision:p.revision,transactionId:null});return drafts.get(p.id);}
  const changed=(p,d)=>d.seat!==p.confirmedSeat||d.by!==d.initialBy;
  function hasDraft(){return rows.some(p=>{const d=drafts.get(p.id);return d&&changed(p,d)&&(d.seat||d.by);});}
@@ -22,7 +23,7 @@ export function mountSeatConfirmations({root,load,save,signOut,staff=false}){
   list.replaceChildren();if(state!=='ready'){status.textContent=t[state]||t.loadError;return;}
   const matches=matchingSeatRows(rows,search.value,filter);status.textContent=matches.length?formatCopy(common.count,{count:matches.length}):t.empty;
   for(const p of matches){
-   const row=el('li','seat-row');row.dataset.confirmed=String(!!p.confirmedSeat);const identity=el('div','seat-identity');const name=el('strong','',p.name);name.dir='auto';identity.append(name);identity.append(el('span','seat-meta',[p.server?'#'+p.server:common.noServer,p.currentAlliance||common.noServer,p.transferGroup||common.noGroup,common.application.statuses[p.status]||p.status,t.transferLead+': '+(p.transferLead||t.noLead)].join(' · ')));
+   const row=el('li','seat-row');row.dataset.confirmed=String(!!p.confirmedSeat);const identity=el('div','seat-identity');const name=el('strong','',p.name);name.dir='auto';const heading=el('div','seat-name-line');heading.append(name);const copyButton=el('button','seat-copy',common.copy);copyButton.type='button';copyButton.dataset.copySeatMessage=p.id;copyButton.setAttribute('aria-label',formatCopy(common.copyFor,{name:p.name}));copyButton.disabled=busy||!seatFollowupMessage(p,language);if(!p.message)copyButton.title=common.unavailable;copyButton.onclick=()=>copyMessage(p.id);heading.append(copyButton);identity.append(heading);identity.append(el('span','seat-meta',[p.server?'#'+p.server:common.noServer,p.currentAlliance||common.noServer,p.transferGroup||common.noGroup,common.application.statuses[p.status]||p.status,t.transferLead+': '+(p.transferLead||t.noLead)].join(' · ')));
    if(p.confirmedBy&&!confirmers.some(c=>c.id===p.confirmerId&&c.name===p.confirmedBy))identity.append(el('span','seat-saved-by',formatCopy(t.legacy,{name:p.confirmedBy})));
    row.append(identity);const draft=draftFor(p),seat=el('details','seat-picker'),summary=el('summary'),menu=el('div','seat-options');summary.setAttribute('aria-label',t.seat+' · '+p.name);seat.append(summary,menu);row.append(seat);
    function paintSeat(){summary.replaceChildren();if(draft.seat)summary.append(seatIcon(draft.seat));summary.append(el('span','',common.application.statuses[draft.seat]||t.chooseSeat),el('span','seat-arrow','⌄'));}
@@ -39,6 +40,17 @@ export function mountSeatConfirmations({root,load,save,signOut,staff=false}){
  async function reload({discard=false}={}){if(closed||busy||(!discard&&hasDraft()))return;const request=++generation;refresh.disabled=true;
   try{const data=await load();if(closed||request!==generation)return;if(!Array.isArray(data.applicants)||!Array.isArray(data.confirmers))throw Error('Invalid response');rows=data.applicants.map(seatRow);confirmers=data.confirmers.filter(c=>typeof c.id==='string'&&typeof c.name==='string').map(({id,name})=>({id,name}));drafts.clear();state='ready';render();}
   catch(error){if(closed||request!==generation)return;clear();state=error.code==='access_denied'?'accessError':'loadError';render();}finally{if(request===generation)refresh.disabled=false;}
+ }
+ function manualCopy(message){const dialog=el('dialog');dialog.setAttribute('aria-label',common.copyTitle);const heading=el('h2','',common.copyTitle),hint=el('p','',common.copyHelp),input=el('textarea'),close=el('button','',common.close);input.readOnly=true;input.value=message;input.dir='auto';input.setAttribute('aria-label',common.messageLabel);close.type='button';close.onclick=()=>dialog.close();dialog.append(heading,hint,input,close);root.append(dialog);dialog.addEventListener('close',()=>{dialog.remove();search.focus();});dialog.showModal();input.focus();input.select();}
+ async function copyMessage(id){
+  if(busy||closed)return;busy=true;const request=++generation,copyLanguage=language;refresh.disabled=true;setNotice('preparing');render();
+  try{
+   // Recheck access and the current player's code without discarding unsaved seat edits.
+   const result=await freshSeatFollowup(load,id,copyLanguage);if(closed||request!==generation)return;
+   try{await clipboard.writeText(result.message);if(closed||request!==generation)return;setNotice('copied',{name:result.name});}
+   catch{if(closed||request!==generation)return;setNotice('copyHelp');manualCopy(result.message);}
+  }catch(error){if(closed||request!==generation)return;if(error.code==='access_denied'){clear();state='accessError';}setNotice(error.code==='missingMessage'?'missingMessage':seatErrorKey(error.code));}
+  finally{busy=false;if(!closed&&request===generation){refresh.disabled=false;render();}}
  }
  async function saveRow(p,draft){if(busy||closed)return;busy=true;const request=++generation;draft.transactionId??=crypto.randomUUID();refresh.disabled=true;setNotice('saving');render();
   try{const result=await save({playerId:p.id,seat:draft.seat,confirmerId:draft.by,revision:draft.revision,transactionId:draft.transactionId});if(closed||request!==generation)return;if(result.ok!==true||!result.applicant||String(result.applicant.id)!==p.id)throw Error('Invalid response');rows=rows.map(row=>row.id===p.id?seatRow(result.applicant):row);drafts.delete(p.id);setNotice('savedNotice');}
