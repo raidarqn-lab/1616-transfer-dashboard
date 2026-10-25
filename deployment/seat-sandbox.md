@@ -30,3 +30,7 @@ The seat viewer lists the same forecast members used by the capacity totals, by 
 ## Version 1.0.57
 
 The applicant roster is one continuous list with every group expanded, groups ordered alphabetically and names ordered alphabetically within each group. Search retains the complete matching group. Group actions resolve their containing roster, and seat-viewer links focus that group in the list. This is a frontend-only update; no Edge Function deployment is needed.
+
+## Version 1.0.58
+
+Compact display uses slim group headers with inline controls and dense player rows. Solo applicants occupy a single row. The seat viewer is collapsed initially and expands on demand. All sorting, whole-group selection and exception checks are unchanged.
