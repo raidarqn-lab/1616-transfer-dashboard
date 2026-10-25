@@ -26,7 +26,7 @@ Green + checkmark = confirmed; yellow = unconfirmed. Uploading alone does not co
 Accuracy is VERY important: wrong colours can stop entire groups fitting their server’s seats. Ask me or the listed Transfer lead if unsure.
 
 APPLICANT MESSENGER
-Answer application-status enquiries here. Find the correct player, click Copy message, and send it privately to them. It includes their individual code to check status and alliance placement, if accepted, at join1616.com.
+Give applicants their code to access their application status. Find the correct player, click Copy message, and send it privately in-game. The prepared message includes their individual confirmation code and join1616.com, where they can check their status and assigned alliance, if accepted, at any time.
 
 STRICTLY CONFIDENTIAL
 Keep all applicant information, screenshots, codes and logins confidential. Do not discuss applicants with anyone else or confirm/deny that they applied or their application status—even if asked. Send a player’s message only to that player. Refer others’ questions to me.
