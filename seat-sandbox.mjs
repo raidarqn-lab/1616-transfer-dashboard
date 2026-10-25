@@ -1,4 +1,4 @@
-import {leadershipRosterHtml} from './seat-sandbox-export.mjs?v=2';
+import {leadershipRosterHtml} from './seat-sandbox-export.mjs?v=3';
 import {SANDBOX_COLOURS,sandboxAccepted,sandboxSeat,sandboxForecast} from './seat-sandbox-core.mjs?v=6';
 
 export function installSeatSandbox(api){
@@ -29,7 +29,7 @@ export function installSeatSandbox(api){
  function exportRoster({allApplicantsOnly=false}={}){
   returnFocus=document.activeElement;
   dialog.classList.add('sandbox-export-dialog');
-  dialog.innerHTML=`<header><h2>Leadership export</h2><button type="button" data-close aria-label="${tr('Close')}">×</button></header><label>Include<select data-export-scope><option value="all">All applicants</option>${!allApplicantsOnly&&current()?'<option value="selected">Selected players in this scenario</option>':''}</select></label><p>Navy-and-white roster with one row per player, alphabetically within groups. Choose Print / Save PDF, or download a shareable HTML file.</p><footer><button type="button" data-download-roster>Download HTML</button><button type="button" class="primary" data-print-roster>Print / Save PDF</button></footer><iframe title="Leadership roster preview"></iframe>`;
+  dialog.innerHTML=`<header><h2>Leadership export</h2><button type="button" data-close aria-label="${tr('Close')}">×</button></header><label>Include<select data-export-scope><option value="all">All applicants</option>${!allApplicantsOnly&&current()?'<option value="selected">Selected players in this scenario</option>':''}</select></label><p>Search, filter, sort, and group the navy-and-white roster. Download HTML to share an interactive offline copy. Print / Save PDF prints the current filtered view.</p><footer><button type="button" data-download-roster>Download HTML</button><button type="button" class="primary" data-print-roster>Print / Save PDF</button></footer><iframe title="Leadership roster preview"></iframe>`;
   let html='';
   const update=()=>{const selected=dialog.querySelector('[data-export-scope]').value==='selected',scenario=current();const players=selected?sandboxForecast(api.players(),api.capacities(),scenario).members:api.players().filter(p=>!p.deleted&&!p.general&&!p.prospect);html=leadershipRosterHtml(players,{locale:api.locale(),subtitle:selected?'Sandbox scenario: '+scenario.name+' · Selected players · Not final approvals':'All applicants · All statuses · Alphabetical by transfer group'});dialog.querySelector('iframe').srcdoc=html;};
   dialog.querySelector('[data-export-scope]').onchange=update;

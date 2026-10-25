@@ -8,6 +8,15 @@ test('leadership roster groups and sorts every player, retaining missing stats a
  assert.ok(html.indexOf('>Zed</td>')<html.indexOf('>Bea</td>'));
  assert.match(html,/No transfer group/);assert.match(html,/Declined/);
  assert.match(html,/150.12M/);assert.match(html,/1.23M/);assert.match(html,/>—<\/td>/);
- assert.ok(!html.includes('<script>'));assert.match(html,/&lt;script&gt;/);
+ assert.ok(!html.includes('<script>x</script>'));assert.match(html,/&lt;script&gt;/);
  assert.equal((html.match(/<td class="name">/g)||[]).length,4);
+});
+test('interactive export embeds controls and only roster fields, escaping attribute payloads',()=>{
+ const html=leadershipRosterHtml([{name:'" onmouseover="bad',group:'</script><script>bad()</script>',power:140,kills:123,status:'Pending',notes:'PRIVATE_NOTE',contact:'PRIVATE_CONTACT',history:[{text:'PRIVATE_HISTORY'}]}]);
+ assert.match(html,/id="roster-controls"/);
+ assert.match(html,/data-power="140"/);
+ assert.match(html,/data-name="&quot; onmouseover=&quot;bad"/);
+ assert.ok(!html.includes('</script><script>bad()'));
+ for(const privateField of ['PRIVATE_NOTE','PRIVATE_CONTACT','PRIVATE_HISTORY'])assert.ok(!html.includes(privateField));
+ assert.ok(!html.includes('<script src='));
 });
