@@ -18,14 +18,15 @@ try{
  await db.exec(await read('deployment/manual-accounts/accounts.sql'));await db.exec(await read('backend/applicant-messenger.sql'));
  await db.exec(await read('backend/seat-confirmations.sql'));await db.exec(await read('backend/seat-confirmations.sql'));
  await db.exec(await read('backend/seat-confirmations-transfer-lead.sql'));await db.exec(await read('backend/seat-confirmations-transfer-lead.sql'));
+ await db.exec(await read('backend/seat-confirmations-message.sql'));await db.exec(await read('backend/seat-confirmations-message.sql'));
  const call=async(action,args)=>(await db.query('select public.nova_manual_accounts($1,$2::jsonb) as data',[action,JSON.stringify(args)])).rows[0].data;
  const account=await call('hub-login-save',{staffEmail:'owner@test.invalid',accountType:'applicant_messenger',displayName:'Helper name',username:'fixture_helper',hash:'a'.repeat(64),salt:'b'.repeat(64),reason:'Transactional verification'});
  const login=await call('login-finish',{accountId:account.id,version:1});const token=login.token,by='manual:'+account.id;
- const base={name:'Fixture applicant',server:1626,alliance:'RiZZ',group:'Glass House 1',status:'Pending',notes:'PRIVATE',history:[{text:'PRIVATE HISTORY'}],power:240};
+ const base={name:'Fixture applicant',applicationId:'application-one',applicationConfirmations:[{applicationId:'application-one',confirmationCode:'1616-TEST-12345678'}],server:1626,alliance:'RiZZ',group:'Glass House 1',status:'Pending',notes:'PRIVATE',history:[{text:'PRIVATE HISTORY'}],power:240};
  for(const [key,changes] of [['player',{}],['approved',{status:'Approved'}],['declined',{status:'Declined'}],['prospect',{prospect:true}],['contact',{general:true}],['deleted',{deleted:true}],['merged',{mergedInto:'player'}],['withdrawn',{status:'Withdrawn'}],['transferred',{status:'Transferred'}],['outbound',{transferDirection:'outbound'}]])await db.query('insert into transfer_private.portal_records values ($1,$2,10,$3::jsonb)',['players',key,JSON.stringify({...base,...changes})]);
  await db.exec(`insert into transfer_private.portal_records values('shared','capacities',10,'{"data":{"Gold":1,"Purple":0,"Blue":2,"White":3}}'),('access','support@test.invalid',10,'{"name":"Support","role":"support","status":"active"}'),('access','lead@test.invalid',10,'{"name":"Lead","role":"lead","status":"active"}');`);
  let result=await call('seat-confirmations-list',{token});assert.equal(result.applicants.length,2);assert.equal(result.confirmers.length,3);assert.ok(!JSON.stringify(result).includes('PRIVATE'));assert.ok(!JSON.stringify(result).includes('@'));assert.ok(!JSON.stringify(result).includes('fixture_helper'));
- for(const row of result.applicants)assert.deepEqual(Object.keys(row).sort(),['id','name','server','currentAlliance','transferGroup','transferLead','status','confirmedSeat','confirmedBy','confirmerId','confirmedAt','revision'].sort());
+ for(const row of result.applicants)assert.deepEqual(Object.keys(row).sort(),['id','name','message','server','currentAlliance','transferGroup','transferLead','status','confirmedSeat','confirmedBy','confirmerId','confirmedAt','revision'].sort());
  assert.equal((await call('seat-confirmations-list',{staffEmail:'support@test.invalid'})).error,'access_denied');assert.equal((await call('seat-confirmations-list',{staffEmail:'attacker@test.invalid'})).error,'access_denied');assert.equal((await call('seat-confirmations-list',{staffEmail:'lead@test.invalid'})).applicants.length,2);
  // Group lead is a linked player, distinct from staff and confirmer identities.
  await db.query("insert into transfer_private.portal_records values('players','group-leader',10,$1::jsonb)",[JSON.stringify({...base,general:true,name:'Group leader',notes:'PRIVATE LEADER NOTES'})]);
@@ -45,6 +46,8 @@ try{
   assert.equal(await resolveLead('Gláss-House 1'),'Group leader');
  }
  await db.exec(`update transfer_private.portal_records set payload=jsonb_set(payload,'{group}','"Glass House 1"') where kind='players' and key='group-leader';`);
+ assert.match(result.applicants[0].message,/1616-TEST-12345678$/);
+ const missing=(await db.query("select transfer_private.seat_confirmation_row('test',$1::jsonb,1) as row",[JSON.stringify({...base,applicationConfirmations:[]})])).rows[0].row;assert.equal(missing.message,null);
  const args={token,playerId:'player',seat:'Gold',confirmerId:by,revision:10,transactionId:'fixture-save-one',status:'Approved',notes:'ATTACK'};
  result=await call('seat-confirmations-save',args);assert.equal(result.ok,true);assert.equal(result.applicant.confirmedSeat,'Gold');assert.equal(result.applicant.transferLead,'Group leader');assert.equal(result.applicant.confirmedBy,'Helper name');assert.equal(result.applicant.revision,11);
  const payload=(await db.query("select payload from transfer_private.portal_records where key='player'")).rows[0].payload;assert.equal(payload.status,'Pending');assert.equal(payload.notes,'PRIVATE');assert.equal(payload.history.length,2);assert.equal(payload.seatConfirmedActor,by);
