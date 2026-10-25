@@ -2,7 +2,7 @@ import test from 'node:test';import assert from 'node:assert/strict';
 import {helperAccessMessage} from '../messenger-access-message.js';
 test('helper invitation includes account-specific login, seat workflow and applicant messaging',()=>{
  const message=helperAccessMessage({username:'fixture_helper',displayName:'MapleSky',password:'example-password'});
- for(const part of ['Username: fixture_helper','Password: example-password','Your display name: MapleSky','https://portal.join1616.com/seat-confirmations.html','Sign in with password','does NOT mean','Upload image','choose your display name','VERY important','Transfer lead','APPLICANT MESSENGER','24 hours'])assert.ok(message.includes(part),part);
+ for(const part of ['Username: fixture_helper','Password: example-password','Your display name: MapleSky','https://portal.join1616.com/seat-confirmations.html','Sign in with password','does NOT mean','Upload image','choose your display name','VERY important','Transfer lead','APPLICANT MESSENGER','TWO TABS: Seat confirmations and Applicant Messenger','STRICTLY CONFIDENTIAL','Do not discuss applicants with anyone else','confirm/deny that they applied or their application status—even if asked','Send a player’s message only to that player','24 hours'])assert.ok(message.includes(part),part);
  assert.ok(message.length<2000,'Typical invitation fits one Discord message');
 });
 test('existing accounts get an explicit password placeholder and editable timing',()=>{

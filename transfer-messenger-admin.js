@@ -1,4 +1,4 @@
-import {setupManualAccounts} from './manual-accounts-ui.js?v=access-message-20261024';
+import {setupManualAccounts} from './manual-accounts-ui.js?v=messenger-management-20261024';
 import {bountyConnection as config} from './nova-bounty-config.js';
 
 export function mountTransferMessengerAdmin({accessPanel,user}){

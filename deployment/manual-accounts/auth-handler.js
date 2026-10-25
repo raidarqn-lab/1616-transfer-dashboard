@@ -51,7 +51,7 @@ export function createManualAuthHandler({rpc,verifyGoogle,derive=passwordKey}){
     if(!/^[a-f0-9]{64}$/.test(token))return reply(401,{error:'Please sign in again.'});
     const result=await rpc(action,{token});return result.error?reply(result.error==='access_denied'?403:401,{error:result.error==='access_denied'?'Applicant Messenger access is required.':'Please sign in again.'}):reply(200,result);
    }
-   if(!['hub-login-search','hub-login-save','hub-login-disable','hub-login-rename'].includes(action))return reply(400,{error:'Use the username and password assigned by the owner. Ask the owner for a reset.'});
+   if(!['hub-login-search','hub-login-save','hub-login-disable','hub-login-rename','hub-messenger-list'].includes(action))return reply(400,{error:'Use the username and password assigned by the owner. Ask the owner for a reset.'});
    const token=req.headers.get('x-portal-token');if(!token)return reply(401,{error:'Sign in to manage logins.'});
    let staffEmail;
    if(/^np_[a-f0-9]{64}$/.test(token)){const session=await rpc('session',{token:token.slice(3)});staffEmail=session.user?.leaderEmail;}
