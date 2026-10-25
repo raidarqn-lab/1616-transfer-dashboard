@@ -20,8 +20,11 @@ try{
  await db.exec(await read('backend/seat-confirmations-transfer-lead.sql'));await db.exec(await read('backend/seat-confirmations-transfer-lead.sql'));
  await db.exec(await read('backend/seat-confirmations-message.sql'));await db.exec(await read('backend/seat-confirmations-message.sql'));
  await db.exec(await read('backend/seat-confirmations-images.sql'));await db.exec(await read('backend/seat-confirmations-images.sql'));
+ await db.exec(await read('backend/messenger-admin-list.sql'));await db.exec(await read('backend/messenger-admin-list.sql'));
  const call=async(action,args)=>(await db.query('select public.nova_manual_accounts($1,$2::jsonb) as data',[action,JSON.stringify(args)])).rows[0].data;
  const account=await call('hub-login-save',{staffEmail:'owner@test.invalid',accountType:'applicant_messenger',displayName:'Helper name',username:'fixture_helper',hash:'a'.repeat(64),salt:'b'.repeat(64),reason:'Transactional verification'});
+ const directory=await call('hub-messenger-list',{staffEmail:'owner@test.invalid'});assert.equal(directory.accounts.length,1);assert.deepEqual(Object.keys(directory.accounts[0]).sort(),['id','playerName','accountType','leadership','username','state'].sort());assert.equal(directory.accounts[0].state,'active');
+ for(const staffEmail of ['support@test.invalid','lead@test.invalid','attacker@test.invalid'])await assert.rejects(call('hub-messenger-list',{staffEmail}),/Access denied/);
  const login=await call('login-finish',{accountId:account.id,version:1});const token=login.token,by='manual:'+account.id;
  const base={name:'Fixture applicant',applicationId:'application-one',applicationConfirmations:[{applicationId:'application-one',confirmationCode:'1616-TEST-12345678'}],server:1626,alliance:'RiZZ',group:'Glass House 1',status:'Pending',notes:'PRIVATE',history:[{text:'PRIVATE HISTORY'}],power:240};
  for(const [key,changes] of [['player',{}],['approved',{status:'Approved'}],['declined',{status:'Declined'}],['prospect',{prospect:true}],['contact',{general:true}],['deleted',{deleted:true}],['merged',{mergedInto:'player'}],['withdrawn',{status:'Withdrawn'}],['transferred',{status:'Transferred'}],['outbound',{transferDirection:'outbound'}]])await db.query('insert into transfer_private.portal_records values ($1,$2,10,$3::jsonb)',['players',key,JSON.stringify({...base,...changes})]);
@@ -89,6 +92,7 @@ try{
  await call('hub-login-disable',{staffEmail:'owner@test.invalid',accountId:account.id});assert.equal((await call('seat-confirmations-list',{token})).error,'access_denied');assert.equal((await call('seat-confirmations-save',{...args,revision:11,transactionId:'fixture-disabled'})).error,'access_denied');
  assert.equal((await call('seat-confirmations-save',{staffEmail:'owner@test.invalid',playerId:'player',seat:'Blue',confirmerId:by,revision:11,transactionId:'fixture-disabled-confirmer'})).error,'invalid_confirmer');
  for(const action of ['seat-image-get','seat-image-save'])assert.equal((await call(action,imageArgs)).error,'access_denied');
+ const disabledDirectory=await call('hub-messenger-list',{staffEmail:'owner@test.invalid'});assert.equal(disabledDirectory.accounts[0].state,'disabled');assert.equal(disabledDirectory.accounts[0].playerName,'Renamed helper');
  const privileges=await db.query("select has_function_privilege('anon','transfer_private.seat_confirmation_action(text,jsonb)','EXECUTE') as allowed");assert.equal(privileges.rows[0].allowed,false);
  console.log('PASS: narrow projection, role boundaries, session revocation, valid confirmers, audit attribution, capacity, stale edits, duplicate saves, display-name updates and repeated migration.');
 }finally{await db.close();}

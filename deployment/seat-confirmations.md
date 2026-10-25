@@ -47,3 +47,11 @@ Transfer Hub → Settings → Team Access → Applicant Messenger includes **Cop
 The builder includes the login link, seat-confirmation and screenshot steps, accuracy/approval guidance, and Applicant Messenger instructions. Work timing is editable before copying. Password/message fields are cleared on dialog close, account change, disable, and composer close; nothing is added to local storage or sent to the backend for this feature. Clipboard failure selects the preview for manual copying. Only the existing owner-only messenger administration UI mounts this function.
 
 Validation: 125 Node tests and a local browser fixture verified saved-credential autofill, copying, and clearing credentials when reopening. No live accounts were created or changed. Frontend-only release; no SQL or Edge Function deployment is needed.
+
+## Messenger account directory (v1.0.56)
+
+Apply `backend/messenger-admin-list.sql` after the existing account/seat migrations, then rebuild and deploy `nova-auth` before publishing the frontend. The repeatable migration adds only an owner-gated read action; it does not change accounts or grants. Reapply it after reinstalling the base accounts function.
+
+Team Access → Applicant Messenger automatically lists active and disabled messenger accounts. The owner can add accounts, edit display names, reset passwords/change usernames, disable or restore access, and copy individual access messages. The directory returns only account ID, display name, username, account type, leadership flag and active/disabled state. It never returns password material, applicant records or contact details. Requests take the owner identity only from the verified session.
+
+The copied invitation explicitly identifies the two tabs, explains each workflow, and requires confidentiality of applicant identities, status, screenshots, codes and logins—even when others ask. Existing-password placeholders and transient password handling remain unchanged. Typical credentials fit within Discord’s 2,000-character limit.
