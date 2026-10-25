@@ -38,10 +38,11 @@ export function sandboxExceptionState(request,group) {
 }
 export function sandboxForecast(players,capacities,scenario={}) {
   const groups=sandboxGroups(players,scenario),included=new Map(),excluded=new Set();
-  for(const g of groups)for(const r of scenario.exceptions||[])if(sandboxExceptionState(r,g)==='approved')excluded.add(r.playerId);
+  for(const g of groups)for(const r of scenario.selectionMode==='individual'?[]:scenario.exceptions||[])if(sandboxExceptionState(r,g)==='approved')excluded.add(r.playerId);
   // Always rebuild accepted seats from current records; never persist an acceptance snapshot.
   for(const p of players)if(sandboxAccepted(p))included.set(String(p.id),p);
-  for(const g of groups.filter(g=>g.selected))for(const p of g.members)if(!excluded.has(String(p.id)))included.set(String(p.id),p);
+  const selected=new Set(scenario.selectedIds||[]);
+  for(const g of groups.filter(g=>g.selected))for(const p of g.members)if(scenario.selectionMode==='individual'?selected.has(String(p.id)):!excluded.has(String(p.id)))included.set(String(p.id),p);
   const counts=Object.fromEntries([...SANDBOX_COLOURS,'Unknown'].map(c=>[c,{accepted:0,tentative:0}]));
   const members=[...included.values()];
   for(const p of members)counts[sandboxSeat(p)][sandboxAccepted(p)?'accepted':'tentative']++;
@@ -53,7 +54,7 @@ export function sandboxForecast(players,capacities,scenario={}) {
 export function applySandboxCommand({previous,command,players,identity,role,now,assert=(ok,message)=>{if(!ok)throw Error(message);}}) {
   assert(['admin','lead'].includes(role),'Admin or lead access required.');
   assert(command&&typeof command==='object'&&!Array.isArray(command),'Invalid sandbox command.');
-  const allowed={create:['op','id','name'],rename:['op','id','name'],select:['op','id','groupKey','memberIds','include'],request:['op','id','groupKey','memberIds','playerId','requestId','reason'],review:['op','id','requestId','decision','reviewNote'],restore:['op','id','requestId']};
+  const allowed={member:['op','id','playerId','include'],create:['op','id','name'],rename:['op','id','name'],select:['op','id','groupKey','memberIds','include'],request:['op','id','groupKey','memberIds','playerId','requestId','reason'],review:['op','id','requestId','decision','reviewNote'],restore:['op','id','requestId']};
   assert(allowed[command.op]&&Object.keys(command).every(k=>allowed[command.op].includes(k)),'Sandbox commands cannot change live records.');
   assert(typeof command.id==='string'&&/^[a-zA-Z0-9-]{8,100}$/.test(command.id),'Invalid scenario identifier.');
   const data=JSON.parse(JSON.stringify(previous||{version:1,scenarios:[]}));
@@ -68,8 +69,20 @@ export function applySandboxCommand({previous,command,players,identity,role,now,
   }else{
     assert(scenario,'Scenario no longer exists. Refresh the sandbox.');
     const groups=sandboxGroups(players,scenario);
-    if(command.op==='rename')scenario.name=name();
+    if(command.op==='member'){
+      assert(typeof command.playerId==='string'&&typeof command.include==='boolean','Choose a player and whether to include them.');
+      const p=groups.flatMap(g=>g.members).find(p=>String(p.id)===command.playerId);
+      assert(p&&!p.deleted&&p.transferDirection!=='outbound','Player is no longer available. Refresh the sandbox.');
+      assert(command.include||!sandboxAccepted(p),'Formally accepted players always stay included.');
+      // Materialize the existing forecast once so moving one player never changes
+      // any other trial seat, including approved exclusions in older scenarios.
+      const ids=new Set(scenario.selectionMode==='individual'?scenario.selectedIds:sandboxForecast(players,{},scenario).members.filter(p=>!sandboxAccepted(p)).map(p=>String(p.id)));
+      if(command.include&&!sandboxAccepted(p))ids.add(command.playerId);else ids.delete(command.playerId);
+      scenario.selectedIds=[...ids];scenario.selectionMode='individual';
+    }
+    else if(command.op==='rename')scenario.name=name();
     else if(['select','request'].includes(command.op)){
+      assert(scenario.selectionMode!=='individual','Use individual player selection for this sandbox.');
       const group=groups.find(g=>g.key===command.groupKey);
       assert(group&&Array.isArray(command.memberIds)&&JSON.stringify(command.memberIds)===JSON.stringify(group.memberIds),'Group membership changed. Refresh and review the whole group.');
       if(command.op==='select'){
@@ -88,6 +101,7 @@ export function applySandboxCommand({previous,command,players,identity,role,now,
         scenario.exceptions.push({id:command.requestId,groupKey:group.key,groupName:group.name,memberIds:group.memberIds,playerId:String(p.id),playerName:p.name,reason:command.reason.trim(),status:'pending',requestedBy:actor,requestedAt:now});
       }
     }else{
+      assert(scenario.selectionMode!=='individual','Use individual player selection for this sandbox.');
       const request=scenario.exceptions.find(r=>r.id===command.requestId);
       assert(request,'Exception request not found.');
       const group=groups.find(g=>g.key===request.groupKey);
