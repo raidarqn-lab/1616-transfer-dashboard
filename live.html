@@ -1555,8 +1555,8 @@ render=function(){previousProspectRender();prospectGroups.update();if(view==='pr
 
 // Sandbox state is intentionally excluded from liveItems() and player autosave.
 let sandboxSaved=BOOT.shared.seatSandbox||{data:{version:1,scenarios:[]},_rev:0};
-const sandboxStyle=document.createElement('link');sandboxStyle.rel='stylesheet';sandboxStyle.href='./seat-sandbox.css?v=7';document.head.append(sandboxStyle);
-const {installSeatSandbox}=await import('./seat-sandbox.mjs?v=9');
+const sandboxStyle=document.createElement('link');sandboxStyle.rel='stylesheet';sandboxStyle.href='./seat-sandbox.css?v=8';document.head.append(sandboxStyle);
+const {installSeatSandbox}=await import('./seat-sandbox.mjs?v=10');
 const sandboxTranslations=await (await fetch('./seat-sandbox-translations.json?v=7')).json();
 for(const [key,values] of Object.entries(sandboxTranslations))['es','pt','fr','de','ko','vi'].forEach((lang,i)=>(interfaceTranslations[lang]??={})[key]=values[i]);
 const sandboxNav=document.createElement('button');sandboxNav.dataset.view='sandbox';sandboxNav.innerHTML='<i data-lucide="flask-conical" aria-hidden="true"></i><span>Seat sandbox</span>';

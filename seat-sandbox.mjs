@@ -1,3 +1,4 @@
+import {leadershipRosterHtml} from './seat-sandbox-export.mjs?v=1';
 import {SANDBOX_COLOURS,sandboxAccepted,sandboxSeat,sandboxForecast} from './seat-sandbox-core.mjs?v=6';
 
 export function installSeatSandbox(api){
@@ -25,6 +26,19 @@ export function installSeatSandbox(api){
   dialog.querySelector('form').onsubmit=async e=>{e.preventDefault();if(disabled())return;const form=e.currentTarget;form.inert=true;try{await save({op:edit?'rename':'create',id,name:form.elements.scenarioName.value},rev);close();}catch(err){dialog.querySelector('[data-error]').textContent=err.message;}finally{form.inert=false;}};
   dialog.showModal();dialog.querySelector('input').focus();
  }
+ function exportRoster(){
+  returnFocus=document.activeElement;
+  dialog.classList.add('sandbox-export-dialog');
+  dialog.innerHTML=`<header><h2>Leadership export</h2><button type="button" data-close aria-label="${tr('Close')}">×</button></header><label>Include<select data-export-scope><option value="all">All applicants</option>${current()?'<option value="selected">Selected players in this scenario</option>':''}</select></label><p>One row per player, alphabetically within groups. Choose Print / Save PDF, or download a shareable HTML file.</p><footer><button type="button" data-download-roster>Download HTML</button><button type="button" class="primary" data-print-roster>Print / Save PDF</button></footer><iframe title="Leadership roster preview"></iframe>`;
+  let html='';
+  const update=()=>{const selected=dialog.querySelector('[data-export-scope]').value==='selected',scenario=current();const players=selected?sandboxForecast(api.players(),api.capacities(),scenario).members:api.players().filter(p=>!p.deleted&&!p.general&&!p.prospect);html=leadershipRosterHtml(players,{locale:api.locale(),subtitle:selected?'Sandbox scenario: '+scenario.name+' · Selected players · Not final approvals':'All applicants · All statuses · Alphabetical by transfer group'});dialog.querySelector('iframe').srcdoc=html;};
+  dialog.querySelector('[data-export-scope]').onchange=update;
+  dialog.querySelector('[data-close]').onclick=close;
+  dialog.querySelector('[data-print-roster]').onclick=()=>{const frame=dialog.querySelector('iframe');frame.contentWindow.focus();frame.contentWindow.print();};
+  dialog.querySelector('[data-download-roster]').onclick=()=>{const a=document.createElement('a'),url=URL.createObjectURL(new Blob([html],{type:'text/html;charset=utf-8'}));a.href=url;a.download='1616-leadership-roster.html';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);};
+  update();dialog.showModal();
+ }
+ dialog.addEventListener('close',()=>dialog.classList.remove('sandbox-export-dialog'));
  function seatLabel(p){
   const colour=sandboxSeat(p),power=p.power==null||p.power===''?null:Number(p.power),confirmed=sandboxAccepted(p)&&SANDBOX_COLOURS.includes(p.confirmedSeat),near=Number.isFinite(power)&&[130,180,230].some(v=>Math.abs(power-v)<=2)&&!confirmed;
   return `<span class="sandbox-seat ${near?'near-boundary':''}" data-seat="${colour}" title="${tr(confirmed?'Confirmed':near?'Within 2M of a cutoff':'Anticipated')}"><i aria-hidden="true"></i>${tr(colour)}${confirmed?' ✓':''}</span>`;
@@ -52,7 +66,7 @@ export function installSeatSandbox(api){
   const positions=Object.fromEntries([...panel.querySelectorAll('[data-scroll]')].map(el=>[el.dataset.scroll,el.scrollTop]));
   const scenario=current();if(scenario)activeId=scenario.id;
   const result=sandboxForecast(api.players(),api.capacities(),scenario),{counts}=result,noEdit=disabled();
-  panel.innerHTML=`<header class="sandbox-heading"><div><span class="sandbox-eyebrow">${tr('SANDBOX · NO LIVE CHANGES')}</span><h2>${tr('Seat sandbox')}</h2><p>${tr('Drag applicants into Selected players. Seat totals update automatically.')}</p></div><div class="sandbox-toolbar">${scenario?`<label>${tr('Scenario')}<select data-scenario ${noEdit?'disabled':''}>${scenarios().map(s=>`<option value="${esc(s.id)}" ${s.id===scenario.id?'selected':''}>${esc(s.name)}</option>`).join('')}</select></label><button type="button" data-edit-scenario ${noEdit?'disabled':''}>${tr('Edit scenario')}</button>`:''}<button type="button" data-new-scenario ${noEdit?'disabled':''}>${tr('New scenario')}</button><button type="button" data-refresh ${busy||api.busy()?'disabled':''}>${tr('Refresh live data')}</button></div></header>
+  panel.innerHTML=`<header class="sandbox-heading"><div><span class="sandbox-eyebrow">${tr('SANDBOX · NO LIVE CHANGES')}</span><h2>${tr('Seat sandbox')}</h2><p>${tr('Drag applicants into Selected players. Seat totals update automatically.')}</p></div><div class="sandbox-toolbar">${scenario?`<label>${tr('Scenario')}<select data-scenario ${noEdit?'disabled':''}>${scenarios().map(s=>`<option value="${esc(s.id)}" ${s.id===scenario.id?'selected':''}>${esc(s.name)}</option>`).join('')}</select></label><button type="button" data-edit-scenario ${noEdit?'disabled':''}>${tr('Edit scenario')}</button>`:''}<button type="button" data-new-scenario ${noEdit?'disabled':''}>${tr('New scenario')}</button><button type="button" data-export-roster>Leadership export</button><button type="button" data-refresh ${busy||api.busy()?'disabled':''}>${tr('Refresh live data')}</button></div></header>
    ${scenario?`<p class="sandbox-notice">${tr('Changes save automatically to')} <strong translate="no">${esc(scenario.name)}</strong>.</p>`:''}
    <p class="sandbox-message ${error?'is-error':''}" role="status">${esc(message|| (scenario?t('All changes saved.'):''))}</p>
    <div class="sandbox-limits">${SANDBOX_COLOURS.map(c=>{const n=counts[c];return `<article data-seat="${c}"><span class="sandbox-seat"><i aria-hidden="true"></i>${tr(c)}</span><strong class="${n.remaining<0?'sandbox-over':''}">${n.remaining==null?'—':Math.abs(n.remaining)} <small>${tr(n.remaining==null?'Limit unknown':n.remaining<0?'over limit':'left')}</small></strong><small>${n.accepted+n.tentative} / ${n.capacity??'—'} ${tr('filled')}</small></article>`;}).join('')}</div>
@@ -74,6 +88,7 @@ export function installSeatSandbox(api){
  panel.addEventListener('click',async e=>{
   const b=e.target.closest('button');if(!b||b.disabled)return;
   if(b.hasAttribute('data-refresh')){busy=true;message=t('Refreshing…');error=false;render();try{await api.refresh();message=t('Live data refreshed.');}catch(err){message=t('Refresh failed:')+' '+t(err.message);error=true;}finally{busy=false;render();}return;}
+  if(b.hasAttribute('data-export-roster'))return exportRoster();
   if(disabled())return;
   if(b.hasAttribute('data-new-scenario'))return scenarioDialog();
   if(b.hasAttribute('data-edit-scenario'))return scenarioDialog(true);
