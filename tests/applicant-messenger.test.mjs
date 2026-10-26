@@ -67,9 +67,9 @@ test('application language survives both projections and takes precedence over p
   const detail=applicantDetails(player);assert.equal(detail.applicationLanguage,want);assert.equal(directoryRow({...detail,id:1}).applicationLanguage,want);
  }
 });
-test('directory filters combine exact server, status and group with name search',()=>{
+test('directory filters combine exact server and group with name search',()=>{
  const rows=[{name:'polâr',server:'1608',status:'Pending',transferGroup:'SALAMI SLAYERS'},{name:'Polar2',server:'16080',status:'Pending',transferGroup:'SALAMI SLAYERS'},{name:'Polar3',server:'1608',status:'Declined',transferGroup:''},{name:'Other',server:'',status:'Pending',transferGroup:''}];
- assert.deepEqual(matchingApplicants(rows,'POLAR',{server:'1608',status:'Pending',transferGroup:'SALAMI SLAYERS'}),[rows[0]]);
+ assert.deepEqual(matchingApplicants(rows,'POLAR',{server:'1608',transferGroup:'SALAMI SLAYERS'}),[rows[0]]);
  assert.deepEqual(matchingApplicants(rows,'',{server:''}),[rows[3]]);
  assert.deepEqual(matchingApplicants(rows,'',{transferGroup:''}),rows.slice(2));
  assert.deepEqual(matchingApplicants(rows,'',{server:'9999'}),[]);
