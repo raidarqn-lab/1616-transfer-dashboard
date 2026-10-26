@@ -1506,8 +1506,13 @@ render=function(){
  if(view==='intake')view='board';
  applicantMatchingRender();
  intakePanel.hidden=true;
- root.querySelectorAll('[data-review-link]').forEach(button=>button.onclick=()=>reviewApplicationFromApplicant(players.find(p=>String(p.id)===button.dataset.reviewLink)));
 };
+// Search can call an earlier render function; delegation also covers those replacement rows.
+root.addEventListener('click',function handleApplicationReviewClick(event){
+ const button=event.target.closest('[data-review-link]');
+ if(!button||button.disabled)return;
+ reviewApplicationFromApplicant(players.find(p=>String(p.id)===button.dataset.reviewLink));
+});
 q('[data-view="intake"]')?.remove();
 for(const [lang,values] of Object.entries({
  es:{'Review & link':'Revisar y vincular','Linked':'Vinculado','Application linkage is complete.':'La vinculación está completa.','Compare and link this application.':'Comparar y vincular esta solicitud.','Open and edit this applicant.':'Abrir y editar este solicitante.','Admin or lead access required.':'Requiere acceso de administrador o líder.'},
