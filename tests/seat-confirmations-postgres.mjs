@@ -119,5 +119,8 @@ try{
  for(const action of ['seat-image-get','seat-image-save'])assert.equal((await call(action,imageArgs)).error,'access_denied');
  const disabledDirectory=await call('hub-messenger-list',{staffEmail:'owner@test.invalid'});assert.equal(disabledDirectory.accounts[0].state,'disabled');assert.equal(disabledDirectory.accounts[0].playerName,'Renamed helper');
  const privileges=await db.query("select has_function_privilege('anon','transfer_private.seat_confirmation_action(text,jsonb)','EXECUTE') as allowed");assert.equal(privileges.rows[0].allowed,false);
+ await db.exec(await read('backend/seat-confirmations-language.sql'));
+ await db.exec(await read('backend/seat-confirmations-language.sql'));
+ console.log('PASS: seat language projection and repeat migration.');
  console.log('PASS: narrow projection, role boundaries, session revocation, valid confirmers, audit attribution, capacity, stale edits, duplicate saves, display-name updates and repeated migration.');
 }finally{await db.close();}

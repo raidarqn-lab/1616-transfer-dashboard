@@ -65,3 +65,9 @@ Claim assigns the signed-in helper, Message sent marks Awaiting reply, and Relea
 All commands authenticate through the existing seat handler and share its global commit lock, including first claims. Version checks prevent stale release/reassignment. Restricted responses expose names and opaque IDs only. Outreach changes are audited privately and do not alter player revisions, applications, capacity or sandbox selections. Copy message checks current ownership server-side before returning a fresh message; it does not send anything or automatically mark Message sent. Existing downloaded messages cannot be recalled.
 
 Run the standard test suite plus both PostgreSQL scripts. The seat PostgreSQL fixture covers competing claimants, ownership enforcement, stale versions, reassignment, release, completed seats, private table permissions and repeat installation.
+
+## Applicant language
+
+Apply `backend/seat-confirmations-language.sql` before the language-aware frontend. This guarded, repeatable patch adds `applicationLanguage` to the existing row projection, preserving outreach ownership and all other fields. The original submitted language takes precedence, with the saved profile language used for legacy records. Missing language defaults to English.
+
+The compact row shows the language, and copy uses the freshly checked applicant's language independently of the interface picker. Existing translations cover English, German, French, Spanish, Portuguese, Korean, Vietnamese and Arabic. Ownership checks remain required. Validation: 140 JS tests, PostgreSQL role/outreach regression and repeat migration tests, and rollback-only production verification.
