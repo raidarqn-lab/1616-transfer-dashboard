@@ -7,6 +7,18 @@ const backend=readFileSync(new URL('../backend/portal-public.ts',import.meta.url
 const ui=vm.runInNewContext(html.slice(html.indexOf('const matchReviewFields='),html.indexOf('function openApplicationMatchReview('))+';({fields:matchReviewFields,values:matchApplicantValues})');
 const link=vm.runInNewContext('('+backend.slice(backend.indexOf('function linkEvents('),backend.indexOf('function authorizedReceipt('))+')',{assert:(condition,message)=>{if(!condition)throw Error(message);},equal:(a,b)=>JSON.stringify(a)===JSON.stringify(b)});
 const app=()=>({id:1,_rev:2,applicationId:'APP-test',name:'Test Applicant',server:'1620',seat:'White',confirmedSeat:'Blue',status:'Pending',rawApplication:{seatColour:'blue'},history:[]});
+test('review click survives search replacing rows without running the latest render wrapper',()=>{
+ const start=html.indexOf("root.addEventListener('click',function handleApplicationReviewClick(");
+ assert.notEqual(start,-1);
+ const a=app(),opened=[];let click;
+ vm.runInNewContext(html.slice(start,html.indexOf('\n});',start)+4),{root:{addEventListener:(type,handler)=>{assert.equal(type,'click');click=handler;}},players:[a],reviewApplicationFromApplicant:p=>opened.push(p)});
+ const press=button=>click({target:{closest:selector=>{assert.equal(selector,'[data-review-link]');return button;}}});
+ press({dataset:{reviewLink:'1'},disabled:false});
+ // A new row after search has no per-button onclick registration.
+ press({dataset:{reviewLink:'1'},disabled:false});
+ press({dataset:{reviewLink:'1'},disabled:true});press(null);
+ assert.deepEqual(opened,[a,a]);
+});
 function request(a,rejectSeat=false){const values=ui.values(a),changed=ui.fields.map(([key])=>key).filter(key=>values[key]!==undefined&&String(a[key]??'')!==String(values[key]??''));return {applicationId:1,playerId:null,applicationRev:2,playerRev:2,reviewVersion:2,acceptFields:changed.filter(key=>!rejectSeat||key!=='seat'),rejectFields:rejectSeat?['seat']:[]};}
 test('every changed seat colour can be reviewed and accepted by the actual backend',()=>{
  const a=app(),before=JSON.stringify(a),events=link({players:{1:a},members:{}},request(a),{email:'lead@example.test'},'lead');
