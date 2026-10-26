@@ -9,10 +9,24 @@ const replies={
  "vi": "Chào {name}! Tôi liên hệ để xác nhận màu suất chuyển server của bạn vì bạn đã đăng ký đến server 1616, trực tiếp hoặc thông qua một nhóm.\n\nTin nhắn này không có nghĩa là đơn của bạn đã được chấp thuận. Chúng tôi đang kiểm tra lại màu suất chuyển server đã xác nhận của từng người để tính xem server có thể tiếp nhận bao nhiêu người chơi.\n\nMàu suất chuyển server của bạn sẽ là vàng, tím, xanh dương hoặc trắng/xám. Bạn có thể cho tôi biết màu của mình và gửi ảnh chụp màn hình hiển thị màu suất chuyển server không? Rất cảm ơn bạn! Chúng tôi sẽ thêm thông tin này vào hồ sơ.\n\nBạn cũng có thể kiểm tra trạng thái đơn bất cứ lúc nào tại join1616.com bằng mã xác nhận đã nhận khi đăng ký.\n\nĐể tiện lưu lại, mã xác nhận của bạn là: {code}",
  "ar": "أهلًا {name}! أتواصل معك لتأكيد لون مقعدك للنقل، لأنك تقدمت للانضمام إلى الخادم 1616 إما مباشرة أو ضمن مجموعة.\n\nهذه الرسالة لا تعني أن طلبك قد تمت الموافقة عليه. نحن نتحقق مجددًا من لون المقعد المؤكد لكل متقدم لمعرفة عدد اللاعبين الذين يمكننا استيعابهم في خادمنا.\n\nسيكون لون مقعدك للنقل ذهبيًا أو بنفسجيًا أو أزرق أو أبيض/رماديًا. هل يمكنك إخباري بلونك وإرسال لقطة للشاشة التي تعرض لون مقعدك للنقل؟ سأكون ممتنًا لك، وسنضيف هذه المعلومات إلى سجلاتنا.\n\nيمكنك أيضًا التحقق من حالة طلبك في أي وقت عبر join1616.com باستخدام رمز التأكيد الذي تلقيته عند تقديم الطلب.\n\nللاحتفاظ به، رمز التأكيد الخاص بك هو: {code}"
 };
+const acceptedIntros={
+ "en": "Hey {name}! Your application to join 1616 has been accepted!\n\nWe're contacting you only to verify your transfer seat colour and update our records. This does not change your accepted application status.",
+ "de": "Hallo {name}! Deine Bewerbung für den Wechsel nach 1616 wurde angenommen!\n\nWir kontaktieren dich nur, um deine Transfer-Sitzfarbe zu überprüfen und unsere Unterlagen zu aktualisieren. Deine Bewerbung bleibt angenommen.",
+ "fr": "Salut {name} ! Ta candidature pour rejoindre 1616 a été acceptée !\n\nNous te contactons uniquement pour vérifier la couleur de ta place de transfert et mettre à jour nos dossiers. Cela ne change pas le statut accepté de ta candidature.",
+ "es": "¡Hola, {name}! ¡Tu solicitud para unirte a 1616 ha sido aceptada!\n\nSolo te contactamos para verificar el color de tu plaza de traslado y actualizar nuestros registros. Esto no cambia el estado de tu solicitud: sigue aceptada.",
+ "pt": "Olá, {name}! A tua candidatura para entrar no servidor 1616 foi aceite!\n\nEstamos a contactar-te apenas para verificar a cor da tua vaga de transferência e atualizar os nossos registos. A tua candidatura continua aceite.",
+ "ko": "{name}님, 안녕하세요! 1616 서버 합류 신청이 승인되었습니다!\n\n이전 좌석 색상을 확인하고 기록을 업데이트하기 위해 연락드립니다. 신청 승인 상태는 변경되지 않습니다.",
+ "vi": "Chào {name}! Đơn đăng ký đến server 1616 của bạn đã được chấp thuận!\n\nChúng tôi liên hệ chỉ để xác minh màu suất chuyển server của bạn và cập nhật hồ sơ. Việc này không thay đổi trạng thái đã được chấp thuận của đơn.",
+ "ar": "أهلًا {name}! تمت الموافقة على طلبك للانضمام إلى الخادم 1616!\n\nنتواصل معك فقط للتحقق من لون مقعدك للنقل وتحديث سجلاتنا. هذا لا يغيّر حالة طلبك المقبول."
+};
 export function seatFollowupMessage(applicant,language=applicantMessageLanguage(applicant?.applicationLanguage)){
  const code=applicant?.message?.match(/For your reference, this code is (1616-[A-Z0-9-]{8,60})$/)?.[1];
  if(!code||typeof applicant.name!=='string'||!applicant.name.trim())return null;
- return formatCopy(replies[language]||replies.en,{name:applicant.name,code});
+ const lang=Object.hasOwn(replies,language)?language:'en';
+ const template=applicant.status==='Approved'
+  ? [acceptedIntros[lang],...replies[lang].split('\n\n').slice(2)].join('\n\n')
+  : replies[lang];
+ return formatCopy(template,{name:applicant.name,code});
 }
 export async function freshSeatFollowup(load,id,language){
  const data=await load();if(!Array.isArray(data?.applicants))throw Error('Invalid response');
