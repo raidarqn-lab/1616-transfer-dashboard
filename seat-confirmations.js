@@ -1,10 +1,10 @@
-import {getManualSession,logoutManual} from './manual-session.js?v=messenger-20261024';
+import {getManualSession,logoutManual} from './manual-session.js?v=leadership-20261025';
 import {bountyConnection as config} from './nova-bounty-config.js';
 import {mountSeatConfirmations} from './seat-confirmations-view.js?v=7';
 let staff=null;const manual=getManualSession();
 if(manual?.user?.role!=='applicant_messenger'){
  try{
-  const live=await import('./live-session.js?v=messenger-20261024');
+  const live=await import('./live-session.js?v=leadership-20261025');
   if(!live.user)location.replace('./sign-in.html?returnTo='+encodeURIComponent('/seat-confirmations.html'));
   else staff=live;
  }catch(error){mountSeatConfirmations({root:document.getElementById('seat-confirmations'),load:async()=>{throw error;},save:async()=>{throw error;},signOut:async()=>location.replace('./sign-in.html')});}

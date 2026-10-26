@@ -32,3 +32,14 @@ test('portal verification maps only a server-verified active leader, never a mem
   if(user?.leaderEmail)assert.deepEqual(await verify('np_'+hash),{uid:'manual:id',email:'leader@example.test',name:'Leader'});else await assert.rejects(verify('np_'+hash),/sign in again/);
  }
 });
+test('report read derives caller identity from session headers, ignoring forged staff fields',async()=>{
+ const calls=[];const handler=createManualAuthHandler({rpc:async(action,args)=>{calls.push([action,args]);return {players:[]};}});
+ assert.equal((await handler(make({action:'leadership-report-list',staffEmail:'owner'}, {'X-Nova-Session':'Bearer '+hash}))).status,200);
+ assert.deepEqual(calls,[['leadership-report-list',{token:hash}]]);
+ assert.equal((await handler(make({action:'leadership-report-list',staffEmail:'owner'}))).status,401);
+});
+test('report account setup uses owner verification and salted hashes',async()=>{
+ const calls=[];const handler=createManualAuthHandler({verifyGoogle:async()=>({email:'owner@example.test'}),derive:async()=>hash,rpc:async(action,args)=>{calls.push([action,args]);return {ok:true};}});
+ assert.equal((await handler(make({action:'hub-report-save',displayName:'Leader',username:'leader',password:'test-only-password'}, {'X-Portal-Token':'google'}))).status,200);
+ assert.equal(calls[0][0],'hub-login-search');assert.equal(calls[1][0],'hub-report-save');assert.equal(calls[1][1].displayName,'Leader');assert.equal(calls[1][1].password,undefined);
+});

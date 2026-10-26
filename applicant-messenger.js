@@ -1,4 +1,4 @@
-import {getManualSession,manualAuth,logoutManual} from './manual-session.js?v=messenger-20261024';
+import {getManualSession,manualAuth,logoutManual} from './manual-session.js?v=leadership-20261025';
 import {mountApplicantMessenger} from './applicant-messenger-view.js?v=7';
 const session=getManualSession();
 if(session?.user?.role==='applicant_messenger'){
@@ -8,7 +8,7 @@ if(session?.user?.role==='applicant_messenger'){
  },signOut:async()=>{await logoutManual();location.replace('./sign-in.html');}});
 }else{
  try{
-  const live=await import('./live-session.js?v=messenger-20261024');
+  const live=await import('./live-session.js?v=leadership-20261025');
   if(!live.user){location.replace('./sign-in.html?returnTo='+encodeURIComponent('/applicant-messenger.html'));}
   else{
    const {staffApplicantDirectory}=await import('./applicant-messenger-staff.js?v=4');
