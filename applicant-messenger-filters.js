@@ -9,4 +9,4 @@ const copy={
  ar:['الكل','إعادة ضبط الفلاتر','لا يوجد متقدمون يطابقون هذه الفلاتر.','عرض {count} من أصل {total} متقدمًا']
 };
 export function messengerFilterCopy(language){const [all,reset,noMatch,count]=copy[language]||copy.en;return {all,reset,noMatch,count};}
-export function applicantMatchesFilters(player,filters={}){return ['server','status','transferGroup'].every(key=>filters[key]===undefined||String(player[key]??'').trim()===filters[key]);}
+export function applicantMatchesFilters(player,filters={}){return ['server','transferGroup'].every(key=>filters[key]===undefined||String(player[key]??'').trim()===filters[key]);}

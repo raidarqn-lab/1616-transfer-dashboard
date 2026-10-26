@@ -1,5 +1,5 @@
 import {getManualSession,manualAuth,logoutManual} from './manual-session.js?v=leadership-20261025';
-import {mountApplicantMessenger} from './applicant-messenger-view.js?v=8';
+import {mountApplicantMessenger} from './applicant-messenger-view.js?v=9';
 const session=getManualSession();
 if(session?.user?.role==='applicant_messenger'){
  mountApplicantMessenger({root:document.getElementById('messenger'),load:async()=>{
