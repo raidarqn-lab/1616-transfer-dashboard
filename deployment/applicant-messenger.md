@@ -33,3 +33,11 @@ Transfer Hub administrators and leads can open **Applicant Messenger** from the 
 Apply `backend/applicant-messenger-details.sql` to an existing installation. It adds a private projection helper and narrowly replaces only the directory expression in the deployed account function, with an expected-definition guard. It preserves every authentication branch and grant. Status, approval, alliance, confirmed seat and rejection gates mirror `transfer_application_status`; only the saved applicant-facing reason is exposed. Preferences and anticipated seat colours are never substituted for confirmed assignments.
 
 Validated with 106 JS tests, local PostgreSQL old-to-new/repeated migration checks, and rollback-only production tests including private-field exclusion and session revocation.
+
+## Applicant language defaults
+
+Apply `backend/applicant-messenger-language.sql` before publishing the updated frontend. This guarded, repeatable migration adds only `applicationLanguage` to the existing restricted detail projection. The original application's language takes precedence over the profile language; legacy records fall back to the saved profile language. Explicitly blank application values remain unspecified.
+
+The directory displays the stated language. Copied access messages use that language independently of the staff interface language, with English for missing or unsupported languages. Templates support English, Korean, Vietnamese, German, French, Portuguese, Spanish and Arabic. Unsupported language labels remain visible with the English fallback indicated.
+
+Validated with 139 JavaScript tests, local PostgreSQL migration/permission regression checks, and a rollback-only production schema check.

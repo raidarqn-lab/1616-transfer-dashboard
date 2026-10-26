@@ -1,6 +1,6 @@
 import {seatCopy} from './seat-confirmations-i18n.js?v=1';
-import {directoryRow} from './applicant-messenger-details.js?v=2';
-import {languageNames,messengerCopy,formatCopy,preferredLanguage,localizedApplicantMessage} from './applicant-messenger-i18n.js?v=2';
+import {directoryRow} from './applicant-messenger-details.js?v=3';
+import {languageNames,messengerCopy,formatCopy,preferredLanguage,localizedApplicantMessage,applicantMessageLanguage,applicantLanguageLabel} from './applicant-messenger-i18n.js?v=3';
 export const searchName=value=>String(value||'').normalize('NFKD').replace(/\p{M}/gu,'').toLocaleLowerCase().trim();
 export function matchingApplicants(applicants,query){const needle=searchName(query);return applicants.filter(p=>searchName(p.name).includes(needle));}
 export function mountApplicantMessenger({root,load,signOut,clipboard=navigator.clipboard}){
@@ -19,7 +19,7 @@ export function mountApplicantMessenger({root,load,signOut,clipboard=navigator.c
    if(p.message){const button=document.createElement('button');button.type='button';button.textContent=t.copy;button.setAttribute('aria-label',formatCopy(t.copyFor,{name:p.name}));button.disabled=copying;button.onclick=()=>copy(p.id,button);heading.append(button);}
    else{const hint=document.createElement('span');hint.className='unavailable';hint.textContent=t.unavailable;heading.append(hint);}
    const facts=document.createElement('dl');facts.className='applicant-facts';
-   for(const [label,value] of [[t.server,p.server||t.noServer],[t.currentAlliance,p.currentAlliance||t.noServer],[t.group,p.transferGroup||t.noGroup],[t.anticipatedSeat,a.statuses[p.anticipatedSeat]||a.statuses.Unconfirmed],[a.alliance,p.destinationAlliance||a.unselected],[a.seat,a.statuses[p.confirmedSeat]||a.unconfirmed]]){
+   for(const [label,value] of [[t.language,applicantLanguageLabel(p.applicationLanguage)],[t.server,p.server||t.noServer],[t.currentAlliance,p.currentAlliance||t.noServer],[t.group,p.transferGroup||t.noGroup],[t.anticipatedSeat,a.statuses[p.anticipatedSeat]||a.statuses.Unconfirmed],[a.alliance,p.destinationAlliance||a.unselected],[a.seat,a.statuses[p.confirmedSeat]||a.unconfirmed]]){
     const box=document.createElement('div'),term=document.createElement('dt'),detail=document.createElement('dd');term.textContent=label;detail.textContent=value;detail.dir='auto';if(label===t.anticipatedSeat&&p.anticipatedSeat){detail.className='seat-colour';detail.dataset.colour=p.anticipatedSeat;}if(label===a.seat&&p.confirmedSeat){detail.className='seat-colour';detail.dataset.colour=p.confirmedSeat;}box.append(term,detail);facts.append(box);
    }row.append(facts);
    if(p.status==='Declined'){const reason=document.createElement('section'),label=document.createElement('strong'),text=document.createElement('p');reason.className='applicant-rejection';label.textContent=a.reason;text.textContent=p.rejectionReasonText?.trim()||a.reasons[p.rejectionReasonCode]||a.noReason;text.dir='auto';reason.append(label,text);row.append(reason);}
@@ -46,7 +46,7 @@ export function mountApplicantMessenger({root,load,signOut,clipboard=navigator.c
  async function copy(id,button){if(copying)return;copying=true;const request=++generation;let failed=false;setNotice('preparing');button.disabled=true;try{
    // Recheck active credentials and current code on every copy, including after revocation.
    const rows=await current();if(closed||request!==generation)return;applicants=rows;const p=rows.find(p=>p.id===id);if(!p?.message)throw Object.assign(Error('Message unavailable'),{code:'missingMessage'});
-   const message=localizedApplicantMessage(p,language);
+   const message=localizedApplicantMessage(p,applicantMessageLanguage(p.applicationLanguage));
    try{await clipboard.writeText(message);if(closed||request!==generation)return;setNotice('copied',{name:p.name});}catch{if(closed||request!==generation)return;setNotice('copyHelp');manualCopy(message);}
   }catch(error){if(request!==generation||closed)return;failed=true;clear();state=errorState(error);render();}finally{copying=false;if(!closed&&!failed&&request===generation){state='ready';render();}refresh.disabled=false;}}
  search.addEventListener('input',render);refresh.addEventListener('click',reload);root.querySelector('#sign-out').onclick=async()=>{closed=true;generation++;clear();state='signingOut';render();await signOut();};

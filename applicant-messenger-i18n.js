@@ -43,3 +43,16 @@ export function localizedApplicantMessage(applicant,language){
  if(!code||language==='en'||!Object.hasOwn(replies,language))return applicant.message;
  return formatCopy(replies[language],{name:applicant.name,code});
 }
+
+// Application choices can be saved as locale codes or language names.
+export function applicantMessageLanguage(value){
+ const key=String(value||'').trim().toLowerCase();
+ const aliases={english:'en',korean:'ko',vietnamese:'vi',german:'de',french:'fr',portuguese:'pt',spanish:'es',arabic:'ar'};
+ return aliases[key]||Object.keys(languageNames).find(code=>languageNames[code].toLowerCase()===key)||preferredLanguage([key]);
+}
+export function applicantLanguageLabel(value){
+ const text=String(value||'').trim();
+ if(!text||/^(unknown|not specified|none)$/i.test(text))return 'Not specified · English default';
+ const code=applicantMessageLanguage(text);
+ return code==='en'&&!/^(en([_-].*)?|english)$/i.test(text)?text+' · Messages in English':languageNames[code];
+}
