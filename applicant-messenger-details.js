@@ -11,7 +11,8 @@ export function anticipatedApplicantSeat(power){
 export function applicantDetails(player,destination){
  const status=player.general||player.prospect||player.transferDirection==='outbound'?'Unconfirmed':statuses.includes(player.status)?player.status:'Unconfirmed';
  const assigned=!['Declined','Withdrawn','Unconfirmed'].includes(status);
- return {server:String(player.server||''),currentAlliance:String(player.alliance||'').trim().slice(0,100),anticipatedSeat:anticipatedApplicantSeat(player.power),transferGroup:String(player.group||''),status,
+ const applicationLanguage=String(Object.hasOwn(player.rawApplication||{},'language')?player.rawApplication.language||'':player.applicationLanguage??player.language??'').trim().slice(0,100);
+ return {applicationLanguage,server:String(player.server||''),currentAlliance:String(player.alliance||'').trim().slice(0,100),anticipatedSeat:anticipatedApplicantSeat(player.power),transferGroup:String(player.group||''),status,
   approval:['Approved','Transferred'].includes(status)?'approved':status==='Declined'?'declined':status==='Withdrawn'?'withdrawn':'pending',
   destinationAlliance:assigned&&alliances.includes(destination)?destination:null,
   confirmedSeat:assigned&&seats.includes(player.confirmedSeat)?player.confirmedSeat:null,
@@ -20,6 +21,6 @@ export function applicantDetails(player,destination){
 }
 // Keep the browser's stored directory restricted to the same explicit contract.
 export function directoryRow(p){
- const detail=applicantDetails({server:p.server,group:p.transferGroup,status:p.status,confirmedSeat:p.confirmedSeat,rejectionReasonCode:p.rejectionReasonCode,rejectionReasonText:p.rejectionReasonText},p.destinationAlliance);
+ const detail=applicantDetails({applicationLanguage:p.applicationLanguage,server:p.server,group:p.transferGroup,status:p.status,confirmedSeat:p.confirmedSeat,rejectionReasonCode:p.rejectionReasonCode,rejectionReasonText:p.rejectionReasonText},p.destinationAlliance);
  return {id:String(p.id),name:String(p.name||''),message:typeof p.message==='string'?p.message:null,...detail,currentAlliance:String(p.currentAlliance||'').trim().slice(0,100),anticipatedSeat:seats.includes(p.anticipatedSeat)?p.anticipatedSeat:null};
 }

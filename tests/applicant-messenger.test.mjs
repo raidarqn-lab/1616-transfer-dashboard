@@ -10,7 +10,7 @@ test('staff messenger directory allows existing leads and admins and projects on
  const player={id:1,name:'Example',notes:'private',history:['private'],applicationConfirmations:[{confirmationCode:'1616-DEMO-12345678'}]};
  for(const role of ['admin','lead']){
   const result=staffApplicantDirectory({role,players:[player,...[{deleted:true},{general:true},{prospect:true},{transferDirection:'outbound'},{mergedInto:2},{status:'Transferred'},{status:'Withdrawn'}].map(flags=>({...player,...flags}))]});
-  assert.equal(result.applicants.length,1);assert.deepEqual(Object.keys(result.applicants[0]),['id','name','message','server','currentAlliance','anticipatedSeat','transferGroup','status','approval','destinationAlliance','confirmedSeat','rejectionReasonCode','rejectionReasonText']);assert.match(result.applicants[0].message,/1616-DEMO-12345678/);
+  assert.equal(result.applicants.length,1);assert.deepEqual(Object.keys(result.applicants[0]),['id','name','message','applicationLanguage','server','currentAlliance','anticipatedSeat','transferGroup','status','approval','destinationAlliance','confirmedSeat','rejectionReasonCode','rejectionReasonText']);assert.match(result.applicants[0].message,/1616-DEMO-12345678/);
  }
  for(const role of ['support','applicant_messenger',null])assert.throws(()=>staffApplicantDirectory({role,players:[player]}),/access is required/);
 });
@@ -60,4 +60,10 @@ test('saved alliance and anticipated seat stay separate from destination and con
  for(const [power,seat] of [[0,'White'],[129.999,'White'],[130,'Blue'],[179.999,'Blue'],[180,'Purple'],[229.999,'Purple'],[230,'Gold'],['180.5','Purple']])assert.equal(anticipatedApplicantSeat(power),seat);
  for(const power of [null,undefined,'',' ',NaN,Infinity,-1,'Unknown',true])assert.equal(anticipatedApplicantSeat(power),null);
  const declined=applicantDetails({alliance:'TSRF',power:150,status:'Declined',confirmedSeat:'Blue'},'WaE');assert.equal(declined.currentAlliance,'TSRF');assert.equal(declined.anticipatedSeat,'Blue');assert.equal(declined.confirmedSeat,null);
+});
+
+test('application language survives both projections and takes precedence over profile language',()=>{
+ for(const [player,want] of [[{language:'de',rawApplication:{language:'ko'}},'ko'],[{language:'Português'},'Português'],[{language:'de',rawApplication:{language:''}},''],[{},'']]){
+  const detail=applicantDetails(player);assert.equal(detail.applicationLanguage,want);assert.equal(directoryRow({...detail,id:1}).applicationLanguage,want);
+ }
 });

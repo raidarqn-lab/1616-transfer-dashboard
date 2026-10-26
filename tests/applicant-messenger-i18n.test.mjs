@@ -26,3 +26,11 @@ test('custom rejection wording stays unchanged while category fallbacks translat
   assert.equal(rejectionMessage({rejectionReasonText:'Saved applicant-facing reason',rejectionReasonCode:'no_seat'},messengerCopy(lang).application),'Saved applicant-facing reason');
  }
 });
+
+test('applicant message defaults use application language codes and names, falling back to English',async()=>{
+ const {applicantMessageLanguage,applicantLanguageLabel}=await import('../applicant-messenger-i18n.js');
+ for(const [value,want] of [['pt-BR','pt'],['Português','pt'],['Korean','ko'],['한국어','ko'],['de','de'],['French','fr'],['','en'],[null,'en'],['unknown','en'],['Japanese','en']])assert.equal(applicantMessageLanguage(value),want);
+ assert.match(applicantLanguageLabel(''),/English default/);assert.match(applicantLanguageLabel('Japanese'),/Japanese/);
+ const p={name:'Example',message:'For your reference, this code is 1616-ABCD-1234-EFGH',applicationLanguage:'ko'};
+ assert.match(localizedApplicantMessage(p,applicantMessageLanguage(p.applicationLanguage)),/신청서/);
+});

@@ -1,5 +1,5 @@
 import {applicantMessage} from './applicant-message.js';
-import {applicantDetails} from './applicant-messenger-details.js?v=2';
+import {applicantDetails} from './applicant-messenger-details.js?v=3';
 
 // Staff use their existing authorized workspace response. Messenger-only accounts
 // continue to use the separate, limited server endpoint and never load this module.

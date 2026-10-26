@@ -1,5 +1,5 @@
 import {getManualSession,manualAuth,logoutManual} from './manual-session.js?v=messenger-20261024';
-import {mountApplicantMessenger} from './applicant-messenger-view.js?v=6';
+import {mountApplicantMessenger} from './applicant-messenger-view.js?v=7';
 const session=getManualSession();
 if(session?.user?.role==='applicant_messenger'){
  mountApplicantMessenger({root:document.getElementById('messenger'),load:async()=>{
@@ -11,7 +11,7 @@ if(session?.user?.role==='applicant_messenger'){
   const live=await import('./live-session.js?v=messenger-20261024');
   if(!live.user){location.replace('./sign-in.html?returnTo='+encodeURIComponent('/applicant-messenger.html'));}
   else{
-   const {staffApplicantDirectory}=await import('./applicant-messenger-staff.js?v=3');
+   const {staffApplicantDirectory}=await import('./applicant-messenger-staff.js?v=4');
    const back=document.createElement('a');back.href='./live.html';back.textContent='← Transfer Hub';back.className='back-to-hub';document.querySelector('.intro').prepend(back);
    mountApplicantMessenger({root:document.getElementById('messenger'),load:async()=>staffApplicantDirectory(await live.api('live.load')),signOut:live.signOut});
   }

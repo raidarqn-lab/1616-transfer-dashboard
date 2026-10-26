@@ -38,6 +38,9 @@ try {
   const result=await db.query('select transfer_private.applicant_messenger_details($1,$2::jsonb) as details',['fixture',JSON.stringify({alliance:' RiZZ ',power,status:'Pending'})]);
   if(result.rows[0].details.anticipatedSeat!==anticipatedApplicantSeat(power)||result.rows[0].details.currentAlliance!=='RiZZ')throw Error('SQL/JS alliance-seat parity failed for '+JSON.stringify(power));
  }
+ await db.exec(await fs.readFile(root+'/backend/applicant-messenger-language.sql','utf8'));
+ await db.exec(await fs.readFile(root+'/backend/applicant-messenger-language.sql','utf8'));
+ console.log('PASS: language precedence, missing language and repeat migration.');
  console.log('PASS: alliance and anticipated-seat parity, missing/invalid power, exact band edges and repeat migration.');
  console.log('PASS: old-to-new detail migration, repeat migration and schema rollback.');
 } catch(error){console.error(error.message);console.error(error.where||'');process.exitCode=1;}finally{await db.close();}
