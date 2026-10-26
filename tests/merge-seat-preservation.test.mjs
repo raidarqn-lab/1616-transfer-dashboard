@@ -1,0 +1,11 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+import vm from 'node:vm';
+const html=readFileSync(new URL('../live.html',import.meta.url),'utf8');
+const merge=vm.runInNewContext(html.slice(html.indexOf('function mergeSeatState('),html.indexOf("q('[data-merge]').onclick"))+';mergeSeatState');
+const seat={confirmedSeat:'Blue',seatConfirmedBy:'Original confirmer',seatConfirmedById:'staff-1',seatConfirmedActor:'actor',seatConfirmedAt:'2026-10-25T12:00:00Z'};
+test('merge preserves the retained confirmation and its original attribution and date',()=>{assert.deepEqual(JSON.parse(JSON.stringify(merge(seat,{}))),seat);assert.deepEqual(JSON.parse(JSON.stringify(merge(seat,{confirmedSeat:'Blue',seatConfirmedBy:'Other'}))),seat);});
+test('merge preserves a confirmation that only exists on the duplicate',()=>{assert.deepEqual(JSON.parse(JSON.stringify(merge({confirmedSeat:''},seat))),seat);});
+test('merge blocks conflicting verified colours without changing either record',()=>{const a={...seat},b={...seat,confirmedSeat:'Purple'},before=JSON.stringify([a,b]);assert.throws(()=>merge(a,b),/different confirmed/);assert.equal(JSON.stringify([a,b]),before);});
+test('merge never invents a confirmation from an anticipated seat',()=>{assert.equal(Object.keys(merge({seat:'Gold'},{confirmedSeat:'Unknown'})).length,0);});
