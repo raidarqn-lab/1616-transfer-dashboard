@@ -1,16 +1,16 @@
-import {loginManual,logoutManual,clearManualSession} from './manual-session.js?v=messenger-20261024';
+import {loginManual,logoutManual,clearManualSession} from './manual-session.js?v=leadership-20261025';
 import { firebaseConfig } from './firebase-config.js';
 import { createPortalTransport } from './supabase-transport.mjs';
 const button = document.getElementById('sign-in');
 const manualForm=document.getElementById('manual-sign-in');
-manualForm.onsubmit=async event=>{event.preventDefault();const submit=manualForm.querySelector('button');submit.disabled=true;report('Signing in…');try{const session=await loginManual(manualForm.elements.username.value.trim().toLowerCase(),manualForm.elements.password.value);location.replace(session.user.role==='applicant_messenger'?(returnTarget==='/seat-confirmations.html'?returnTarget:'./applicant-messenger.html'):(returnTarget||'./alliance-hub.html'));}catch(error){report(error.message,true);}finally{manualForm.elements.password.value='';submit.disabled=false;}};
+manualForm.onsubmit=async event=>{event.preventDefault();const submit=manualForm.querySelector('button');submit.disabled=true;report('Signing in…');try{const session=await loginManual(manualForm.elements.username.value.trim().toLowerCase(),manualForm.elements.password.value);location.replace(session.user.role==='leadership_report'?'./leadership-report.html':session.user.role==='applicant_messenger'?(returnTarget==='/seat-confirmations.html'?returnTarget:'./applicant-messenger.html'):(returnTarget||'./alliance-hub.html'));}catch(error){report(error.message,true);}finally{manualForm.elements.password.value='';submit.disabled=false;}};
 const signOutButton = document.getElementById('sign-out');
 const status = document.getElementById('status');
 const identity = document.getElementById('identity');
 const signedIn = document.getElementById('signed-in');
 // Only return to known workspaces on this origin; never trust an external redirect.
 let returnTarget=null;
-try{const requested=new URLSearchParams(location.search).get('returnTo');if(requested){const target=new URL(requested,location.href);if(target.origin===location.origin&&['/alliance-hub.html','/live.html','/applicant-messenger.html','/seat-confirmations.html'].includes(target.pathname))returnTarget=target.pathname+target.search+target.hash;}}catch{}
+try{const requested=new URLSearchParams(location.search).get('returnTo');if(requested){const target=new URL(requested,location.href);if(target.origin===location.origin&&['/alliance-hub.html','/live.html','/applicant-messenger.html','/seat-confirmations.html','/leadership-report.html'].includes(target.pathname))returnTarget=target.pathname+target.search+target.hash;}}catch{}
 if(returnTarget){document.querySelector('h1').textContent='Sign in to continue';document.querySelector('.panel > p').textContent='Use your assigned username and password, or Google. We’ll return you to your workspace.';}
 
 function report(message, error = false) {

@@ -1,0 +1,48 @@
+const {PGlite}=await import(process.env.PGLITE_MODULE||'@electric-sql/pglite');
+import fs from 'node:fs/promises';import assert from 'node:assert/strict';
+const db=new PGlite(),read=path=>fs.readFile(new URL('../'+path,import.meta.url),'utf8');
+try{
+ await db.exec(`create role anon;create role authenticated;create role service_role;
+ create schema nova_evidence_private;create schema transfer_private;create schema extensions;
+ create table transfer_private.portal_records(kind text,key text,revision bigint,payload jsonb,primary key(kind,key));
+ create table transfer_private.portal_control(singleton boolean primary key,admin_email text,revision bigint);
+ create table transfer_private.portal_transactions(id text primary key,actor text,events jsonb,revision bigint);
+ create table nova_evidence_private.hub_staff(email text primary key,role text,alliances jsonb,status text,accounts_manage boolean,updated_by text);
+ create table nova_evidence_private.admin_identities(email text primary key,id uuid,display_name text,player_key text,revision bigint,updated_at timestamptz,updated_by text);
+ create table nova_evidence_private.member_links(account_id uuid primary key,player_key text,active boolean,historical_until timestamptz);
+ create table nova_evidence_private.hub_audit(actor_email text,action text,subject text,detail jsonb);
+ insert into nova_evidence_private.hub_staff values('owner@test.invalid','master','[]','active',true,'test');
+ insert into transfer_private.portal_control values(true,'owner@test.invalid',10);
+ create function extensions.digest(t text,algorithm text) returns bytea language sql as $$select sha256(convert_to(t,'UTF8'))$$;
+ create function extensions.gen_random_bytes(n int) returns bytea language sql as $$select decode(replace(gen_random_uuid()::text,'-','')||replace(gen_random_uuid()::text,'-',''),'hex')$$;`);
+ await db.exec(await read('deployment/manual-accounts/accounts.sql'));await db.exec(await read('backend/applicant-messenger.sql'));
+ await db.exec(await read('backend/seat-confirmations.sql'));await db.exec(await read('backend/seat-confirmations.sql'));
+ await db.exec(await read('backend/seat-confirmations-transfer-lead.sql'));await db.exec(await read('backend/seat-confirmations-transfer-lead.sql'));
+ await db.exec(await read('backend/seat-confirmations-message.sql'));await db.exec(await read('backend/seat-confirmations-message.sql'));
+ await db.exec(await read('backend/seat-confirmations-images.sql'));await db.exec(await read('backend/seat-confirmations-images.sql'));
+ await db.exec(await read('backend/seat-confirmations-outreach.sql'));await db.exec(await read('backend/seat-confirmations-outreach.sql'));
+ await db.exec(await read('backend/messenger-admin-list.sql'));await db.exec(await read('backend/messenger-admin-list.sql'));
+ const call=async(action,args)=>(await db.query('select public.nova_manual_accounts($1,$2::jsonb) as data',[action,JSON.stringify(args)])).rows[0].data;
+
+ await db.exec(await read('backend/leadership-report.sql'));await db.exec(await read('backend/leadership-report.sql'));
+ const save={staffEmail:'owner@test.invalid',displayName:'Test leader',username:'fixture_leader',hash:'a'.repeat(64),salt:'b'.repeat(64)};
+ for(const action of ['hub-report-list','hub-report-save'])await assert.rejects(call(action,{...save,staffEmail:'attacker@test.invalid'}),/Access denied/);
+ const account=await call('hub-report-save',save);assert.equal(account.ok,true);
+ const session=await call('login-finish',{accountId:account.id,version:1});assert.equal(session.user.role,'leadership_report');assert.equal(session.user.leaderEmail,undefined);
+ const base={name:'Applicant',group:'Alpha',server:1617,alliance:'Test',power:185,kills:123456,hqLevel:35,profession:100,confirmedSeat:'Purple',status:'Approved',notes:'PRIVATE',applicationConfirmations:[{confirmationCode:'PRIVATE_CODE'}],history:['PRIVATE'],rawApplication:{email:'PRIVATE'}};
+ for(const [key,patch] of [['one',{}],['declined',{status:'Declined'}],['withdrawn',{status:'Withdrawn'}],['deleted',{deleted:true}],['general',{general:true}],['prospect',{prospect:true}],['merged',{mergedInto:'one'}]])await db.query('insert into transfer_private.portal_records values($1,$2,1,$3)',['players',key,JSON.stringify({...base,...patch})]);
+ let result=await call('leadership-report-list',{token:session.token});assert.equal(result.players.length,3);assert.ok(!JSON.stringify(result).includes('PRIVATE'));
+ assert.deepEqual(Object.keys(result.players[0]).sort(),['name','group','server','alliance','power','kills','hqLevel','profession','confirmedSeat','status','transferDirection'].sort());
+ assert.equal((await call('leadership-report-list',{staffEmail:'owner@test.invalid'})).players.length,3);
+ assert.equal((await call('leadership-report-list',{})).error,'access_denied');assert.equal((await call('leadership-report-list',{token:'a'.repeat(64),staffEmail:'owner@test.invalid'})).error,'access_denied');
+ for(const action of ['applicant-messenger-list','seat-confirmations-list','seat-confirmations-save','seat-image-get','seat-outreach'])assert.equal((await call(action,{token:session.token})).error,'access_denied');
+ const helper=await call('hub-login-save',{...save,accountType:'applicant_messenger',username:'fixture_helper',reason:'Test report isolation'});
+ const helperSession=await call('login-finish',{accountId:helper.id,version:1});assert.equal(helperSession.user.role,'applicant_messenger');assert.equal((await call('leadership-report-list',{token:helperSession.token})).error,'access_denied');
+ await assert.rejects(call('hub-report-save',{...save,accountId:helper.id}),/identity does not match/);
+ const directory=await call('hub-report-list',{staffEmail:save.staffEmail});assert.equal(directory.accounts.length,1);assert.equal(directory.accounts[0].displayName,save.displayName);
+ await db.exec("update transfer_private.portal_records set payload=jsonb_set(payload,'{name}','\"Updated applicant\"') where key='one'");assert.ok((await call('leadership-report-list',{token:session.token})).players.some(p=>p.name==='Updated applicant'));
+ await call('hub-report-save',{...save,accountId:account.id});assert.equal((await call('leadership-report-list',{token:session.token})).error,'access_denied');
+ const next=await call('login-finish',{accountId:account.id,version:2});await call('hub-login-disable',{staffEmail:save.staffEmail,accountId:account.id});assert.equal((await call('leadership-report-list',{token:next.token})).error,'access_denied');
+ for(const role of ['anon','authenticated'])assert.equal((await db.query("select has_function_privilege($1,'transfer_private.leadership_report_action(text,jsonb)','EXECUTE') allowed",[role])).rows[0].allowed,false);
+ console.log('Leadership report: account lifecycle, live data, field allowlist, role isolation and SQL grants passed');
+}finally{await db.close();}

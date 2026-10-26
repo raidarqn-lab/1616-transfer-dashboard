@@ -9,7 +9,7 @@ import {setupMemberHandoff} from './member-handoff.js?v=20260927';
 import {setupLeaderInvitations} from './leader-invitations.js?v=individual-20260927';
 import {setupManualAccounts} from './manual-accounts-ui.js?v=messenger-claim-instructions-20261024';
 import {setupEventSchedule,renderEventSchedule,openEventEditor,eventSaved,eventRecurrencePayload} from './event-schedule.js?v=repeat-editor-20260927';
-import {user} from './live-session.js?v=messenger-20261024';
+import {user} from './live-session.js?v=leadership-20261025';
 import {bountyConnection as config} from './nova-bounty-config.js';
 
 const $=id=>document.getElementById(id);

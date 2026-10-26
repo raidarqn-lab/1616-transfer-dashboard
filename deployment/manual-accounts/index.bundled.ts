@@ -21,7 +21,7 @@ export function createManualAuthHandler({rpc,verifyGoogle,derive=passwordKey}){
    const {action}=input;if(imageRequest&&action!=='seat-image-save')return reply(400,{error:'Invalid upload action.'});
    const seatErrors={already_claimed:[409,'Someone else owns this outreach. Refresh the list.'],claim_required:[409,'Claim this applicant before copying the message.'],outreach_changed:[409,'This outreach changed. Refresh the list.'],already_confirmed:[409,'This seat is already confirmed.'],invalid_outreach:[400,'Choose a valid outreach action.'],invalid_image:[400,'Choose a valid screenshot.'],image_missing:[404,'No screenshot is attached.'],image_changed:[409,'Another helper changed this screenshot. Refresh before replacing it.'],access_denied:[403,'Applicant Messenger or Transfer Hub lead access is required.'],invalid_name:[400,'Enter a display name of 1–100 characters.'],invalid_confirmer:[409,'This confirmer is no longer available. Refresh the list.'],invalid_confirmation:[400,'Choose a seat colour and confirmer before saving.'],applicant_unavailable:[409,'This application is no longer available for seat confirmation.'],record_changed:[409,'This applicant changed. Refresh the list before saving.'],capacity_unavailable:[409,'Ask the administrator to set seat capacities in Transfer Hub.'],capacity_full:[409,'No seats of this colour remain. Contact the transfer team.'],unavailable:[503,'Seat confirmations are temporarily unavailable.']};
    const seatReply=result=>{if(!result.error)return reply(200,result);const [status,message]=seatErrors[result.error]||[503,'The save could not be confirmed. Refresh before retrying.'];return reply(status,{error:message,code:result.error});};
-   if(['seat-confirmations-list','seat-confirmations-save','seat-image-get','seat-image-save','seat-outreach'].includes(action)){
+   if(['leadership-report-list','seat-confirmations-list','seat-confirmations-save','seat-image-get','seat-image-save','seat-outreach'].includes(action)){
     const args={};const manual=(req.headers.get('x-nova-session')||'').replace(/^Bearer /,'');
     if(manual){if(!/^[a-f0-9]{64}$/.test(manual))return reply(401,{error:'Please sign in again.',code:'access_denied'});args.token=manual;}
     else{const token=req.headers.get('x-portal-token');if(!token)return reply(401,{error:'Please sign in again.',code:'access_denied'});
@@ -52,7 +52,7 @@ export function createManualAuthHandler({rpc,verifyGoogle,derive=passwordKey}){
     if(!/^[a-f0-9]{64}$/.test(token))return reply(401,{error:'Please sign in again.'});
     const result=await rpc(action,{token});return result.error?reply(result.error==='access_denied'?403:401,{error:result.error==='access_denied'?'Applicant Messenger access is required.':'Please sign in again.'}):reply(200,result);
    }
-   if(!['hub-login-search','hub-login-save','hub-login-disable','hub-login-rename','hub-messenger-list'].includes(action))return reply(400,{error:'Use the username and password assigned by the owner. Ask the owner for a reset.'});
+   if(!['hub-login-search','hub-login-save','hub-login-disable','hub-login-rename','hub-messenger-list','hub-report-list','hub-report-save'].includes(action))return reply(400,{error:'Use the username and password assigned by the owner. Ask the owner for a reset.'});
    const token=req.headers.get('x-portal-token');if(!token)return reply(401,{error:'Sign in to manage logins.'});
    let staffEmail;
    if(/^np_[a-f0-9]{64}$/.test(token)){const session=await rpc('session',{token:token.slice(3)});staffEmail=session.user?.leaderEmail;}
@@ -62,7 +62,7 @@ export function createManualAuthHandler({rpc,verifyGoogle,derive=passwordKey}){
    if(action==='hub-login-rename')return seatReply(await rpc(action,{staffEmail,accountId:input.accountId,displayName:input.displayName}));
    if(action==='hub-login-search')args.query=String(input.query||'').slice(0,100);
    if(action==='hub-login-disable')args.accountId=input.accountId;
-   if(action==='hub-login-save'){
+   if(action==='hub-login-save'||action==='hub-report-save'){
     if(typeof input.password!=='string'||input.password.length<12||input.password.length>128)return reply(400,{error:'Use a password of 12–128 characters.'});
     // Check owner authorization before spending CPU hashing or accepting a mutation.
     await rpc('hub-login-search',{staffEmail,query:'__permission_check__'});

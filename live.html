@@ -313,7 +313,7 @@
 </style><style>#transfer-mock .account-role{display:inline-block;font-size:11px;background:#eeddd6;color:#9c3645;border-radius:20px;padding:2px 7px;margin-left:5px}#transfer-mock [data-set-main]{font-size:12px;padding:4px 8px;margin-top:8px}</style><style>#transfer-mock .confirm-shade{position:fixed!important;inset:0!important;height:100dvh!important;z-index:3000!important;display:flex;align-items:center;justify-content:center;padding:16px}#transfer-mock .confirm-shade[hidden]{display:none!important}#transfer-mock .confirm-box{max-height:calc(100dvh - 32px);overflow:auto;margin:0}</style><script>
 (async()=>{
 const {setupRejectionReasonFields,rejectionPatch}=await import('./rejection-reasons.js?v=2');
-const LIVE=await import('./live-session.js?v=messenger-20261024');if(!LIVE.user){location.replace(LIVE.landingPage||'./sign-in.html');return;}const BOOT=await LIVE.api('live.load');
+const LIVE=await import('./live-session.js?v=leadership-20261025');if(!LIVE.user){location.replace(LIVE.landingPage||'./sign-in.html');return;}const BOOT=await LIVE.api('live.load');
 const {applicantMessage,installApplicantMessageCopy}=await import('./applicant-message.js?v=20261024');
 const stateSession=Math.random().toString(36).slice(2);
 const languageNames={en:'English',ko:'한국어',vi:'Tiếng Việt',de:'Deutsch',fr:'Français',pt:'Português',es:'Español'};
@@ -1588,6 +1588,7 @@ adminSettingsSections.reports.querySelector('[data-export-leadership-report]').o
  if(BOOT.role!=='admin'||previewRole!=='admin')return;
  seatSandbox.exportRoster({allApplicantsOnly:true});
 };
+if(BOOT.role==='admin'){const {mountLeadershipReportAdmin}=await import('./leadership-report-admin.js?v=1');mountLeadershipReportAdmin({panel:adminSettingsSections.reports,user:LIVE.user});}
 languageControl.querySelector('select').addEventListener('change',()=>seatSandbox.render());
 const sandboxOriginalSnapshot=applyLiveSnapshot;
 applyLiveSnapshot=function(snapshot){sandboxSaved=snapshot.shared.seatSandbox||{data:{version:1,scenarios:[]},_rev:0};sandboxOriginalSnapshot(snapshot);};
