@@ -1588,7 +1588,7 @@ adminSettingsSections.reports.querySelector('[data-export-leadership-report]').o
  if(BOOT.role!=='admin'||previewRole!=='admin')return;
  seatSandbox.exportRoster({allApplicantsOnly:true});
 };
-if(BOOT.role==='admin'){const {mountLeadershipReportAdmin}=await import('./leadership-report-admin.js?v=1');mountLeadershipReportAdmin({panel:adminSettingsSections.reports,user:LIVE.user});}
+if(BOOT.role==='admin'){const {mountLeadershipReportAdmin}=await import('./leadership-report-admin.js?v=2');mountLeadershipReportAdmin({panel:adminSettingsSections.reports,user:LIVE.user});}
 languageControl.querySelector('select').addEventListener('change',()=>seatSandbox.render());
 const sandboxOriginalSnapshot=applyLiveSnapshot;
 applyLiveSnapshot=function(snapshot){sandboxSaved=snapshot.shared.seatSandbox||{data:{version:1,scenarios:[]},_rev:0};sandboxOriginalSnapshot(snapshot);};
