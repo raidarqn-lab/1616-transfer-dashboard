@@ -18,3 +18,10 @@ test('copy lookup refreshes the selected player and never substitutes another ap
  await assert.rejects(freshSeatFollowup(async()=>{throw Object.assign(Error('Revoked'),{code:'access_denied'});},'one','en'),e=>e.code==='access_denied');
  await assert.rejects(freshSeatFollowup(async()=>({applicants:null}),'one','en'),/Invalid response/);
 });
+
+test('seat messages default to each applicant language independently of the interface',async()=>{
+ for(const [value,lang] of [['Deutsch','de'],['fr','fr'],['pt-BR','pt'],['Español','es'],['한국어','ko'],['vi','vi'],['ar','ar'],['','en'],[undefined,'en']]){
+  const p={...applicant,applicationLanguage:value};assert.equal(seatFollowupMessage(p),seatFollowupMessage(p,lang));
+  const result=await freshSeatFollowup(async()=>({applicants:[p]}),'one');assert.equal(result.message,seatFollowupMessage(p,lang));
+ }
+});
