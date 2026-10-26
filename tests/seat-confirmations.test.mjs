@@ -31,3 +31,13 @@ test('outreach filters distinguish available, owned, awaiting and confirmed reco
  assert.deepEqual(matchingSeatRows(rows,'','awaiting','me').map(p=>p.id),['waiting']);
  assert.equal(matchingSeatRows(rows,'','mine').length,0);
 });
+test('seat directory filters combine server and group with name and outreach ownership',()=>{
+ const rows=[{name:'polâr',server:'1608',transferGroup:'SALAMI SLAYERS',outreach:{ownerId:'me',status:'awaiting'}},{name:'Polar2',server:'16080',transferGroup:'SALAMI SLAYERS',outreach:{ownerId:'me'}},{name:'Polar3',server:'1608',transferGroup:'Other',confirmedSeat:'Blue'},{name:'Other',server:'',transferGroup:''}];
+ const filters={server:'1608',transferGroup:'SALAMI SLAYERS'};
+ assert.deepEqual(matchingSeatRows(rows,'POLAR','mine','me',filters),[rows[0]]);
+ assert.deepEqual(matchingSeatRows(rows,'','awaiting','me',filters),[rows[0]]);
+ assert.deepEqual(matchingSeatRows(rows,'','available','me',filters),[]);
+ assert.deepEqual(matchingSeatRows(rows,'','all','me',{server:'',transferGroup:''}),[rows[3]]);
+ assert.deepEqual(matchingSeatRows(rows,'','confirmed','me',{server:'1608'}),[rows[2]]);
+ assert.deepEqual(matchingSeatRows(rows,''),rows);
+});
