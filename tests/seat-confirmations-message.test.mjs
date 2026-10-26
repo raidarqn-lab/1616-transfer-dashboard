@@ -25,3 +25,31 @@ test('seat messages default to each applicant language independently of the inte
   const result=await freshSeatFollowup(async()=>({applicants:[p]}),'one');assert.equal(result.message,seatFollowupMessage(p,lang));
  }
 });
+
+
+test('accepted applicants get a separate introduction in all supported languages',()=>{
+ for(const language of Object.keys(languageNames)){
+  const pending=seatFollowupMessage({...applicant,status:'Pending'},language);
+  const accepted=seatFollowupMessage({...applicant,status:'Approved'},language);
+  assert.notEqual(accepted,pending);
+  assert.ok(accepted.includes(applicant.name));
+  assert.deepEqual(accepted.split('\n\n').slice(2),pending.split('\n\n').slice(2));
+  assert.equal(accepted.split('1616-TEST-12345678').length,2);
+  assert.ok(!accepted.includes('{name}'));
+  for(const status of ['Pending','Under Review','Waitlisted'])assert.equal(seatFollowupMessage({...applicant,status},language),pending);
+ }
+ const accepted=seatFollowupMessage({...applicant,status:'Approved'},'en');
+ assert.match(accepted,/has been accepted/);
+ assert.match(accepted,/only to verify your transfer seat colour/);
+ assert.ok(!accepted.includes('does not mean your application has been approved'));
+ assert.equal(seatFollowupMessage({...applicant,status:'Approved'},'unknown'),accepted);
+ assert.equal(seatFollowupMessage({...applicant,status:'Approved',applicationLanguage:'Deutsch'}),seatFollowupMessage({...applicant,status:'Approved'},'de'));
+});
+
+test('copy uses latest acceptance status, including when approval is reversed',async()=>{
+ for(const status of ['Approved','Pending']){
+  const result=await freshSeatFollowup(async()=>({applicants:[{...applicant,status}]}),'one');
+  assert.equal(result.message,seatFollowupMessage({...applicant,status}));
+  assert.equal(result.message.includes('has been accepted'),status==='Approved');
+ }
+});
