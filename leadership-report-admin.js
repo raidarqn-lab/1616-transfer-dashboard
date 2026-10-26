@@ -8,7 +8,40 @@ export function mountLeadershipReportAdmin({panel,user}){
  dialog.innerHTML=`<div class="admin-dialog-bar"><strong>Leadership report login</strong><button type="button" data-close aria-label="Close leadership login">×</button></div><section class="hub-card"><form><label>Leader name<input name="displayName" maxlength="100" required autocomplete="off"></label><label>Username<input name="username" minlength="3" maxlength="32" pattern="[a-z0-9_]{3,32}" required autocomplete="off"></label><small>3–32 lowercase letters, numbers or underscores.</small><label>New password<input name="password" type="password" minlength="12" maxlength="128" required autocomplete="new-password"></label><label>Confirm password<input name="confirmation" type="password" minlength="12" maxlength="128" required autocomplete="new-password"></label><small>12–128 characters. Share privately with this leader.</small><div class="hub-actions"><button type="submit" class="primary">Save login & password</button></div></form><p data-result role="status"></p><div data-share hidden><label>Access instructions<textarea rows="8" readonly></textarea></label><button type="button" data-copy>Copy access instructions</button></div></section>`;
  document.body.append(dialog);const form=dialog.querySelector('form'),message=dialog.querySelector('[data-result]'),share=dialog.querySelector('[data-share]');let selected=null,busy=false;
  const call=async body=>{const response=await fetch(config.endpoint.replace('/nova-bounty','/nova-auth'),{method:'POST',headers:{'Content-Type':'application/json',apikey:config.anonKey,'X-Portal-Token':await user.getIdToken()},body:JSON.stringify(body),signal:AbortSignal.timeout(30000)});const result=await response.json();if(!response.ok)throw Error(result.error||'The account request could not be confirmed.');return result;};
- const accessText=(account,password)=>`Welcome to the 1616 leadership applicant report!\n\nhttps://portal.join1616.com/leadership-report.html\nUsername: ${account.username}\nPassword: ${password||'[Share the assigned password separately]'}\n\nSign in to view the live applicant roster. It refreshes every 30 seconds. Use search, filters, sorting and grouping to explore the list, or Print / Save PDF to save the current view. This is read-only access.\n\nKeep all applicant information and your login confidential. Contact me for help.`;
+ const accessText=(account,password)=>`Welcome to the 1616 leadership applicant roster!
+
+LOGIN
+https://portal.join1616.com/leadership-report.html
+Username: ${account.username}
+Password: ${password||'[Share the assigned password separately]'}
+
+Enter your credentials and click “Sign in with password”.
+
+WHAT YOU CAN SEE
+A compact roster of applicants, arranged alphabetically by transfer group and by player within each group. Each row shows their server, current alliance, total hero power (THP), kills, HQ level, profession level, seat colour, and application status.
+
+The list includes all statuses, including declined and withdrawn applicants. Ungrouped players appear under No transfer group. Contacts, prospects, and deleted records are excluded.
+
+HOW TO USE IT
+1. Search to find a player, group, server, or alliance.
+2. Filter by group, status, seat colour, server, or alliance. Open Numeric filters to set THP, kills, HQ, or profession limits.
+3. Group by changes how players are organized.
+4. Sort by and Order change the order within groups.
+5. Reset filters returns to the full list.
+6. Print / Save PDF saves or prints your current filtered view.
+
+LIVE UPDATES
+The page checks for updates every 30 seconds while open. Click Refresh now to check immediately. Your filters stay selected during updates.
+
+This is read-only access. You can view and organize the report, but you cannot change applications or approve players. Seat colours are estimates unless confirmed; a seat colour does not mean approval.
+
+EXPORTED COPIES
+Downloaded HTML reports work offline and include search, filters, sorting, and grouping. HTML and PDF exports are snapshots—they do not update when the portal changes. Check their date before relying on them.
+
+STRICTLY CONFIDENTIAL
+Keep applicant information, exported reports, and your login confidential. Do not share your account or forward reports outside authorized leadership. Do not confirm or deny someone’s application or status to others. Refer questions to me or the Transfer lead.
+
+Contact me for help or a password reset.`;
  const open=account=>{selected=account;form.reset();form.hidden=false;form.elements.confirmation.setCustomValidity('');form.elements.displayName.value=account?.displayName||'';form.elements.username.value=account?.username||'';message.textContent='';share.hidden=true;dialog.showModal();};
  const load=async()=>{status.textContent='Loading report accounts…';try{const result=await call({action:'hub-report-list'});list.replaceChildren();for(const account of result.accounts){const row=document.createElement('article');row.className='member-account-row';const name=document.createElement('strong');name.textContent=account.displayName;const info=document.createElement('span');info.textContent='@'+account.username+' · '+(account.active?'Active':'Disabled');const actions=document.createElement('div');actions.className='hub-actions';const edit=document.createElement('button');edit.type='button';edit.textContent=account.active?'Edit / reset password':'Restore access';edit.onclick=()=>open(account);actions.append(edit);if(account.active){const copy=document.createElement('button');copy.type='button';copy.textContent='Copy access instructions';copy.onclick=async()=>{try{await navigator.clipboard.writeText(accessText(account));status.textContent='Access instructions copied. Share the assigned password separately.';}catch{status.textContent='Clipboard unavailable. Open Edit to create a new access message.';}};const disable=document.createElement('button');disable.type='button';disable.textContent='Disable access';disable.onclick=async()=>{if(!confirm('Disable report access for '+account.displayName+'?'))return;disable.disabled=true;try{const result=await call({action:'hub-login-disable',accountId:account.id});if(result.ok!==true)throw Error('Disable could not be confirmed. Refresh accounts.');await load();}catch(error){status.textContent=error.message;disable.disabled=false;}};actions.append(copy,disable);}row.append(name,info,actions);list.append(row);}status.textContent=result.accounts.length+' leader accounts';}catch(error){status.textContent=error.message;}};
  section.querySelector('[data-add]').onclick=()=>open(null);section.querySelector('[data-refresh]').onclick=load;
