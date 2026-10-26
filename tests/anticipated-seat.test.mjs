@@ -32,13 +32,13 @@ function columns(view,preferences={}){
  vm.runInContext(columnSetup+';globalThis.result=[...hidden];',context);
  return [...context.result];
 }
-test('fresh/reset applications show group and anticipated seat; existing preferences migrate once per view',()=>{
+test('applications show group, confirmed seat and profession; existing preferences migrate once per view',()=>{
  for(const view of ['applications','board']){
-  const fresh=columns(view);assert(!fresh.includes(3));assert(!fresh.includes(6));assert(fresh.includes(7));assert(fresh.includes(12));
-  const prefs={['players-v2:'+view]:[3,6,9]};const migrated=columns(view,prefs);
-  assert(!migrated.includes(3));assert(!migrated.includes(6));assert(migrated.includes(9));
-  prefs['players-v2:'+view].push(3,6);const customized=columns(view,prefs);
-  assert(customized.includes(3));assert(customized.includes(6));
+  const fresh=columns(view);assert(!fresh.includes(3));assert(fresh.includes(6));assert(!fresh.includes(7));assert(!fresh.includes(10));assert(fresh.includes(11));assert(fresh.includes(12));
+  const prefs={['players-v2:'+view]:[3,7,9,10]};const migrated=columns(view,prefs);
+  assert(!migrated.includes(3));assert(migrated.includes(6));assert(!migrated.includes(7));assert(migrated.includes(9));assert(!migrated.includes(10));assert(migrated.includes(11));
+  prefs['players-v2:'+view].push(3,7,10);const customized=columns(view,prefs);
+  assert(customized.includes(3));assert(customized.includes(7));assert(customized.includes(10));
  }
  assert(columns('prospects').includes(3));assert(columns('prospects').includes(6));
 });
