@@ -1,6 +1,6 @@
 import {messengerFilterCopy,applicantMatchesFilters} from './applicant-messenger-filters.js?v=2';
 import {prepareSeatImage} from './seat-confirmations-image.js?v=1';
-import {seatFollowupMessage,freshSeatFollowup} from './seat-confirmations-message.js?v=4';
+import {seatFollowupMessage,freshSeatFollowup} from './seat-confirmations-message.js?v=5';
 import {languageNames,messengerCopy,preferredLanguage,formatCopy,applicantLanguageLabel} from './applicant-messenger-i18n.js?v=3';
 import {seatCopy,seatErrorKey} from './seat-confirmations-i18n.js?v=4';
 export const seatColours=['Gold','Purple','Blue','White'];

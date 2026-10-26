@@ -33,14 +33,18 @@ test('accepted applicants get a separate introduction in all supported languages
   const accepted=seatFollowupMessage({...applicant,status:'Approved'},language);
   assert.notEqual(accepted,pending);
   assert.ok(accepted.includes(applicant.name));
-  assert.deepEqual(accepted.split('\n\n').slice(2),pending.split('\n\n').slice(2));
+  assert.ok(accepted.includes('join1616.com'));
+  assert.equal(accepted.split('\n\n').length,4);
   assert.equal(accepted.split('1616-TEST-12345678').length,2);
   assert.ok(!accepted.includes('{name}'));
   for(const status of ['Pending','Under Review','Waitlisted'])assert.equal(seatFollowupMessage({...applicant,status},language),pending);
  }
  const accepted=seatFollowupMessage({...applicant,status:'Approved'},'en');
  assert.match(accepted,/has been accepted/);
- assert.match(accepted,/only to verify your transfer seat colour/);
+ assert.match(accepted,/Could you send a screenshot/);
+ assert.match(accepted,/Gold, Purple, Blue, or White\/Gray/);
+ assert.ok(accepted.endsWith('Thanks for your help!'));
+ assert.match(accepted,/assigned alliance, when available/);
  assert.ok(!accepted.includes('does not mean your application has been approved'));
  assert.equal(seatFollowupMessage({...applicant,status:'Approved'},'unknown'),accepted);
  assert.equal(seatFollowupMessage({...applicant,status:'Approved',applicationLanguage:'Deutsch'}),seatFollowupMessage({...applicant,status:'Approved'},'de'));
