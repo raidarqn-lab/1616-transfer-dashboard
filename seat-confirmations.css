@@ -8,3 +8,5 @@
 .seat-name-line{gap:6px}.seat-image-dialog{width:min(720px,calc(100vw - 36px));max-height:90vh;overflow:auto}.seat-image-dialog img{display:block;max-width:100%;max-height:65vh;width:auto;height:auto;margin:12px auto;object-fit:contain}.seat-image-dialog p{font-size:12px}.seat-image-actions{display:flex;gap:10px;justify-content:flex-end}
 
 .seat-outreach{display:flex;align-items:center;flex-wrap:wrap;gap:5px;font-size:11px;color:#425c4b;margin-top:4px}.seat-row .seat-reassign{width:auto;max-width:130px;min-height:24px;padding:2px 4px;font-size:11px}.seat-followup{color:#925b16}.seat-outreach .seat-copy{padding:2px 6px}
+
+.seat-row[data-unable="true"]{background:#fff0dc;border-color:#da8221;border-inline-start:4px solid #c56b09}.seat-warning{color:#9a4e00;font-size:1.2rem}.seat-missing{display:inline-flex;flex-direction:row;flex:none;align-items:center;gap:5px;font-size:12px;cursor:pointer}.seat-missing input{width:auto;min-height:0;margin:0;accent-color:#c56b09}

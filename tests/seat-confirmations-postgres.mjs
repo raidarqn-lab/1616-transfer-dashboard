@@ -114,6 +114,35 @@ try{
  assert.equal((await call('hub-login-rename',{staffEmail:'lead@test.invalid',accountId:account.id,displayName:'Changed'})).error,'access_denied');
  assert.equal((await call('hub-login-rename',{staffEmail:'owner@test.invalid',accountId:account.id,displayName:'Renamed helper'})).ok,true);
  result=await call('seat-confirmations-list',{token});assert.equal(result.confirmers.find(c=>c.id===by).name,'Renamed helper');assert.equal((await call('session',{token})).user.playerName,'Renamed helper');
+ // Support workflow migration is repeatable and preserves all confirmation data.
+ await db.exec(await read('backend/support-applicant-actions.sql'));
+ await db.exec(await read('backend/support-applicant-actions.sql'));
+ const before=(await db.query("select payload from transfer_private.portal_records where kind='players' and key='player'")).rows[0].payload;
+ const beforeImage=(await db.query("select * from transfer_private.seat_images where player_key='player'")).rows[0];
+ for(const command of ['unable','found','withdraw'])assert.equal((await outreach(command,{token:undefined,staffEmail:'support@test.invalid',version:'11'})).error,'access_denied');
+ const unable=await outreach('unable');assert.equal(unable.applicant.outreach.status,'unable');assert.equal(unable.applicant.confirmedSeat,'Gold');assert.equal(unable.applicant.revision,11);
+ for(const command of ['claim','sent','release','check'])assert.equal((await outreach(command,{version:unable.applicant.outreach.version})).error,'outreach_changed');
+ assert.equal((await outreach('found',{version:'stale'})).error,'outreach_changed');
+ assert.equal((await outreach('found',{version:unable.applicant.outreach.version})).applicant.outreach,null);
+ assert.equal((await outreach('withdraw',{version:'stale'})).error,'record_changed');
+ assert.equal((await outreach('approve',{version:'11'})).error,'invalid_outreach');
+ for(const playerId of ['contact','prospect','deleted','merged','transferred','outbound','declined'])assert.equal((await outreach('withdraw',{playerId,version:'10'})).error,'applicant_unavailable');
+ await outreach('unable');
+ const withdrawn=await outreach('withdraw',{version:'11',status:'Approved',confirmedSeat:'White',notes:'ATTACK'});assert.equal(withdrawn.withdrawn,true);
+ const after=(await db.query("select payload,revision from transfer_private.portal_records where kind='players' and key='player'")).rows[0];
+ assert.equal(after.payload.status,'Withdrawn');
+ for(const key of Object.keys(before).filter(key=>!['status','updatedAt','history'].includes(key)))assert.deepEqual(after.payload[key],before[key],key+' must survive withdrawal');
+ assert.deepEqual(after.payload.history.slice(1),before.history);assert.match(after.payload.history[0].text,/player’s request/);
+ assert.deepEqual((await db.query("select * from transfer_private.seat_images where player_key='player'")).rows[0],beforeImage);
+ assert.equal((await db.query("select count(*)::int n from transfer_private.seat_outreach where player_key='player'")).rows[0].n,0);
+ assert.equal((await call('seat-confirmations-list',{token})).applicants.some(p=>p.id==='player'),false);
+ assert.equal((await call('applicant-messenger-list',{token})).applicants.some(p=>p.id==='player'),false);
+ assert.equal((await outreach('withdraw',{version:'11'})).withdrawn,true);
+ assert.equal((await db.query("select revision from transfer_private.portal_records where kind='players' and key='player'")).rows[0].revision,after.revision);
+ const event=(await db.query("select events from transfer_private.portal_transactions where id like 'support-withdraw-%'")).rows[0].events[0];assert.equal(event.value.status,'Withdrawn');assert.equal(event.value.confirmedSeat,'Gold');assert.equal(event.value._rev,after.revision);
+ // Restore fixture solely so the pre-existing revoked-confirmer assertion remains applicable.
+ await db.query("update transfer_private.portal_records set payload=$1::jsonb,revision=11 where kind='players' and key='player'",[JSON.stringify(before)]);
+ console.log('PASS: limited support withdrawal, synchronized transaction, preserved seat/image/history, missing queue, stale edits, authorization and repeat migration.');
  await call('hub-login-disable',{staffEmail:'owner@test.invalid',accountId:account.id});assert.equal((await call('seat-confirmations-list',{token})).error,'access_denied');assert.equal((await call('seat-confirmations-save',{...args,revision:11,transactionId:'fixture-disabled'})).error,'access_denied');
  assert.equal((await call('seat-confirmations-save',{staffEmail:'owner@test.invalid',playerId:'player',seat:'Blue',confirmerId:by,revision:11,transactionId:'fixture-disabled-confirmer'})).error,'invalid_confirmer');
  for(const action of ['seat-image-get','seat-image-save'])assert.equal((await call(action,imageArgs)).error,'access_denied');
