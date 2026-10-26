@@ -12,7 +12,7 @@ ${fence}
 Your display name: ${displayName}
 Enter your credentials and click “Sign in with password”. Choose your language at the top.
 
-You should have TWO TABS: Seat confirmations and Applicant Messenger.
+Your support workspace is Seat confirmations.
 
 SEAT CONFIRMATIONS
 Check seat colours to see which players and groups fit. Contacting someone does NOT mean approval.
@@ -24,9 +24,6 @@ Check seat colours to see which players and groups fit. Contacting someone does 
 Filters: Mine = your people; Available = unclaimed; Awaiting reply = waiting. Cannot continue? Click Release. Already contacted someone? Claim them and mark Message sent. Ask me to reassign if needed.
 Green + checkmark = confirmed; yellow = unconfirmed. Uploading alone does not confirm. Correct errors and save again; View image → Replace image replaces screenshots.
 Accuracy is VERY important: wrong colours can stop whole groups fitting. Ask me or the Transfer lead if unsure.
-
-APPLICANT MESSENGER
-Find the player, click Copy message and send it privately to them. It includes their code and join1616.com to check application status and their assigned alliance, if accepted.
 
 STRICTLY CONFIDENTIAL
 Keep all applicant information, screenshots, codes and logins confidential. Do not discuss applicants with anyone else or confirm/deny that they applied or their application status—even if asked. Send a player’s message only to that player. Refer others’ questions to me.
