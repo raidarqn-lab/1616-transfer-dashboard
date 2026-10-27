@@ -7,12 +7,9 @@ export function sandboxGroupKey(value) {
 export function sandboxAccepted(p) {
   return !p.deleted&&!p.general&&!p.prospect&&['Approved','Transferred'].includes(p.status)&&p.transferDirection!=='outbound';
 }
-export function sandboxAnticipated(power) {
-  if(power==null||typeof power==='boolean'||String(power).trim()===''||!Number.isFinite(Number(power))||Number(power)<0)return 'Unknown';
-  return Number(power)>=230?'Gold':Number(power)>=180?'Purple':Number(power)>=130?'Blue':'White';
-}
+// Seat evidence is independent of application approval. Never infer a colour from THP.
 export function sandboxSeat(p) {
-  return sandboxAccepted(p)&&SANDBOX_COLOURS.includes(p.confirmedSeat)?p.confirmedSeat:sandboxAnticipated(p.power);
+  return SANDBOX_COLOURS.includes(p.confirmedSeat)?p.confirmedSeat:'Unknown';
 }
 export function sandboxCandidate(p) {
   return !p.deleted&&!p.general&&!p.prospect&&['Pending','Under Review','Waitlisted','Approved','Transferred'].includes(p.status)&&p.transferDirection!=='outbound';
@@ -48,7 +45,7 @@ export function sandboxForecast(players,capacities,scenario={}) {
   for(const p of members)counts[sandboxSeat(p)][sandboxAccepted(p)?'accepted':'tentative']++;
   for(const c of SANDBOX_COLOURS){counts[c].capacity=Number.isSafeInteger(capacities?.[c])&&capacities[c]>=0?capacities[c]:null;counts[c].remaining=counts[c].capacity==null?null:counts[c].capacity-counts[c].accepted-counts[c].tentative;}
   return {groups,members,counts,excluded:[...excluded],accepted:members.filter(sandboxAccepted).length,
-    estimates:members.filter(p=>sandboxAccepted(p)&&!SANDBOX_COLOURS.includes(p.confirmedSeat)).length,
+    unconfirmed:counts.Unknown.accepted+counts.Unknown.tentative,
     nonApplicants:members.filter(p=>!sandboxCandidate(p)).length};
 }
 export function applySandboxCommand({previous,command,players,identity,role,now,assert=(ok,message)=>{if(!ok)throw Error(message);}}) {

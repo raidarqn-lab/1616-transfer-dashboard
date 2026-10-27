@@ -5,10 +5,10 @@ const identity={email:'lead@example.test'},other={email:'reviewer@example.test'}
 const capacities={Gold:1,Purple:2,Blue:3,White:3};
 const fixture=()=>[
  {id:1,name:'Accepted',status:'Approved',group:'North',power:200,confirmedSeat:'Blue'},
- {id:2,name:'North member',status:'Pending',group:'Nórth',power:180},
- {id:3,name:'Solo',status:'Pending',group:'Solo',power:129},
- {id:4,name:'Harbor A',status:'Pending',group:'Harbor',power:230},
- {id:5,name:'Harbor B',status:'Interested',prospect:true,group:'Harbor',power:228},
+ {id:2,name:'North member',status:'Pending',group:'Nórth',power:180,confirmedSeat:'Purple'},
+ {id:3,name:'Solo',status:'Pending',group:'Solo',power:129,confirmedSeat:'White'},
+ {id:4,name:'Harbor A',status:'Pending',group:'Harbor',power:230,confirmedSeat:'Gold'},
+ {id:5,name:'Harbor B',status:'Interested',prospect:true,group:'Harbor',power:228,confirmedSeat:'Purple'},
  {id:6,name:'Withdrawn',status:'Withdrawn',group:'',power:200},
  {id:7,name:'Deleted',status:'Approved',deleted:true,power:250},
  {id:8,name:'Departed',status:'Departed',transferDirection:'outbound',power:260}
@@ -26,7 +26,7 @@ test('accepted baseline is automatic, groups expand across categories, unknowns 
  assert.equal(f.accepted,2);assert.equal(f.counts.Blue.accepted,1);assert.equal(f.counts.Purple.tentative,0);assert.equal(f.counts.Unknown.accepted,1);
  assert.deepEqual(f.members.map(p=>p.id).sort(),[1,9]);
  assert.equal(f.groups.find(g=>g.name==='Harbor').members.length,2);assert(!f.groups.some(g=>g.members.some(p=>[6,7,8].includes(p.id))));
- assert.equal(sandboxSeat({...players[1],confirmedSeat:'White'}),'Purple');
+ assert.equal(sandboxSeat({...players[1],confirmedSeat:'White'}),'White');
 });
 test('whole groups count once; pending exception counts until independent approval, and restore reunites group',()=>{
  const original=fixture(),before=structuredClone(original);let d=include(create());
@@ -62,7 +62,7 @@ test('partially accepted groups can add and remove remaining members without tou
 });
 test('stale membership invalidates approval and rejects actions based on old roster; renamed groups follow selected players',()=>{
  let d=request(include(create()));d=run(d,command('review',{requestId:'request-123',decision:'approved',reviewNote:''}),fixture(),other);
- const players=fixture();players.push({id:10,name:'New member',group:'Harbor',status:'Pending',power:150});
+ const players=fixture();players.push({id:10,name:'New member',group:'Harbor',status:'Pending',power:150,confirmedSeat:'Blue'});
  const f=sandboxForecast(players,capacities,d.scenarios[0]);assert.equal(f.counts.Gold.tentative,1);assert.equal(f.counts.Blue.tentative,1);
  const old=group(d);assert.throws(()=>run(d,command('select',{groupKey:old.key,memberIds:old.memberIds,include:false}),players),/membership changed/);
  players.filter(p=>p.group==='Harbor').forEach(p=>p.group='Renamed');
@@ -107,4 +107,20 @@ test('first individual move preserves legacy selections and approved exclusions 
  d=run(d,command('member',{playerId:'4',include:true}));
  assert(sandboxForecast(fixture(),capacities,d.scenarios[0]).members.some(p=>p.id===4));
  assert.equal(d.scenarios[0].exceptions[0].status,'approved');
+});
+
+test('confirmed colour is authoritative regardless of application status or hero power',()=>{
+ for(const status of ['Pending','Under Review','Waitlisted','Approved','Transferred']){
+  for(const confirmedSeat of ['Gold','Purple','Blue','White']){
+   for(const power of [null,0,129,130,180,230,999])assert.equal(sandboxSeat({status,confirmedSeat,power,seat:'Gold'}),confirmedSeat);
+  }
+  for(const confirmedSeat of [undefined,null,'','Unknown','blue','Anticipated'])assert.equal(sandboxSeat({status,confirmedSeat,power:999,seat:'Gold'}),'Unknown');
+ }
+});
+test('unconfirmed selected players never consume estimated colour capacity and remain visibly unconfirmed',()=>{
+ const players=[{id:1,name:'Accepted without colour',status:'Approved',power:999},{id:2,name:'Pending confirmed white',status:'Pending',confirmedSeat:'White',power:999},{id:3,name:'Pending without colour',status:'Pending',power:180}];
+ const f=sandboxForecast(players,capacities,{selectionMode:'individual',selectedIds:['2','3']});
+ assert.equal(f.members.length,3);assert.equal(f.unconfirmed,2);assert.equal(f.counts.Unknown.accepted,1);assert.equal(f.counts.Unknown.tentative,1);
+ assert.equal(f.counts.White.tentative,1);assert.equal(f.counts.White.remaining,2);
+ for(const colour of ['Gold','Purple','Blue']){assert.equal(f.counts[colour].accepted+f.counts[colour].tentative,0);assert.equal(f.counts[colour].remaining,capacities[colour]);}
 });

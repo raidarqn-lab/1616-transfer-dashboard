@@ -1,5 +1,5 @@
-import {leadershipRosterHtml} from './seat-sandbox-export.mjs?v=4';
-import {SANDBOX_COLOURS,sandboxAccepted,sandboxSeat,sandboxForecast} from './seat-sandbox-core.mjs?v=6';
+import {leadershipRosterHtml} from './seat-sandbox-export.mjs?v=6';
+import {SANDBOX_COLOURS,sandboxAccepted,sandboxSeat,sandboxForecast} from './seat-sandbox-core.mjs?v=7';
 
 export function installSeatSandbox(api){
  const {root,host,esc}=api,t=s=>api.t(s),tr=s=>esc(t(s));
@@ -40,8 +40,8 @@ export function installSeatSandbox(api){
  }
  dialog.addEventListener('close',()=>dialog.classList.remove('sandbox-export-dialog'));
  function seatLabel(p){
-  const colour=sandboxSeat(p),power=p.power==null||p.power===''?null:Number(p.power),confirmed=sandboxAccepted(p)&&SANDBOX_COLOURS.includes(p.confirmedSeat),near=Number.isFinite(power)&&[130,180,230].some(v=>Math.abs(power-v)<=2)&&!confirmed;
-  return `<span class="sandbox-seat ${near?'near-boundary':''}" data-seat="${colour}" title="${tr(confirmed?'Confirmed':near?'Within 2M of a cutoff':'Anticipated')}"><i aria-hidden="true"></i>${tr(colour)}${confirmed?' ✓':''}</span>`;
+  const colour=sandboxSeat(p),confirmed=SANDBOX_COLOURS.includes(colour);
+  return `<span class="sandbox-seat" data-seat="${colour}" title="${tr(confirmed?'Confirmed':'Unconfirmed')}"><i aria-hidden="true"></i>${tr(confirmed?colour:'Unconfirmed')}${confirmed?' ✓':''}</span>`;
  }
  function stats(p){
   const number=v=>v==null||v===''||!Number.isFinite(Number(v))?null:Number(v);
@@ -66,13 +66,12 @@ export function installSeatSandbox(api){
   const positions=Object.fromEntries([...panel.querySelectorAll('[data-scroll]')].map(el=>[el.dataset.scroll,el.scrollTop]));
   const scenario=current();if(scenario)activeId=scenario.id;
   const result=sandboxForecast(api.players(),api.capacities(),scenario),{counts}=result,noEdit=disabled();
-  panel.innerHTML=`<header class="sandbox-heading"><div><span class="sandbox-eyebrow">${tr('SANDBOX · NO LIVE CHANGES')}</span><h2>${tr('Seat sandbox')}</h2><p>${tr('Drag applicants into Selected players. Seat totals update automatically.')}</p></div><div class="sandbox-toolbar">${scenario?`<label>${tr('Scenario')}<select data-scenario ${noEdit?'disabled':''}>${scenarios().map(s=>`<option value="${esc(s.id)}" ${s.id===scenario.id?'selected':''}>${esc(s.name)}</option>`).join('')}</select></label><button type="button" data-edit-scenario ${noEdit?'disabled':''}>${tr('Edit scenario')}</button>`:''}<button type="button" data-new-scenario ${noEdit?'disabled':''}>${tr('New scenario')}</button><button type="button" data-export-roster>Leadership export</button><button type="button" data-refresh ${busy||api.busy()?'disabled':''}>${tr('Refresh live data')}</button></div></header>
+  panel.innerHTML=`<header class="sandbox-heading"><div><span class="sandbox-eyebrow">${tr('SANDBOX · NO LIVE CHANGES')}</span><h2>${tr('Seat sandbox')}</h2><p>${tr('Drag applicants into Selected players. Totals use confirmed seat colours only.')}</p></div><div class="sandbox-toolbar">${scenario?`<label>${tr('Scenario')}<select data-scenario ${noEdit?'disabled':''}>${scenarios().map(s=>`<option value="${esc(s.id)}" ${s.id===scenario.id?'selected':''}>${esc(s.name)}</option>`).join('')}</select></label><button type="button" data-edit-scenario ${noEdit?'disabled':''}>${tr('Edit scenario')}</button>`:''}<button type="button" data-new-scenario ${noEdit?'disabled':''}>${tr('New scenario')}</button><button type="button" data-export-roster>Leadership export</button><button type="button" data-refresh ${busy||api.busy()?'disabled':''}>${tr('Refresh live data')}</button></div></header>
    ${scenario?`<p class="sandbox-notice">${tr('Changes save automatically to')} <strong translate="no">${esc(scenario.name)}</strong>.</p>`:''}
    <p class="sandbox-message ${error?'is-error':''}" role="status">${esc(message|| (scenario?t('All changes saved.'):''))}</p>
    <div class="sandbox-limits">${SANDBOX_COLOURS.map(c=>{const n=counts[c];return `<article data-seat="${c}"><span class="sandbox-seat"><i aria-hidden="true"></i>${tr(c)}</span><strong class="${n.remaining<0?'sandbox-over':''}">${n.remaining==null?'—':Math.abs(n.remaining)} <small>${tr(n.remaining==null?'Limit unknown':n.remaining<0?'over limit':'left')}</small></strong><small>${n.accepted+n.tentative} / ${n.capacity??'—'} ${tr('filled')}</small></article>`;}).join('')}</div>
    <p class="sandbox-notice">${result.accepted} ${tr('accepted players always included')} · ${tr('Drag individuals, or use Add and Remove.')}</p>
-   ${counts.Unknown.accepted+counts.Unknown.tentative?`<p class="sandbox-warning">${counts.Unknown.accepted+counts.Unknown.tentative} ${tr('players have unknown seat colours. Totals are incomplete.')}</p>`:''}
-   ${result.estimates?`<p class="sandbox-muted">${result.estimates} ${tr('accepted players use anticipated colours until their seats are confirmed.')}</p>`:''}
+   ${result.unconfirmed?`<p class="sandbox-warning">${result.unconfirmed} ${tr('selected players have no confirmed seat colour. They are excluded from colour totals; totals are incomplete.')}</p>`:''}
    ${!scenario?`<p class="sandbox-warning">${tr('Create a scenario to start adding players.')}</p>`:''}
    <div class="sandbox-board">${lists(result)}</div>`;
   panel.querySelectorAll('[data-scroll]').forEach(el=>{el.scrollTop=positions[el.dataset.scroll]||0;});

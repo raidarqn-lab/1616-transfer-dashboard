@@ -27,7 +27,6 @@
 #transfer-mock .seat-sandbox [data-seat="Unknown"]{--sandbox-seat:#7c756e}
 #transfer-mock .sandbox-seat{display:inline-flex;align-items:center;gap:4px;font-size:11px;width:max-content;max-width:100%}
 #transfer-mock .sandbox-seat i{width:7px;height:7px;background:var(--sandbox-seat);border-radius:50%;display:inline-block;flex-shrink:0}
-#transfer-mock .sandbox-seat.near-boundary{border:1px solid #a96f36;border-radius:4px;padding:0 3px}
 #transfer-mock .sandbox-board{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px;margin-top:10px}
 #transfer-mock .sandbox-lane{min-width:0;border:1px solid #d9c7b0;border-radius:7px;background:#fffaf2;display:flex;flex-direction:column;max-height:66vh;min-height:220px;transition:background .1s,border-color .1s}
 #transfer-mock .sandbox-lane>header{display:flex;align-items:center;justify-content:space-between;gap:6px;padding:8px 10px;border-bottom:1px solid #e2cfba;background:#efe3d1;border-radius:6px 6px 0 0;flex-wrap:wrap}
