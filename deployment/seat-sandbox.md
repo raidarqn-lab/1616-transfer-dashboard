@@ -21,3 +21,7 @@ The bundle embeds `seat-sandbox-core.mjs` between BEGIN/END markers. Regenerate 
 Run `node --test tests/*.test.mjs`. Tests cover isolated saves, authorization, stale revisions, individual add/remove, deduplication, fixed accepted seats, changes in group membership, legacy-plan preservation and no live mutation.
 
 Browser QA uses fictional records with the real frontend/domain modules. Verify dragging in and out, Add/Remove alternatives, search, scenario switching and locked accepted players. Live verification is read-only; do not change real selections just to test a release.
+
+## Confirmed colours only — October 26, 2026
+
+All sandbox rows, capacity totals and roster exports use `confirmedSeat`, independent of application approval. Hero power and anticipated colours never supply a fallback. Missing or invalid confirmed colours display as Unconfirmed, remain in the selected roster, and appear in an incomplete-totals warning without consuming a colour's capacity. Selection persistence, locked accepted players and live records are unchanged.

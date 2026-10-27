@@ -20,3 +20,10 @@ test('interactive export embeds controls and only roster fields, escaping attrib
  for(const privateField of ['PRIVATE_NOTE','PRIVATE_CONTACT','PRIVATE_HISTORY'])assert.ok(!html.includes(privateField));
  assert.ok(!html.includes('<script src='));
 });
+
+test('roster export uses confirmed colours for pending applicants and labels missing evidence',()=>{
+ const html=leadershipRosterHtml([{name:'Pending confirmed white',status:'Pending',confirmedSeat:'White',power:999},{name:'No confirmation',status:'Approved',power:999}]);
+ assert.match(html,/data-seat="White"/);assert.match(html,/data-seat="Unconfirmed"/);
+ assert.match(html,/>Confirmed seat<\/th>/);assert.match(html,/>Unconfirmed<\/span>/);
+ assert.ok(!html.includes('data-seat="Gold"'));assert.ok(!html.includes('estimates unless confirmed'));
+});

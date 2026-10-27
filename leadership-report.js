@@ -1,5 +1,5 @@
 import {getManualSession,loginManual,logoutManual,manualAuth} from './manual-session.js?v=leadership-20261025';
-import {leadershipRosterHtml} from './seat-sandbox-export.mjs?v=5';
+import {leadershipRosterHtml} from './seat-sandbox-export.mjs?v=6';
 import {bountyConnection as config} from './nova-bounty-config.js';
 const frame=document.querySelector('#report'),login=document.querySelector('#login'),form=document.querySelector('#login-form'),status=document.querySelector('#status'),refresh=document.querySelector('#refresh'),logout=document.querySelector('#logout'),identity=document.querySelector('#identity');
 let staff=null,busy=false,lastData=null,filterState=null,epoch=0;
