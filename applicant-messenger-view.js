@@ -15,7 +15,7 @@ export function mountApplicantMessenger({root,load,signOut,withdraw,clipboard=na
  reset.onclick=()=>{search.value='';for(const {select} of Object.values(selectors))select.value='';render();search.focus();};
  const storageKey='1616-applicant-messenger-language-v1';
  let saved='';try{saved=localStorage.getItem(storageKey);}catch{}
- let language=preferredLanguage([saved,...(navigator.languages||[navigator.language])]),t={...messengerCopy(language),...supportCopy(language)};
+ let language=preferredLanguage([saved,...(navigator.languages||[navigator.language])]),t={...messengerCopy(language),...supportCopy(language),title:'Application access'};
  let applicants=[],generation=0,copying=false,closed=false,state='loading',noticeKey='',noticeValues={};
  const clear=()=>{applicants=[];list.replaceChildren();root.querySelectorAll('dialog').forEach(d=>d.remove());noticeKey='';notice.textContent='';for(const {select} of Object.values(selectors)){select.replaceChildren();const option=document.createElement('option');option.value='';option.textContent=messengerFilterCopy(language).all;select.append(option);}};
  const setNotice=(key,values={})=>{noticeKey=key;noticeValues=values;notice.textContent=key?formatCopy(t[key],values):'';};
@@ -36,7 +36,7 @@ export function mountApplicantMessenger({root,load,signOut,withdraw,clipboard=na
   }
  }
  function translate(){
-  t={...messengerCopy(language),...supportCopy(language)};document.documentElement.lang=language;document.documentElement.dir=language==='ar'?'rtl':'ltr';document.title=t.title+' · 1616';
+  t={...messengerCopy(language),...supportCopy(language),title:'Application access'};document.documentElement.lang=language;document.documentElement.dir=language==='ar'?'rtl':'ltr';document.title=t.title+' · 1616';
   root.querySelectorAll('[data-i18n]').forEach(el=>{el.textContent=t[el.dataset.i18n];});
   search.placeholder=t.search;list.setAttribute('aria-label',t.title);root.querySelector('.directory').setAttribute('aria-label',t.title);
   const back=root.querySelector('.back-to-hub');if(back)back.textContent=t.back;
