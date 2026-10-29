@@ -1489,9 +1489,13 @@ function applicationGroupMembers(p){
 }
 function applicationGroupMemberCount(p){return applicationGroupMembers(p).length;}
 function transferGroupCell(p){
- const name=esc(displayTransferGroup(p)),count=p.general?0:applicationGroupMemberCount(p);
- if(p.general||(!count&&['','unknown','solo'].includes(nameKey(String(p.group||'').trim()))))return name;
- return '<button type="button" class="application-group-link" data-application-group="'+esc(p.id)+'" aria-haspopup="dialog"><span translate="no">'+name+'</span>'+(count?'<small class="application-group-count" data-tooltip="Names listed in this application, excluding the applicant.">'+count+' listed in application</small>':'')+'</button>';
+ const name=esc(displayTransferGroup(p));
+ if(p.general)return name;
+ const {members,submitted}=rosterGroupMembers(p),count=members.length;
+ if(!submitted&&['','unknown','solo'].includes(nameKey(String(p.group||'').trim())))return name;
+ const label=submitted?'listed in application':count===1?'player':'players';
+ const hint=submitted?'Names listed in this application, excluding the applicant.':'Linked group members';
+ return '<button type="button" class="application-group-link" data-application-group="'+esc(p.id)+'" aria-haspopup="dialog"><span translate="no">'+name+'</span><small class="application-group-count" data-tooltip="'+esc(hint)+'">'+count+' '+label+'</small></button>';
 }
 function rosterGroupMembers(p){
  const submitted=applicationGroupMembers(p);
