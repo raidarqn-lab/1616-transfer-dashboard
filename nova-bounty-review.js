@@ -1,5 +1,5 @@
 import {membershipLabels} from './player-membership.js?v=20261004';
-import {renderPlayerContributions} from './season-contributions.js?v=20261028';
+import {renderPlayerContributions} from './season-contributions.js?v=20261028b';
 import {renderScreenshotLaneEvidence} from './screenshot-lanes.js?v=lanes-20261004';
 import {openRosterPublisher} from './toolkit-roster-publisher.js?v=dated-20261004';
 import {rosterCandidates,validateMatchingRosters,rosterMatchAvailability} from './toolkit-roster-matches.js?v=dated-20261004';

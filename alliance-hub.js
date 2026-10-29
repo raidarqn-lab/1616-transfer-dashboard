@@ -1,5 +1,5 @@
 import {setupAllianceGuidelines} from './alliance-guidelines.js?v=3';
-import {setupSeasonContributions} from './season-contributions.js?v=20261028';
+import {setupSeasonContributions} from './season-contributions.js?v=20261028b';
 import {setupSeasonEvents} from './season-events.js?v=season-availability-20260930';
 import {createWebsiteProfile} from './website-profile.js?v=avatars-20260928';
 import './site-tutorial.js?v=20260928';

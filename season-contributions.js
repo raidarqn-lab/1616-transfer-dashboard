@@ -4,7 +4,7 @@ const number=v=>v==null?'—':Number(v).toLocaleString();
 function table(headers,rows){const t=el('table');t.className='contribution-table';const h=el('tr');headers.forEach(x=>h.append(el('th',x)));const head=el('thead');head.append(h);t.append(head);const body=el('tbody');for(const row of rows){const tr=el('tr');row.forEach(x=>tr.append(el('td',x)));body.append(tr);}t.append(body);return t;}
 export function setupSeasonContributions({call}){
  const nav=el('button','Season contributions');nav.type='button';nav.dataset.hubView='contributions';document.querySelector('[data-hub-view="season"]').after(nav);
- const section=el('section');section.className='hub-section contribution-section';section.dataset.section='contributions';section.hidden=true;document.querySelector('.hub-section').parentElement.append(section);
+ const section=el('section');section.className='hub-section contribution-section';section.dataset.section='contributions';section.hidden=true;document.querySelector('.hub-section').before(section);
  const heading=el('h1','Season contributions'),intro=el('p','Season totals for Nova Sapphire, linked to each player’s shared profile.');
  const toolbar=el('div');toolbar.className='contribution-toolbar';const label=el('label','Season '),season=el('input');season.type='number';season.min='1';season.max='99';season.value='4';season.setAttribute('aria-label','Contribution season');label.append(season);
  const search=el('input');search.type='search';search.placeholder='Search player or UID';search.setAttribute('aria-label','Search season contributions');
