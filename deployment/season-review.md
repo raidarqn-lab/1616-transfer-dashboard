@@ -15,3 +15,7 @@ The page has member/UID search, named-reviewer filters, blank/Keep/Cut filters, 
 Validation: `node --test tests/*.test.mjs`. For transactional backend validation before initial setup, wrap the migration and `backend/verify-season-review.sql` in one transaction and roll back. The verification checks assignment counts, access, forged reviewer IDs, repeat initialization, idempotent retry, stale edits, blank votes, roster boundaries, private projections, owner-only final decisions, closing/reopening, revocation and table/function grants. Run against a disposable database or before Season 4 initialization; it intentionally refuses to overwrite an initialized season.
 
 Rollback the frontend to the preceding revision if needed. Preserve review tables and audit records; do not delete saved reviews or reset leaders' passwords as part of a rollback.
+
+## Owner notes
+
+The Notes from RaidARQN column stores a separate shared note per Season 4 member. Only the active master with account-management permission may edit it; all assigned reviewers may read it. Notes have independent optimistic versions, exact-retry handling, a 4000-character bound and private audit entries. They remain editable after voting closes, do not count as votes and appear in both CSV exports and member Details. Reapply season-review.sql before publishing this frontend; it preserves existing review data and credentials.

@@ -21,6 +21,9 @@ create table if not exists nova_evidence_private.season_review_votes(
  foreign key(season,player_key) references nova_evidence_private.season_review_members(season,player_key),
  foreign key(season,reviewer_id) references nova_evidence_private.season_reviewers(season,reviewer_id)
 );
+alter table nova_evidence_private.season_review_members add column if not exists owner_note text not null default '' check(length(owner_note)<=4000);
+alter table nova_evidence_private.season_review_members add column if not exists owner_note_version bigint not null default 0;
+alter table nova_evidence_private.season_review_members add column if not exists owner_note_updated_at timestamptz;
 alter table nova_evidence_private.season_reviews enable row level security;
 alter table nova_evidence_private.season_reviewers enable row level security;
 alter table nova_evidence_private.season_review_members enable row level security;
@@ -54,7 +57,7 @@ begin
  if action='hub-content-list' then
   select coalesce(jsonb_agg(jsonb_build_object('id',r.reviewer_id,'name',r.name,'active',coalesce(h.status='active' and (h.role='master' or h.alliances ? 'NvSP'),false)) order by lower(r.name)),'[]') into reviewers
   from nova_evidence_private.season_reviewers r left join nova_evidence_private.hub_staff h on h.email=r.staff_email where r.season=4;
-  select coalesce(jsonb_agg(jsonb_build_object('playerKey',m.player_key,'uid',m.uid,'name',m.name,'decision',m.decision,'decisionVersion',m.decision_version) order by lower(m.name)),'[]') into players from nova_evidence_private.season_review_members m where m.season=4;
+  select coalesce(jsonb_agg(jsonb_build_object('playerKey',m.player_key,'uid',m.uid,'name',m.name,'decision',m.decision,'decisionVersion',m.decision_version,'ownerNote',m.owner_note,'ownerNoteVersion',m.owner_note_version,'ownerNoteUpdatedAt',m.owner_note_updated_at) order by lower(m.name)),'[]') into players from nova_evidence_private.season_review_members m where m.season=4;
   select coalesce(jsonb_agg(nova_evidence_private.season_vote_json(v)),'[]') into votes from nova_evidence_private.season_review_votes v where v.season=4;
   if can_manage then
    select coalesce(jsonb_agg(jsonb_build_object('id',i.id,'name',i.display_name) order by lower(i.display_name)),'[]') into candidates
@@ -89,6 +92,17 @@ begin
  select * into member_ from nova_evidence_private.season_review_members where season=4 and player_key=args->>'playerKey';
  if member_.player_key is null then return jsonb_build_object('error','This member is not in the Season 4 roster.');end if;
  expected:=(args->>'version')::bigint;
+ if op='owner-note' then
+  if not can_manage then return jsonb_build_object('error','Only RaidARQN can edit these notes.');end if;
+  if jsonb_typeof(args->'note') is distinct from 'string' or length(args->>'note')>4000 then return jsonb_build_object('error','Enter a note of at most 4000 characters.');end if;
+  if expected is distinct from member_.owner_note_version then
+   if member_.owner_note=args->>'note' then return jsonb_build_object('ok',true,'note',member_.owner_note,'version',member_.owner_note_version,'updatedAt',member_.owner_note_updated_at);end if;
+   return jsonb_build_object('error','This note changed. Copy your draft, refresh and try again.');
+  end if;
+  update nova_evidence_private.season_review_members set owner_note=args->>'note',owner_note_version=owner_note_version+1,owner_note_updated_at=clock_timestamp() where season=4 and player_key=member_.player_key returning * into member_;
+  insert into nova_evidence_private.hub_audit(actor_email,action,subject,detail) values(actor,'season-review-owner-note',member_.player_key,jsonb_build_object('season',4,'version',member_.owner_note_version,'note',member_.owner_note));
+  return jsonb_build_object('ok',true,'note',member_.owner_note,'version',member_.owner_note_version,'updatedAt',member_.owner_note_updated_at);
+ end if;
  if op='decision' then
   if not can_manage then return jsonb_build_object('error','Only the owner can record a final decision.');end if;
   if coalesce(args->>'decision','') not in ('Pending','Keep','Cut') then return jsonb_build_object('error','Choose Pending, Keep or Cut.');end if;
