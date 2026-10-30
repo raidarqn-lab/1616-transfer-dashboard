@@ -1,7 +1,7 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {faqItems,faqLabels,languageNames,faqCopy,matchingFaqs} from '../transfer-faq-data.js';
-import {copyFaqAnswer} from '../transfer-faq.js';
+import {copyFaqAnswer,faqReturnLinks} from '../transfer-faq.js';
 
 test('every question and control has a complete translation in every offered language',()=>{
  const langs=Object.keys(languageNames);assert.equal(langs.length,8);assert.equal(faqItems.length,6);assert.equal(new Set(faqItems.map(item=>item.id)).size,6);
@@ -18,4 +18,9 @@ test('search respects category and page language, including accents and empty re
 });
 test('unknown IDs never copy and unsupported language safely falls back to English',async()=>{
  assert.equal(faqCopy('seat-approval','xx'),faqCopy('seat-approval','en'));assert.equal(await copyFaqAnswer('missing','en',{writeText:()=>assert.fail(),manual:()=>assert.fail()}),false);
+});
+
+test('return navigation uses only the two workspace destinations',()=>{
+ const [org,other]=faqReturnLinks('organization');assert.equal(org.href,'./live.html#organization');assert.equal(other.href,'./seat-confirmations.html');
+ for(const source of [null,'seats','https://untrusted.example/']){const [primary,secondary]=faqReturnLinks(source);assert.equal(primary.href,'./seat-confirmations.html');assert.equal(secondary.href,'./live.html#organization');}
 });
