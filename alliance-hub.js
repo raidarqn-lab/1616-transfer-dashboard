@@ -1,5 +1,6 @@
 import {setupAllianceGuidelines} from './alliance-guidelines.js?v=3';
 import {setupSeasonContributions} from './season-contributions.js?v=20261028b';
+import {setupSeasonReview} from './season-review.js?v=season4-2';
 import {setupSeasonEvents} from './season-events.js?v=season-availability-20260930';
 import {createWebsiteProfile} from './website-profile.js?v=avatars-20260928';
 import './site-tutorial.js?v=20260928';
@@ -20,6 +21,7 @@ setupStorm({call:hubCall});
 setupSeasonEvents({call:hubCall});
 setupAllianceGuidelines({call:hubCall});
 setupSeasonContributions({call:hubCall});
+setupSeasonReview({call:hubCall});
 const sections=[...document.querySelectorAll('.hub-section')];
 const nav=[...document.querySelectorAll('[data-hub-view]')];
 let access=null,staff=[],selectedEmail='',content=[];
@@ -42,6 +44,7 @@ function show(view){
  if(view==='guidelines')window.dispatchEvent(new Event('nova-guidelines-open'));
  if(view==='season')window.dispatchEvent(new Event('nova-season-open'));
  if(view==='contributions')window.dispatchEvent(new Event('nova-contributions-open'));
+ if(view==='review')window.dispatchEvent(new Event('nova-review-open'));
  if(view==='storm')window.dispatchEvent(new Event('nova-storm-open'));
  if(view==='trains')window.dispatchEvent(new Event('nova-trains-open'));
  if(view==='shop')window.dispatchEvent(new Event('nova-shop-open'));
