@@ -1,9 +1,13 @@
-import {faqItems,faqLabels,faqLanguage,faqCopy,matchingFaqs,languageNames,preferredLanguage} from './transfer-faq-data.js?v=1';
+import {faqItems,faqLabels,faqLanguage,faqCopy,matchingFaqs,languageNames,preferredLanguage} from './transfer-faq-data.js?v=2';
 
 export async function copyFaqAnswer(id,language,{writeText,manual}){
  const answer=faqCopy(id,language);if(!answer)return false;
  try{if(!writeText)throw Error('Clipboard unavailable');await writeText(answer);return true;}
  catch{manual(answer,faqLanguage(language));return false;}
+}
+export function faqReturnLinks(source){
+ const seats={href:'./seat-confirmations.html',path:'/seat-confirmations.html',label:'seatsNav',back:'backSeats'},organization={href:'./live.html#organization',path:'/live.html',label:'organizationNav',back:'backOrganization'};
+ return source==='organization'?[organization,seats]:[seats,organization];
 }
 export function mountFaq(){
  const q=selector=>document.querySelector(selector),params=new URLSearchParams(location.search),storageKey='1616-applicant-messenger-language-v1';let stored='';try{stored=localStorage.getItem(storageKey)||'';}catch{}
@@ -31,7 +35,8 @@ export function mountFaq(){
   });
  }
  function renderTopics(){const host=q('#topics');host.replaceChildren();const labels=faqLabels[language];host.setAttribute('aria-label',labels.all);for(const key of ['all','applications','seats','alliances']){const button=node('button','topic');button.type='button';button.setAttribute('aria-pressed',String(category===key));button.append(node('span','',labels[key]),node('small','',String(key==='all'?faqItems.length:faqItems.filter(item=>item.category===key).length)));button.onclick=()=>{category=key;renderTopics();renderList();q('#topics').querySelectorAll('button')[['all','applications','seats','alliances'].indexOf(key)].focus();};host.append(button);}}
- function translate(){const labels=faqLabels[language];document.documentElement.lang=language;document.documentElement.dir=language==='ar'?'rtl':'ltr';document.title=labels.title+' · 1616';document.querySelectorAll('[data-label]').forEach(el=>el.textContent=labels[el.dataset.label]);picker.value=language;picker.setAttribute('aria-label',labels.pageLanguage);search.placeholder=labels.search;search.setAttribute('aria-label',labels.search);q('#clear-search').setAttribute('aria-label',labels.clear);q('#manual-answer').setAttribute('aria-label',labels.answer);renderTopics();renderList();}
+ function translate(){const labels=faqLabels[language];const [primary,secondary]=faqReturnLinks(params.get('from'));q('.faq-return').setAttribute('aria-label',labels.workspaceNav);q('#faq-back').href=primary.href;q('#faq-back span:last-child').textContent=labels[primary.back];q('#faq-other').href=secondary.href;q('#faq-other').textContent=labels[secondary.label];document.documentElement.lang=language;document.documentElement.dir=language==='ar'?'rtl':'ltr';document.title=labels.title+' · 1616';document.querySelectorAll('[data-label]').forEach(el=>el.textContent=labels[el.dataset.label]);picker.value=language;picker.setAttribute('aria-label',labels.pageLanguage);search.placeholder=labels.search;search.setAttribute('aria-label',labels.search);q('#clear-search').setAttribute('aria-label',labels.clear);q('#manual-answer').setAttribute('aria-label',labels.answer);renderTopics();renderList();}
+ q('#faq-back').onclick=e=>{const [primary]=faqReturnLinks(params.get('from'));try{const previous=new URL(document.referrer);if(previous.origin===location.origin&&previous.pathname===primary.path&&history.length>1){e.preventDefault();history.back();}}catch{}};
  options(picker);picker.onchange=()=>{language=faqLanguage(picker.value);try{localStorage.setItem(storageKey,language);}catch{}notice('');translate();};search.oninput=renderList;q('#clear-search').onclick=()=>{search.value='';renderList();search.focus();};translate();
 }
 if(typeof document!=='undefined')mountFaq();
