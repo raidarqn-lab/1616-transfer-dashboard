@@ -254,7 +254,12 @@ export const faqLabels={
     "count": "{count} questions",
     "footer": "1616 · One team. Clear communication.",
     "answer": "Answer",
-    "draftBadge": "Draft"
+    "draftBadge": "Draft",
+    "backSeats": "Back to Seat confirmations",
+    "backOrganization": "Back to Transfer organization",
+    "seatsNav": "Seat confirmations",
+    "organizationNav": "Transfer organization",
+    "workspaceNav": "Back to your workspace"
   },
   "de": {
     "title": "Häufig gestellte Fragen",
@@ -279,7 +284,12 @@ export const faqLabels={
     "count": "{count} Fragen",
     "footer": "1616 · Ein Team. Klare Kommunikation.",
     "answer": "Antwort",
-    "draftBadge": "Entwurf"
+    "draftBadge": "Entwurf",
+    "backSeats": "Zurück zu Platzbestätigungen",
+    "backOrganization": "Zurück zur Transferorganisation",
+    "seatsNav": "Platzbestätigungen",
+    "organizationNav": "Transferorganisation",
+    "workspaceNav": "Zurück zum Arbeitsbereich"
   },
   "es": {
     "title": "Preguntas frecuentes",
@@ -304,7 +314,12 @@ export const faqLabels={
     "count": "{count} preguntas",
     "footer": "1616 · Un equipo. Comunicación clara.",
     "answer": "Respuesta",
-    "draftBadge": "Borrador"
+    "draftBadge": "Borrador",
+    "backSeats": "Volver a Confirmaciones de plaza",
+    "backOrganization": "Volver a Organización de traslados",
+    "seatsNav": "Confirmaciones de plaza",
+    "organizationNav": "Organización de traslados",
+    "workspaceNav": "Volver al espacio de trabajo"
   },
   "pt": {
     "title": "Perguntas frequentes",
@@ -329,7 +344,12 @@ export const faqLabels={
     "count": "{count} perguntas",
     "footer": "1616 · Uma equipe. Comunicação clara.",
     "answer": "Resposta",
-    "draftBadge": "Rascunho"
+    "draftBadge": "Rascunho",
+    "backSeats": "Voltar às Confirmações de vaga",
+    "backOrganization": "Voltar à Organização de transferências",
+    "seatsNav": "Confirmações de vaga",
+    "organizationNav": "Organização de transferências",
+    "workspaceNav": "Voltar ao espaço de trabalho"
   },
   "fr": {
     "title": "Questions fréquentes",
@@ -354,7 +374,12 @@ export const faqLabels={
     "count": "{count} questions",
     "footer": "1616 · Une équipe. Une communication claire.",
     "answer": "Réponse",
-    "draftBadge": "Brouillon"
+    "draftBadge": "Brouillon",
+    "backSeats": "Retour aux confirmations de place",
+    "backOrganization": "Retour à l’organisation des transferts",
+    "seatsNav": "Confirmations de place",
+    "organizationNav": "Organisation des transferts",
+    "workspaceNav": "Retour à votre espace de travail"
   },
   "ko": {
     "title": "자주 묻는 질문",
@@ -379,7 +404,12 @@ export const faqLabels={
     "count": "질문 {count}개",
     "footer": "1616 · 하나의 팀. 명확한 소통.",
     "answer": "답변",
-    "draftBadge": "초안"
+    "draftBadge": "초안",
+    "backSeats": "좌석 확인으로 돌아가기",
+    "backOrganization": "이전 배치로 돌아가기",
+    "seatsNav": "좌석 확인",
+    "organizationNav": "이전 배치",
+    "workspaceNav": "작업 공간으로 돌아가기"
   },
   "vi": {
     "title": "Câu hỏi thường gặp",
@@ -404,7 +434,12 @@ export const faqLabels={
     "count": "{count} câu hỏi",
     "footer": "1616 · Một đội ngũ. Giao tiếp rõ ràng.",
     "answer": "Câu trả lời",
-    "draftBadge": "Bản nháp"
+    "draftBadge": "Bản nháp",
+    "backSeats": "Quay lại Xác nhận suất",
+    "backOrganization": "Quay lại Sắp xếp chuyển máy chủ",
+    "seatsNav": "Xác nhận suất",
+    "organizationNav": "Sắp xếp chuyển máy chủ",
+    "workspaceNav": "Quay lại không gian làm việc"
   },
   "ar": {
     "title": "الأسئلة الشائعة",
@@ -429,7 +464,12 @@ export const faqLabels={
     "count": "{count} أسئلة",
     "footer": "1616 · فريق واحد. تواصل واضح.",
     "answer": "الإجابة",
-    "draftBadge": "مسودة"
+    "draftBadge": "مسودة",
+    "backSeats": "العودة إلى تأكيدات المقاعد",
+    "backOrganization": "العودة إلى تنظيم الانتقال",
+    "seatsNav": "تأكيدات المقاعد",
+    "organizationNav": "تنظيم الانتقال",
+    "workspaceNav": "العودة إلى مساحة العمل"
   }
 };
 export const faqLanguage=value=>Object.hasOwn(languageNames,value)?value:'en';
