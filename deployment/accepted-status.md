@@ -1,6 +1,6 @@
 # Accepted applicants
 
-`Accepted` records that entry to 1616 was approved and accepted through the app. It is separate from `Approved` and from arrival (`Transferred`). No existing status is migrated automatically.
+`Accepted` records that entry to 1616 was approved and accepted through the app. It retains a distinct status from `Approved` and arrival (`Transferred`), but Accepted applicants are also included in Approved groups, filters, and Promised seat counts and rosters. Accepted remains independently filterable, and seat capacity counts each player once. No existing status is migrated automatically.
 
 Accepted applicants remain active, retain their confirmed-seat allocation, can be assigned to a destination alliance, appear in seat confirmations and messenger projections, and remain locked into sandbox capacity totals. The server records `acceptedAt` and `acceptedBy`, preserving the original approval date. Status labels cover all portal and messenger languages.
 

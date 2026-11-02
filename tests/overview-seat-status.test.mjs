@@ -4,14 +4,14 @@ import {readFileSync} from 'node:fs';
 import vm from 'node:vm';
 const html=readFileSync(new URL('../live.html',import.meta.url),'utf8');
 const context=vm.createContext({esc:value=>String(value).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;')});
-vm.runInContext(html.slice(html.indexOf('function overviewSeatStatusPlayers('),html.indexOf('function closeOverviewSeatRosters(')),context);
+vm.runInContext(html.slice(html.indexOf('function matchesApplicantStatus('),html.indexOf('function closeOverviewSeatRosters(')),context);
 const count=(records,status)=>JSON.parse(JSON.stringify(context.overviewSeatStatusCounts(records,status)));
-test('overview counts mutually exclusive current statuses with confirmed colours only',()=>{
+test('approved overview includes accepted applicants with confirmed colours only',()=>{
  const records=[{status:'Approved',confirmedSeat:'Blue',power:250},{status:'Accepted',confirmedSeat:'White',power:250},{status:'Approved',confirmedSeat:'Unknown',power:200},{status:'Accepted',power:200},...['Pending','Under Review','Waitlisted','Declined','Withdrawn','Transferred'].map(status=>({status,confirmedSeat:'Gold'}))];
- assert.deepEqual(count(records,'Approved'),{Gold:0,Purple:0,Blue:1,White:0,total:2,unknown:1});
+ assert.deepEqual(count(records,'Approved'),{Gold:0,Purple:0,Blue:1,White:1,total:4,unknown:2});
  assert.deepEqual(count(records,'Accepted'),{Gold:0,Purple:0,Blue:0,White:1,total:2,unknown:1});
  records[0].status='Accepted';
- assert.equal(count(records,'Approved').Blue,0);assert.equal(count(records,'Accepted').Blue,1);
+ assert.equal(count(records,'Approved').Blue,1);assert.equal(count(records,'Accepted').Blue,1);
  assert.equal(count(records,'Accepted').Gold,0);
 });
 test('non-applicants, deleted records and outbound transfers never enter either panel',()=>{
@@ -26,13 +26,13 @@ test('all four confirmed colours and empty cohorts reconcile with panel totals',
  assert.equal(count([],'Approved').total,0);
 });
 test('hover list membership matches each colour, total and unknown count without changing records',()=>{
- const records=[{name:'Zed',server:1627,status:'Approved',confirmedSeat:'Blue'},{name:'Amy',server:1581,status:'Approved',confirmedSeat:'Blue'},{name:'Unknown seat',status:'Approved'},{name:'Accepted',status:'Accepted',confirmedSeat:'Blue'},{name:'Withdrawn',status:'Withdrawn',confirmedSeat:'Blue'}];
+ const records=[{name:'Zed',server:1627,status:'Approved',confirmedSeat:'Blue'},{name:'Amy',server:1581,status:'Approved',confirmedSeat:'Blue'},{name:'Unknown seat',status:'Approved'},{name:'Accepted',server:1700,status:'Accepted',confirmedSeat:'Blue'},{name:'Withdrawn',status:'Withdrawn',confirmedSeat:'Blue'}];
  const before=structuredClone(records);
  for(const status of ['Approved','Accepted'])for(const colour of ['Gold','Purple','Blue','White','all','unknown']){
   const expected=count(records,status)[colour==='all'?'total':colour];
   assert.equal(context.overviewSeatStatusPlayers(records,status,colour).length,expected);
  }
- assert.deepEqual(Array.from(context.overviewSeatStatusPlayers(records,'Approved','Blue'),p=>p.name),['Amy','Zed']);
+ assert.deepEqual(Array.from(context.overviewSeatStatusPlayers(records,'Approved','Blue'),p=>p.name),['Amy','Zed','Accepted']);
  assert.deepEqual(records,before);
 });
 test('roster formats source server, current alliance and player name safely, including missing values and empty seats',()=>{
