@@ -276,7 +276,8 @@
     "Approved applications": "승인된 신청",
     "Accepted seats": "수락된 자리",
     "Accepted through the in-game app": "게임 내 신청에서 수락됨",
-    "Awaiting seat colour": "자리 색상 확인 대기"
+    "Awaiting seat colour": "자리 색상 확인 대기",
+    "No players in this category.": "이 분류에 해당하는 플레이어가 없습니다."
   },
   "vi": {
     "Language": "Ngôn ngữ",
@@ -555,7 +556,8 @@
     "Approved applications": "Đơn đăng ký đã được duyệt",
     "Accepted seats": "Suất đã được chấp nhận",
     "Accepted through the in-game app": "Đã được chấp nhận qua đơn đăng ký trong game",
-    "Awaiting seat colour": "Đang chờ xác nhận màu suất"
+    "Awaiting seat colour": "Đang chờ xác nhận màu suất",
+    "No players in this category.": "Không có người chơi trong nhóm này."
   },
   "de": {
     "Language": "Sprache",
@@ -834,7 +836,8 @@
     "Approved applications": "Genehmigte Bewerbungen",
     "Accepted seats": "Angenommene Plätze",
     "Accepted through the in-game app": "Über die Bewerbung im Spiel angenommen",
-    "Awaiting seat colour": "Platzfarbe noch ausstehend"
+    "Awaiting seat colour": "Platzfarbe noch ausstehend",
+    "No players in this category.": "Keine Spieler in dieser Kategorie."
   },
   "fr": {
     "Language": "Langue",
@@ -1113,7 +1116,8 @@
     "Approved applications": "Candidatures approuvées",
     "Accepted seats": "Places acceptées",
     "Accepted through the in-game app": "Acceptation via la candidature en jeu",
-    "Awaiting seat colour": "Couleur de place à confirmer"
+    "Awaiting seat colour": "Couleur de place à confirmer",
+    "No players in this category.": "Aucun joueur dans cette catégorie."
   },
   "pt": {
     "Language": "Idioma",
@@ -1392,7 +1396,8 @@
     "Approved applications": "Inscrições aprovadas",
     "Accepted seats": "Vagas aceitas",
     "Accepted through the in-game app": "Aceitos pela inscrição no jogo",
-    "Awaiting seat colour": "Aguardando confirmação da cor da vaga"
+    "Awaiting seat colour": "Aguardando confirmação da cor da vaga",
+    "No players in this category.": "Nenhum jogador nesta categoria."
   },
   "es": {
     "Language": "Idioma",
@@ -1671,6 +1676,7 @@
     "Approved applications": "Solicitudes aprobadas",
     "Accepted seats": "Plazas aceptadas",
     "Accepted through the in-game app": "Aceptados mediante la solicitud dentro del juego",
-    "Awaiting seat colour": "Color de plaza por confirmar"
+    "Awaiting seat colour": "Color de plaza por confirmar",
+    "No players in this category.": "No hay jugadores en esta categoría."
   }
 }
