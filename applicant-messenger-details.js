@@ -1,4 +1,4 @@
-const statuses=['Pending','Under Review','Approved','Waitlisted','Declined','Withdrawn','Transferred'];
+const statuses=['Pending','Under Review','Approved','Accepted','Waitlisted','Declined','Withdrawn','Transferred'];
 const alliances=['NvSP','NvEM','WaE','DRoN','ECKO'];
 const seats=['Gold','Purple','Blue','White'];
 const reasons=['no_seat','low_kills','low_profession','low_hq','low_participation','low_power','group_full','conflict','not_specified','other','requirements','placement','information'];
@@ -13,7 +13,7 @@ export function applicantDetails(player,destination){
  const assigned=!['Declined','Withdrawn','Unconfirmed'].includes(status);
  const applicationLanguage=String(Object.hasOwn(player.rawApplication||{},'language')?player.rawApplication.language||'':player.applicationLanguage??player.language??'').trim().slice(0,100);
  return {applicationLanguage,server:String(player.server||''),currentAlliance:String(player.alliance||'').trim().slice(0,100),anticipatedSeat:anticipatedApplicantSeat(player.power),transferGroup:String(player.group||''),status,
-  approval:['Approved','Transferred'].includes(status)?'approved':status==='Declined'?'declined':status==='Withdrawn'?'withdrawn':'pending',
+  approval:['Approved','Accepted','Transferred'].includes(status)?'approved':status==='Declined'?'declined':status==='Withdrawn'?'withdrawn':'pending',
   destinationAlliance:assigned&&alliances.includes(destination)?destination:null,
   confirmedSeat:assigned&&seats.includes(player.confirmedSeat)?player.confirmedSeat:null,
   rejectionReasonCode:status==='Declined'&&reasons.includes(player.rejectionReasonCode)?player.rejectionReasonCode:null,

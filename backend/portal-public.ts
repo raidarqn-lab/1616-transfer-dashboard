@@ -195,14 +195,14 @@ function sandboxGroupKey(value) {
   return !name||/^(unknown|solo|not applicable|n\/a)$/i.test(name)?'':name.normalize('NFD').replace(/\p{M}/gu,'').replace(/[đĐ]/g,'d').toLowerCase();
 }
 function sandboxAccepted(p) {
-  return !p.deleted&&!p.general&&!p.prospect&&['Approved','Transferred'].includes(p.status)&&p.transferDirection!=='outbound';
+  return !p.deleted&&!p.general&&!p.prospect&&['Approved','Accepted','Transferred'].includes(p.status)&&p.transferDirection!=='outbound';
 }
 // Seat evidence is independent of application approval. Never infer a colour from THP.
 function sandboxSeat(p) {
   return SANDBOX_COLOURS.includes(p.confirmedSeat)?p.confirmedSeat:'Unknown';
 }
 function sandboxCandidate(p) {
-  return !p.deleted&&!p.general&&!p.prospect&&['Pending','Under Review','Waitlisted','Approved','Transferred'].includes(p.status)&&p.transferDirection!=='outbound';
+  return !p.deleted&&!p.general&&!p.prospect&&['Pending','Under Review','Waitlisted','Approved','Accepted','Transferred'].includes(p.status)&&p.transferDirection!=='outbound';
 }
 function sandboxGroups(players, scenario={}) {
   const selected=new Set(scenario.selectedIds||[]),byKey=new Map();
@@ -357,7 +357,7 @@ function validateOrganization(value,state){
  else{
   assert(record(d.assignments)&&record(d.limits),'Invalid alliance arrangement.');
   assignments={};limits={};
-  for(const [id,home]of Object.entries(d.assignments)){const p=state.players[id];assert(p&&!p.deleted&&!p.general&&!p.prospect&&p.status==='Approved','Only approved applicants can be arranged.');assert(home===''||homes.includes(home),'Unknown destination alliance.');assignments[id]=home;}
+  for(const [id,home]of Object.entries(d.assignments)){const p=state.players[id];assert(p&&!p.deleted&&!p.general&&!p.prospect&&['Approved','Accepted'].includes(p.status),'Only approved or accepted applicants can be arranged.');assert(home===''||homes.includes(home),'Unknown destination alliance.');assignments[id]=home;}
   for(const home of homes){const max=d.limits[home];assert(max==null||Number.isInteger(max)&&max>=0&&max<=10000,'Invalid alliance capacity.');limits[home]=max??null;assert(max==null||values(assignments).filter(x=>x===home).length<=max,home+' exceeds its maximum incoming players.');}
  }
  const groupLeads={},groupDetails={};
@@ -426,7 +426,8 @@ function saveEvents(state,request,identity,role,at=new Date().toISOString()){
     next.rejectionReasonAt=at;next.rejectionReasonBy=name;
    }
    if(next.status!=='Declined'){next.rejectionReasonCode='';next.rejectionReasonText='';delete next.rejectionReasonAt;delete next.rejectionReasonBy;}
-   if(changed.includes('status')&&next.status==='Approved'&&old?.status!=='Approved'&&!old?.approvedAt)next.approvedAt=at;
+   if(changed.includes('status')&&['Approved','Accepted'].includes(next.status)&&!old?.approvedAt)next.approvedAt=at;
+   if(changed.includes('status')&&next.status==='Accepted'&&old?.status!=='Accepted'){next.acceptedAt=at;next.acceptedBy=email;}
    if(changed.includes('status')&&next.status==='Transferred'&&!next.transferDirection){next.transferDirection='inbound';next.general=false;next.prospect=false;}
    assert(next.transferDirection==null||['','inbound','outbound'].includes(next.transferDirection),'Choose inbound or outbound transfer.');
    if(next.transferDirection){
@@ -473,7 +474,7 @@ function saveEvents(state,request,identity,role,at=new Date().toISOString()){
  }
  const all={...state.players};events.filter(e=>e.kind==='players').forEach(e=>all[e.key]=e.value);
  const limits=events.find(e=>e.kind==='shared'&&e.key==='capacities')?.value?.data||state.shared.capacities?.data||{Gold:0,Purple:0,Blue:0,White:0};
- if(events.some(e=>e.kind==='players'||e.kind==='shared'&&e.key==='capacities'))for(const colour of ['Gold','Purple','Blue','White']){assert(Number.isSafeInteger(limits[colour])&&limits[colour]>=0,'Set valid seat capacities in Settings.');assert(values(all).filter(p=>!p.deleted&&!p.general&&!p.prospect&&['Approved','Transferred'].includes(p.status)&&p.confirmedSeat===colour).length<=limits[colour],'No '+colour+' seats remain.');}
+ if(events.some(e=>e.kind==='players'||e.kind==='shared'&&e.key==='capacities'))for(const colour of ['Gold','Purple','Blue','White']){assert(Number.isSafeInteger(limits[colour])&&limits[colour]>=0,'Set valid seat capacities in Settings.');assert(values(all).filter(p=>!p.deleted&&!p.general&&!p.prospect&&['Approved','Accepted','Transferred'].includes(p.status)&&p.confirmedSeat===colour).length<=limits[colour],'No '+colour+' seats remain.');}
  return events;
 }
 function questionsFor(rows,state,email){

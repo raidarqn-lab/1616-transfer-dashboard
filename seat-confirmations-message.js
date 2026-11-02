@@ -23,7 +23,7 @@ export function seatFollowupMessage(applicant,language=applicantMessageLanguage(
  const code=applicant?.message?.match(/For your reference, this code is (1616-[A-Z0-9-]{8,60})$/)?.[1];
  if(!code||typeof applicant.name!=='string'||!applicant.name.trim())return null;
  const lang=Object.hasOwn(replies,language)?language:'en';
- const template=applicant.status==='Approved'
+ const template=['Approved','Accepted'].includes(applicant.status)
   ? acceptedReplies[lang]
   : replies[lang];
  return formatCopy(template,{name:applicant.name,code});
