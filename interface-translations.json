@@ -270,7 +270,8 @@
     "Reached": "도달함",
     "LWSERVERS SNAPSHOT · DEMO WORKFLOW": "LWServers 스냅샷 · 데모",
     "My inbox": "내 받은편지함",
-    "My Inbox": "내 받은편지함"
+    "My Inbox": "내 받은편지함",
+    "Accepted": "입장 수락됨"
   },
   "vi": {
     "Language": "Ngôn ngữ",
@@ -543,7 +544,8 @@
     "Reached": "Đã đến",
     "LWSERVERS SNAPSHOT · DEMO WORKFLOW": "ẢNH CHỤP LWSERVERS · DEMO",
     "My inbox": "Hộp thư của tôi",
-    "My Inbox": "Hộp thư của tôi"
+    "My Inbox": "Hộp thư của tôi",
+    "Accepted": "Đã được chấp nhận"
   },
   "de": {
     "Language": "Sprache",
@@ -816,7 +818,8 @@
     "Reached": "Erreicht",
     "LWSERVERS SNAPSHOT · DEMO WORKFLOW": "LWSERVERS-SNAPSHOT · DEMO",
     "My inbox": "Mein Posteingang",
-    "My Inbox": "Mein Posteingang"
+    "My Inbox": "Mein Posteingang",
+    "Accepted": "Angenommen"
   },
   "fr": {
     "Language": "Langue",
@@ -1089,7 +1092,8 @@
     "Reached": "Atteint",
     "LWSERVERS SNAPSHOT · DEMO WORKFLOW": "INSTANTANÉ LWSERVERS · DÉMO",
     "My inbox": "Ma boîte de réception",
-    "My Inbox": "Ma boîte de réception"
+    "My Inbox": "Ma boîte de réception",
+    "Accepted": "Accepté"
   },
   "pt": {
     "Language": "Idioma",
@@ -1362,7 +1366,8 @@
     "Reached": "Atingido",
     "LWSERVERS SNAPSHOT · DEMO WORKFLOW": "SNAPSHOT LWSERVERS · DEMO",
     "My inbox": "Minha caixa de entrada",
-    "My Inbox": "Minha caixa de entrada"
+    "My Inbox": "Minha caixa de entrada",
+    "Accepted": "Aceito"
   },
   "es": {
     "Language": "Idioma",
@@ -1635,6 +1640,7 @@
     "Reached": "Alcanzado",
     "LWSERVERS SNAPSHOT · DEMO WORKFLOW": "INSTANTÁNEA LWSERVERS · DEMO",
     "My inbox": "Mi bandeja de entrada",
-    "My Inbox": "Mi bandeja de entrada"
+    "My Inbox": "Mi bandeja de entrada",
+    "Accepted": "Aceptado"
   }
 }

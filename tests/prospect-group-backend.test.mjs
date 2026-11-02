@@ -36,7 +36,7 @@ test('prospect groups save with stale or missing alliance assignees; preserve pl
 test('group-only saves cannot modify placements or capacities; real placements still require approval',()=>{
  const {state}=fixture();
  for(const extra of [{assignments:{2:'NvSP'}},{limits:{NvSP:100}}])assert.throws(()=>server.validateOrganization({groupsOnly:true,data:{...extra}},state),/cannot change alliance placements/);
- assert.throws(()=>server.validateOrganization({data:{assignments:{2:'NvSP'},limits:{}}},state),/Only approved applicants/);
+ assert.throws(()=>server.validateOrganization({data:{assignments:{2:'NvSP'},limits:{}}},state),/Only approved or accepted applicants/);
  state.players[2].prospect=false;state.players[2].status='Approved';
  state.shared.transferOrganization.data.groupDetails={crew:{preference:'preferred',brief:'Keep this'}};
  const result=plain(server.validateOrganization({data:{assignments:{2:'NvSP'},limits:{NvSP:1}}},state));

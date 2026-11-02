@@ -5,14 +5,14 @@ export function sandboxGroupKey(value) {
   return !name||/^(unknown|solo|not applicable|n\/a)$/i.test(name)?'':name.normalize('NFD').replace(/\p{M}/gu,'').replace(/[đĐ]/g,'d').toLowerCase();
 }
 export function sandboxAccepted(p) {
-  return !p.deleted&&!p.general&&!p.prospect&&['Approved','Transferred'].includes(p.status)&&p.transferDirection!=='outbound';
+  return !p.deleted&&!p.general&&!p.prospect&&['Approved','Accepted','Transferred'].includes(p.status)&&p.transferDirection!=='outbound';
 }
 // Seat evidence is independent of application approval. Never infer a colour from THP.
 export function sandboxSeat(p) {
   return SANDBOX_COLOURS.includes(p.confirmedSeat)?p.confirmedSeat:'Unknown';
 }
 export function sandboxCandidate(p) {
-  return !p.deleted&&!p.general&&!p.prospect&&['Pending','Under Review','Waitlisted','Approved','Transferred'].includes(p.status)&&p.transferDirection!=='outbound';
+  return !p.deleted&&!p.general&&!p.prospect&&['Pending','Under Review','Waitlisted','Approved','Accepted','Transferred'].includes(p.status)&&p.transferDirection!=='outbound';
 }
 export function sandboxGroups(players, scenario={}) {
   const selected=new Set(scenario.selectedIds||[]),byKey=new Map();

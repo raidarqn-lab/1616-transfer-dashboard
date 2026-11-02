@@ -13,7 +13,7 @@ export function applicantWithdrawal(request){return async playerId=>{
  if(result.ok!==true||result.withdrawn!==true||String(result.playerId)!==String(playerId))throw Error('Withdrawal was not saved.');
  return result;
 };}
-export const canWithdraw=p=>['Pending','Under Review','Approved','Waitlisted'].includes(p.status);
+export const canWithdraw=p=>['Pending','Under Review','Approved','Accepted','Waitlisted'].includes(p.status);
 const keys=['withdraw','withdrawConfirm','withdrawnNotice','unable','cannotLocate','foundHint'];
 const copy={
  en:['Withdraw application','Withdraw {name}’s application? Only continue if the player requested this. Their status will change to Withdrawn throughout the portal. Their seat confirmation and screenshot will be kept. Contact an administrator to undo a withdrawal.','Application withdrawn.','Unable to find','Cannot locate player','Uncheck to return this player to the main queue.'],
