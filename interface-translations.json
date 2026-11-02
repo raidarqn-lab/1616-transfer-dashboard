@@ -271,7 +271,12 @@
     "LWSERVERS SNAPSHOT · DEMO WORKFLOW": "LWServers 스냅샷 · 데모",
     "My inbox": "내 받은편지함",
     "My Inbox": "내 받은편지함",
-    "Accepted": "입장 수락됨"
+    "Accepted": "입장 수락됨",
+    "Promised seats": "약속된 자리",
+    "Approved applications": "승인된 신청",
+    "Accepted seats": "수락된 자리",
+    "Accepted through the in-game app": "게임 내 신청에서 수락됨",
+    "Awaiting seat colour": "자리 색상 확인 대기"
   },
   "vi": {
     "Language": "Ngôn ngữ",
@@ -545,7 +550,12 @@
     "LWSERVERS SNAPSHOT · DEMO WORKFLOW": "ẢNH CHỤP LWSERVERS · DEMO",
     "My inbox": "Hộp thư của tôi",
     "My Inbox": "Hộp thư của tôi",
-    "Accepted": "Đã được chấp nhận"
+    "Accepted": "Đã được chấp nhận",
+    "Promised seats": "Suất đã hứa",
+    "Approved applications": "Đơn đăng ký đã được duyệt",
+    "Accepted seats": "Suất đã được chấp nhận",
+    "Accepted through the in-game app": "Đã được chấp nhận qua đơn đăng ký trong game",
+    "Awaiting seat colour": "Đang chờ xác nhận màu suất"
   },
   "de": {
     "Language": "Sprache",
@@ -819,7 +829,12 @@
     "LWSERVERS SNAPSHOT · DEMO WORKFLOW": "LWSERVERS-SNAPSHOT · DEMO",
     "My inbox": "Mein Posteingang",
     "My Inbox": "Mein Posteingang",
-    "Accepted": "Angenommen"
+    "Accepted": "Angenommen",
+    "Promised seats": "Zugesagte Plätze",
+    "Approved applications": "Genehmigte Bewerbungen",
+    "Accepted seats": "Angenommene Plätze",
+    "Accepted through the in-game app": "Über die Bewerbung im Spiel angenommen",
+    "Awaiting seat colour": "Platzfarbe noch ausstehend"
   },
   "fr": {
     "Language": "Langue",
@@ -1093,7 +1108,12 @@
     "LWSERVERS SNAPSHOT · DEMO WORKFLOW": "INSTANTANÉ LWSERVERS · DÉMO",
     "My inbox": "Ma boîte de réception",
     "My Inbox": "Ma boîte de réception",
-    "Accepted": "Accepté"
+    "Accepted": "Accepté",
+    "Promised seats": "Places promises",
+    "Approved applications": "Candidatures approuvées",
+    "Accepted seats": "Places acceptées",
+    "Accepted through the in-game app": "Acceptation via la candidature en jeu",
+    "Awaiting seat colour": "Couleur de place à confirmer"
   },
   "pt": {
     "Language": "Idioma",
@@ -1367,7 +1387,12 @@
     "LWSERVERS SNAPSHOT · DEMO WORKFLOW": "SNAPSHOT LWSERVERS · DEMO",
     "My inbox": "Minha caixa de entrada",
     "My Inbox": "Minha caixa de entrada",
-    "Accepted": "Aceito"
+    "Accepted": "Aceito",
+    "Promised seats": "Vagas prometidas",
+    "Approved applications": "Inscrições aprovadas",
+    "Accepted seats": "Vagas aceitas",
+    "Accepted through the in-game app": "Aceitos pela inscrição no jogo",
+    "Awaiting seat colour": "Aguardando confirmação da cor da vaga"
   },
   "es": {
     "Language": "Idioma",
@@ -1641,6 +1666,11 @@
     "LWSERVERS SNAPSHOT · DEMO WORKFLOW": "INSTANTÁNEA LWSERVERS · DEMO",
     "My inbox": "Mi bandeja de entrada",
     "My Inbox": "Mi bandeja de entrada",
-    "Accepted": "Aceptado"
+    "Accepted": "Aceptado",
+    "Promised seats": "Plazas prometidas",
+    "Approved applications": "Solicitudes aprobadas",
+    "Accepted seats": "Plazas aceptadas",
+    "Accepted through the in-game app": "Aceptados mediante la solicitud dentro del juego",
+    "Awaiting seat colour": "Color de plaza por confirmar"
   }
 }
