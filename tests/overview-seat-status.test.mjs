@@ -68,3 +68,11 @@ test('compact and overview rosters use distinct accessible IDs for the same play
  assert.match(overview,/aria-controls="overview-roster-Approved-Blue"/);
  assert.doesNotMatch(compact,/id="overview-roster/);
 });
+
+ test('seat summary is excluded from interactive roster table controls',()=>{
+ const summary={dataset:{},closest:selector=>selector==='[data-applicants-seat-summary]',querySelectorAll:()=>{throw new Error('Seat summary must not receive table controls');}};
+ const root={querySelectorAll:selector=>selector==='table'?[summary]:[]};
+ const c=vm.createContext({root});
+ vm.runInContext(html.slice(html.indexOf('function enableTableControls('),html.indexOf('const followupPanel='))+';enableTableControls();',c);
+ assert.equal(summary.dataset.controlsReady,undefined);
+});
