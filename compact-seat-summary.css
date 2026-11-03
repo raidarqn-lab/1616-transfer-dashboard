@@ -7,6 +7,8 @@
 #transfer-mock .applicants-seat-summary td{text-align:center;padding:7px 4px;border:0;border-radius:7px;background:var(--status-seat-bg)}
 #transfer-mock .applicants-seat-summary .overview-seat-count{font-size:18px;min-height:32px;min-width:32px;color:inherit}
 #transfer-mock .applicants-seat-summary [data-status-total] .overview-seat-count{font-size:22px}
+#transfer-mock .overview-seat-count .overview-seat-capacity{font-size:.75em;font-weight:400;white-space:nowrap}
+#transfer-mock .overview-seat-count>span{white-space:nowrap}
 #transfer-mock .applicants-seat-summary .muted{font-size:12px;margin:6px 4px 0}
 #transfer-mock .applicants-seat-summary [data-status-unknown] .overview-seat-count{font-size:13px;min-height:30px}
 #transfer-mock .awaiting-acceptance{padding:16px 18px;margin:20px 0;background:#fffcf6;border:1px solid #e5ded2;border-radius:14px}
@@ -51,6 +53,7 @@
  #transfer-mock .applicants-seat-summary thead th:last-child{width:42px}
  #transfer-mock .applicants-seat-summary td{padding:5px 1px}
  #transfer-mock .applicants-seat-summary .overview-seat-count{font-size:16px;min-width:28px;padding:2px}
+ #transfer-mock .applicants-seat-summary .overview-seat-capacity{display:block;font-size:11px;line-height:1.2}
  #transfer-mock .applicants-seat-summary [data-status-total] .overview-seat-count{font-size:18px}
  #transfer-mock .awaiting-acceptance{padding:14px}
  #transfer-mock .awaiting-heading{align-items:flex-start;flex-wrap:wrap;gap:10px}
