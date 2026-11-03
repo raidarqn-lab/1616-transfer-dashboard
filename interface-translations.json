@@ -277,7 +277,19 @@
     "Accepted seats": "수락된 자리",
     "Accepted through the in-game app": "게임 내 신청에서 수락됨",
     "Awaiting seat colour": "자리 색상 확인 대기",
-    "No players in this category.": "이 분류에 해당하는 플레이어가 없습니다."
+    "No players in this category.": "이 분류에 해당하는 플레이어가 없습니다.",
+    "Seat summary": "자리 요약",
+    "Promised": "약속됨",
+    "Promised includes accepted players.": "약속된 자리에는 수락된 플레이어가 포함됩니다.",
+    "Awaiting acceptance": "수락 대기",
+    "Approved · not yet accepted in game": "승인됨 · 게임 내 수락 전",
+    "Show names": "이름 보기",
+    "Hide names": "이름 숨기기",
+    "No group recorded": "등록된 그룹 없음",
+    "No approved applicants awaiting acceptance.": "수락 대기 중인 승인된 신청자가 없습니다.",
+    "Copy outstanding": "대기 명단 복사",
+    "Copied outstanding players": "대기 명단을 복사했습니다",
+    "Unable to copy. Please try again.": "복사하지 못했습니다. 다시 시도하세요."
   },
   "vi": {
     "Language": "Ngôn ngữ",
@@ -557,7 +569,19 @@
     "Accepted seats": "Suất đã được chấp nhận",
     "Accepted through the in-game app": "Đã được chấp nhận qua đơn đăng ký trong game",
     "Awaiting seat colour": "Đang chờ xác nhận màu suất",
-    "No players in this category.": "Không có người chơi trong nhóm này."
+    "No players in this category.": "Không có người chơi trong nhóm này.",
+    "Seat summary": "Tổng quan suất chuyển",
+    "Promised": "Đã hứa",
+    "Promised includes accepted players.": "Suất đã hứa bao gồm người chơi đã được chấp nhận.",
+    "Awaiting acceptance": "Chờ chấp nhận",
+    "Approved · not yet accepted in game": "Đã duyệt · chưa được chấp nhận trong game",
+    "Show names": "Hiện tên",
+    "Hide names": "Ẩn tên",
+    "No group recorded": "Chưa ghi nhận nhóm",
+    "No approved applicants awaiting acceptance.": "Không có người đăng ký đã duyệt đang chờ chấp nhận.",
+    "Copy outstanding": "Sao chép danh sách chờ",
+    "Copied outstanding players": "Đã sao chép người chơi đang chờ",
+    "Unable to copy. Please try again.": "Không thể sao chép. Vui lòng thử lại."
   },
   "de": {
     "Language": "Sprache",
@@ -837,7 +861,19 @@
     "Accepted seats": "Angenommene Plätze",
     "Accepted through the in-game app": "Über die Bewerbung im Spiel angenommen",
     "Awaiting seat colour": "Platzfarbe noch ausstehend",
-    "No players in this category.": "Keine Spieler in dieser Kategorie."
+    "No players in this category.": "Keine Spieler in dieser Kategorie.",
+    "Seat summary": "Platzübersicht",
+    "Promised": "Zugesagt",
+    "Promised includes accepted players.": "Zugesagte Plätze schließen angenommene Spieler ein.",
+    "Awaiting acceptance": "Annahme ausstehend",
+    "Approved · not yet accepted in game": "Genehmigt · im Spiel noch nicht angenommen",
+    "Show names": "Namen anzeigen",
+    "Hide names": "Namen ausblenden",
+    "No group recorded": "Keine Gruppe erfasst",
+    "No approved applicants awaiting acceptance.": "Keine genehmigten Bewerber warten auf Annahme.",
+    "Copy outstanding": "Ausstehende kopieren",
+    "Copied outstanding players": "Ausstehende Spieler kopiert",
+    "Unable to copy. Please try again.": "Kopieren fehlgeschlagen. Bitte erneut versuchen."
   },
   "fr": {
     "Language": "Langue",
@@ -1117,7 +1153,19 @@
     "Accepted seats": "Places acceptées",
     "Accepted through the in-game app": "Acceptation via la candidature en jeu",
     "Awaiting seat colour": "Couleur de place à confirmer",
-    "No players in this category.": "Aucun joueur dans cette catégorie."
+    "No players in this category.": "Aucun joueur dans cette catégorie.",
+    "Seat summary": "Résumé des places",
+    "Promised": "Promises",
+    "Promised includes accepted players.": "Les places promises incluent les joueurs acceptés.",
+    "Awaiting acceptance": "En attente d’acceptation",
+    "Approved · not yet accepted in game": "Approuvés · pas encore acceptés en jeu",
+    "Show names": "Afficher les noms",
+    "Hide names": "Masquer les noms",
+    "No group recorded": "Aucun groupe renseigné",
+    "No approved applicants awaiting acceptance.": "Aucun candidat approuvé en attente d’acceptation.",
+    "Copy outstanding": "Copier les joueurs en attente",
+    "Copied outstanding players": "Joueurs en attente copiés",
+    "Unable to copy. Please try again.": "Impossible de copier. Réessayez."
   },
   "pt": {
     "Language": "Idioma",
@@ -1397,7 +1445,19 @@
     "Accepted seats": "Vagas aceitas",
     "Accepted through the in-game app": "Aceitos pela inscrição no jogo",
     "Awaiting seat colour": "Aguardando confirmação da cor da vaga",
-    "No players in this category.": "Nenhum jogador nesta categoria."
+    "No players in this category.": "Nenhum jogador nesta categoria.",
+    "Seat summary": "Resumo de vagas",
+    "Promised": "Prometidas",
+    "Promised includes accepted players.": "As vagas prometidas incluem os jogadores aceitos.",
+    "Awaiting acceptance": "Aguardando aceitação",
+    "Approved · not yet accepted in game": "Aprovados · ainda não aceitos no jogo",
+    "Show names": "Mostrar nomes",
+    "Hide names": "Ocultar nomes",
+    "No group recorded": "Sem grupo registrado",
+    "No approved applicants awaiting acceptance.": "Não há candidatos aprovados aguardando aceitação.",
+    "Copy outstanding": "Copiar pendentes",
+    "Copied outstanding players": "Jogadores pendentes copiados",
+    "Unable to copy. Please try again.": "Não foi possível copiar. Tente novamente."
   },
   "es": {
     "Language": "Idioma",
@@ -1677,6 +1737,18 @@
     "Accepted seats": "Plazas aceptadas",
     "Accepted through the in-game app": "Aceptados mediante la solicitud dentro del juego",
     "Awaiting seat colour": "Color de plaza por confirmar",
-    "No players in this category.": "No hay jugadores en esta categoría."
+    "No players in this category.": "No hay jugadores en esta categoría.",
+    "Seat summary": "Resumen de plazas",
+    "Promised": "Prometidas",
+    "Promised includes accepted players.": "Las plazas prometidas incluyen a los jugadores aceptados.",
+    "Awaiting acceptance": "Pendientes de aceptación",
+    "Approved · not yet accepted in game": "Aprobados · aún no aceptados en el juego",
+    "Show names": "Mostrar nombres",
+    "Hide names": "Ocultar nombres",
+    "No group recorded": "Sin grupo registrado",
+    "No approved applicants awaiting acceptance.": "No hay solicitantes aprobados pendientes de aceptación.",
+    "Copy outstanding": "Copiar pendientes",
+    "Copied outstanding players": "Jugadores pendientes copiados",
+    "Unable to copy. Please try again.": "No se pudo copiar. Inténtalo de nuevo."
   }
 }

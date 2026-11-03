@@ -59,3 +59,12 @@ test('hover opens an accessible list; leave closes it, while clicks pin it and E
  handlers.pointerout({target:button,relatedTarget:null});for(const fn of timers.values())fn();assert.equal(panel.hidden,false);
  handlers['document:keydown']({key:'Escape'});assert.equal(panel.hidden,true);assert.equal(button.attributes['aria-expanded'],'false');
 });
+
+test('compact and overview rosters use distinct accessible IDs for the same players',()=>{
+ const records=[{status:'Approved',confirmedSeat:'Blue',name:'A'}];
+ const compact=context.overviewSeatRosterMarkup(records,'Approved','Blue','applicants');
+ const overview=context.overviewSeatRosterMarkup(records,'Approved','Blue');
+ assert.match(compact,/aria-controls="applicants-roster-Approved-Blue"/);
+ assert.match(overview,/aria-controls="overview-roster-Approved-Blue"/);
+ assert.doesNotMatch(compact,/id="overview-roster/);
+});
