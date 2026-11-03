@@ -34,3 +34,28 @@ test('destination appears beside transfer group; existing column identities and 
 test('all inline scripts compile',()=>{for(const match of html.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/gi)){if(match[1].trim())new vm.Script(match[1]);}});
 
 test('Accepted applicants can retain and change their destination alliance',async()=>{const {c,players,change}=setup();players[0].status='Accepted';assert.doesNotMatch(c.inlineDestinationCell(players[0]),/disabled/);await change('NvEM');assert.equal(c.organizationSaved.data.assignments[1],'NvEM');assert.equal(players[0].status,'Accepted');});
+
+
+test('Profile assigned alliance uses the shared saved placement and refreshes after saving',async()=>{
+ const field={innerHTML:'',querySelector:()=>({setAttribute:(key,value)=>{field.label=value;}})};
+ const page={querySelector:()=>field};
+ let player;
+ const {c,players,change}=setup({profile:{querySelector:()=>page},current:()=>player});
+ player=players[0];c.renderProfileDestination();
+ assert.match(field.innerHTML,/Assigned alliance/);
+ assert.match(field.innerHTML,/data-inline-destination="1"/);
+ assert.match(field.innerHTML,/<option value="NvSP" selected>/);
+ assert.match(field.innerHTML,/Changes save immediately/);
+ assert.equal(field.label,'Assigned alliance · First');
+ c.render=c.renderProfileDestination;
+ await change('NvEM');
+ assert.match(field.innerHTML,/<option value="NvEM" selected>/);
+ assert.match(field.innerHTML,/Saved/);
+ await change('');
+ assert.match(field.innerHTML,/<option value="" selected>/);
+ player=players[2];c.renderProfileDestination();
+ assert.match(field.innerHTML,/disabled/);
+ assert.match(field.innerHTML,/after the applicant is approved/);
+ player=players[0];c.organizationEditable=()=>false;c.renderProfileDestination();
+ assert.doesNotMatch(field.innerHTML,/<select/);
+});
