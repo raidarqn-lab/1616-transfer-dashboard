@@ -25,15 +25,22 @@ try{
  const call=async(action,args)=>(await db.query('select public.nova_manual_accounts($1,$2::jsonb) as data',[action,JSON.stringify(args)])).rows[0].data;
 
  await db.exec(await read('backend/leadership-report.sql'));await db.exec(await read('backend/leadership-report.sql'));
+ await db.exec(await read('backend/leadership-report-destination.sql'));await db.exec(await read('backend/leadership-report-destination.sql'));
  const save={staffEmail:'owner@test.invalid',displayName:'Test leader',username:'fixture_leader',hash:'a'.repeat(64),salt:'b'.repeat(64)};
  for(const action of ['hub-report-list','hub-report-save'])await assert.rejects(call(action,{...save,staffEmail:'attacker@test.invalid'}),/Access denied/);
  const account=await call('hub-report-save',save);assert.equal(account.ok,true);
  const session=await call('login-finish',{accountId:account.id,version:1});assert.equal(session.user.role,'leadership_report');assert.equal(session.user.leaderEmail,undefined);
  const base={name:'Applicant',group:'Alpha',server:1617,alliance:'Test',power:185,kills:123456,hqLevel:35,profession:100,confirmedSeat:'Purple',status:'Approved',notes:'PRIVATE',applicationConfirmations:[{confirmationCode:'PRIVATE_CODE'}],history:['PRIVATE'],rawApplication:{email:'PRIVATE'}};
  for(const [key,patch] of [['one',{}],['declined',{status:'Declined'}],['withdrawn',{status:'Withdrawn'}],['deleted',{deleted:true}],['general',{general:true}],['prospect',{prospect:true}],['merged',{mergedInto:'one'}]])await db.query('insert into transfer_private.portal_records values($1,$2,1,$3)',['players',key,JSON.stringify({...base,...patch})]);
+ await db.query('insert into transfer_private.portal_records values($1,$2,1,$3)',['shared','transferOrganization',JSON.stringify({data:{assignments:{one:'NvEM',deleted:'PRIVATE_DESTINATION'},limits:{NvEM:50},groupLeads:{private:'PRIVATE_LEAD'}}})]);
  let result=await call('leadership-report-list',{token:session.token});assert.equal(result.players.length,3);assert.ok(!JSON.stringify(result).includes('PRIVATE'));
- assert.deepEqual(Object.keys(result.players[0]).sort(),['name','group','server','alliance','power','kills','hqLevel','profession','confirmedSeat','status','transferDirection'].sort());
+ assert.deepEqual(Object.keys(result.players[0]).sort(),['name','group','server','alliance','power','kills','hqLevel','profession','confirmedSeat','status','transferDirection','destinationAlliance'].sort());
  assert.equal((await call('leadership-report-list',{staffEmail:'owner@test.invalid'})).players.length,3);
+ assert.equal(result.players.filter(p=>p.destinationAlliance==='NvEM').length,1);assert.equal(result.players.filter(p=>p.destinationAlliance===null).length,2);
+ await db.exec("update transfer_private.portal_records set payload=jsonb_set(payload,'{data,assignments,one}','\"WaE\"') where kind='shared' and key='transferOrganization'");
+ result=await call('leadership-report-list',{token:session.token});assert.equal(result.players.filter(p=>p.destinationAlliance==='WaE').length,1);
+ await db.exec("update transfer_private.portal_records set payload=jsonb_set(payload,'{data,assignments,one}','\"\"') where kind='shared' and key='transferOrganization'");
+ result=await call('leadership-report-list',{token:session.token});assert.equal(result.players.filter(p=>p.destinationAlliance==='').length,1);
  assert.equal((await call('leadership-report-list',{})).error,'access_denied');assert.equal((await call('leadership-report-list',{token:'a'.repeat(64),staffEmail:'owner@test.invalid'})).error,'access_denied');
  for(const action of ['applicant-messenger-list','seat-confirmations-list','seat-confirmations-save','seat-image-get','seat-outreach'])assert.equal((await call(action,{token:session.token})).error,'access_denied');
  const helper=await call('hub-login-save',{...save,accountType:'applicant_messenger',username:'fixture_helper',reason:'Test report isolation'});

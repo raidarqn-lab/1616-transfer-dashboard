@@ -1,7 +1,7 @@
 // Serialized into the standalone HTML; no imports, network calls, or portal state.
 export function installRosterControls(){
  const form=document.querySelector('#roster-controls'),table=document.querySelector('table'),count=document.querySelector('#roster-count'),summary=document.querySelector('#view-summary');
- const rows=[...table.querySelectorAll('tr[data-player]')];
+ const rows=[...table.querySelectorAll('tr[data-player]')],columnCount=table.querySelectorAll('thead th').length;
  const norm=v=>String(v||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLocaleLowerCase();
  const fields={group:'Transfer group',status:'Status',seat:'Seat colour',server:'Server',alliance:'Alliance'};
  const numeric={power:'THP (millions)',kills:'Kills',hq:'HQ level',profession:'Profession level'};
@@ -21,7 +21,7 @@ export function installRosterControls(){
  function render(){
   const terms=norm(value('search')).trim().split(/\s+/).filter(Boolean),sort=value('sort'),dir=value('direction')==='asc'?1:-1,groupBy=value('groupBy');
   const filtered=rows.filter(r=>{
-   const d=r.dataset;if(!terms.every(term=>norm([d.name,d.group,d.server,d.alliance,d.status,d.seat].join(' ')).includes(term)))return false;
+   const d=r.dataset;if(!terms.every(term=>norm([d.name,d.group,d.server,d.alliance,d.destination,d.status,d.seat].join(' ')).includes(term)))return false;
    for(const key of Object.keys(fields))if(value(key)&&d[key]!==value(key))return false;
    for(const key of Object.keys(numeric)){const lo=value(key+'_min'),hi=value(key+'_max');if(lo!==''||hi!==''){if(d[key]===''||!Number.isFinite(Number(d[key])))return false;const n=Number(d[key]);if(lo!==''&&n<Number(lo)||hi!==''&&n>Number(hi))return false;}}
    return true;
@@ -29,8 +29,8 @@ export function installRosterControls(){
   filtered.sort((a,b)=>{const av=a.dataset[sort],bv=b.dataset[sort];if(sort in numeric){if(av===''||bv==='')return av===''?(bv===''?0:1):-1;return (Number(av)-Number(bv))*dir||a.dataset.name.localeCompare(b.dataset.name);}return av.localeCompare(bv,undefined,{numeric:true,sensitivity:'base'})*dir||a.dataset.name.localeCompare(b.dataset.name);});
   table.querySelectorAll('tbody').forEach(e=>e.remove());const groups=new Map();
   for(const r of filtered){const name=groupBy?r.dataset[groupBy]:'';if(!groups.has(name))groups.set(name,[]);groups.get(name).push(r);}
-  for(const [name,members] of [...groups].sort(([a],[b])=>a.localeCompare(b,undefined,{numeric:true,sensitivity:'base'}))){const body=make('tbody');if(groupBy){const tr=make('tr');tr.className='group';const th=make('th',name+' · '+members.length);th.colSpan=9;tr.append(th);body.append(tr);}body.append(...members);table.append(body);}
-  if(!filtered.length){const body=make('tbody'),tr=make('tr'),td=make('td','No applicants match these filters.');td.colSpan=9;tr.append(td);body.append(tr);table.append(body);}
+  for(const [name,members] of [...groups].sort(([a],[b])=>a.localeCompare(b,undefined,{numeric:true,sensitivity:'base'}))){const body=make('tbody');if(groupBy){const tr=make('tr');tr.className='group';const th=make('th',name+' · '+members.length);th.colSpan=columnCount;tr.append(th);body.append(tr);}body.append(...members);table.append(body);}
+  if(!filtered.length){const body=make('tbody'),tr=make('tr'),td=make('td','No applicants match these filters.');td.colSpan=columnCount;tr.append(td);body.append(tr);table.append(body);}
   count.textContent=filtered.length+' of '+rows.length+' players'+(groupBy?' · '+groups.size+' groups':'');
   const filters=[];for(const key of ['search',...Object.keys(fields)])if(value(key))filters.push((fields[key]||'Search')+': '+value(key));for(const [key,title] of Object.entries(numeric))for(const bound of ['min','max'])if(value(key+'_'+bound)!=='')filters.push(title+' '+bound+': '+value(key+'_'+bound));
   summary.textContent=(filters.length?filters.join(' | '):'All applicants')+' · Grouped by '+(fields[groupBy]||'none')+' · Sorted by '+form.elements.namedItem('sort').selectedOptions[0].textContent+' ('+value('direction')+')';
