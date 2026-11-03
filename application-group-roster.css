@@ -1,0 +1,20 @@
+#transfer-mock .application-group-dialog {width: min(760px, calc(100vw - 24px)); max-height: 85dvh;}
+#transfer-mock .application-group-table-wrap {margin: 0 24px 24px;}
+#transfer-mock .application-group-table {width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 14px;}
+#transfer-mock .application-group-table th {background: #f3e8dc; color: #6f5460; font-size: 12px; font-weight: 600;}
+#transfer-mock .application-group-table th, #transfer-mock .application-group-table td {padding: 12px 8px; border: 0; border-bottom: 1px solid #e3cfc4; text-align: right; vertical-align: middle; font-variant-numeric: tabular-nums;}
+#transfer-mock .application-group-table th:first-child, #transfer-mock .application-group-table td:first-child {width: 46%; text-align: left; overflow-wrap: anywhere;}
+#transfer-mock .application-group-table th:nth-child(2) {width: 10%;}
+#transfer-mock .application-group-table th:nth-child(3) {width: 18%;}
+#transfer-mock .application-group-table th:nth-child(4) {width: 26%;}
+#transfer-mock .application-group-table .group-player-link {display: inline; padding: 3px 0; width: auto; background: none; border: 0; border-radius: 0; color: #922547; font: inherit; text-align: left; text-decoration: underline; text-underline-offset: 3px; overflow-wrap: anywhere;}
+#transfer-mock .application-group-table .group-player-link:focus-visible {outline: 2px solid #922547; outline-offset: 3px;}
+#transfer-mock .group-current-name, #transfer-mock .group-match-note {display: block; margin-top: 4px; color: #76616a; font-size: 11px; font-variant-numeric: normal;}
+#transfer-mock .group-stats-hint {font-size: 12px; color: #76616a; margin: 14px 0 0;}
+@media (max-width: 480px) {
+ #transfer-mock .application-group-table-wrap {margin: 0 12px 18px;}
+ #transfer-mock .application-group-table {font-size: 12px;}
+ #transfer-mock .application-group-table th, #transfer-mock .application-group-table td {padding: 10px 4px;}
+ #transfer-mock .application-group-table th:first-child, #transfer-mock .application-group-table td:first-child {width: 40%;}
+ #transfer-mock .application-group-table th:nth-child(4) {width: 32%;}
+}
