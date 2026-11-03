@@ -1,0 +1,10 @@
+#transfer-mock .toolkit-check{border:1px solid #ddcdbc;border-radius:14px;padding:16px;margin:16px 0;background:#fffaf2;font-size:13px;line-height:1.5}
+#transfer-mock .toolkit-check:empty{display:none}
+#transfer-mock .toolkit-check h3{margin:0 0 10px;font-size:16px}
+#transfer-mock .toolkit-candidate{border-top:1px solid #e6d8c9;padding-top:12px;margin-top:12px}
+#transfer-mock .toolkit-candidate dl{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:12px 0}
+#transfer-mock .toolkit-candidate dl>div{padding:8px;background:#f4ede4;border-radius:8px}
+#transfer-mock .toolkit-candidate dt{font-size:11px;color:#78695b}
+#transfer-mock .toolkit-candidate dd{margin:2px 0 0;font-weight:600}
+#transfer-mock .toolkit-candidate p{overflow-wrap:anywhere}
+#transfer-mock .toolkit-automation-note{font-size:12px;color:#78695b;margin:8px 0}

@@ -1,0 +1,11 @@
+# Automatic applicant lookups
+
+The portal checks newly created applications every minute while an administrator or lead has the portal open and idle. Support users do not run checks. A check reads the current published LWServers player snapshot through the pinned LWToolkit library; no protected credentials or local Keychain session are deployed.
+
+Apply `backend/applicant-toolkit.sql` once before the function/client release. Its private enable timestamp is retained on repeat deployment. Only applications created after activation are eligible, including manually created applications with newly issued confirmation codes. It does not backfill older records. Validate using the migration without COMMIT followed by `backend/verify-applicant-toolkit.sql` and ROLLBACK.
+
+Build the existing portal-public function with `build-edge.mjs`, the reviewed private Toolkit installation, an official esbuild binary and an output path outside this public repository. The reviewed Toolkit pin is 0.6.0, commit 44632ec0a2f970ba9ef36ad73ba5f55d99ec5a49; the player adapter reports 0.5.5. Deploy the generated private bundle into the existing portal-public function, preserving authentication and secrets. Never commit the generated bundle or vendored Toolkit implementation to this public repository.
+
+Checks save `lwToolkitCheck` beside the existing profile, with retrieval time, source hash, source measurements, identity inputs and up to five exact-name candidates. Existing source UIDs require exact matching; name-only matches always need human review. Original application fields, decisions, confirmed seats, linked identities and profile statistics are not overwritten. Profile cards show the source details and observation dates.
+
+Optimistic portal revisions protect concurrent edits. One run fetches one server and checks at most three candidates. Successful checks are not repeated until identity inputs change. Temporary failures retry after 15 minutes, at most three attempts. A SOURCE_COMPATIBILITY failure persists a shared block and evidence hash and stops all automatic source reads until the Toolkit compatibility issue is repaired and that block is explicitly cleared. No raw-source fallback is used. Results are observations from the latest published snapshot, not a claim of real-time game data.
