@@ -1,0 +1,104 @@
+/* Garnet & champagne: preserve the original player workspace and seat colours. */
+#transfer-mock .profile-popup.binder-profile {
+  --profile-paper: #fffaf5;
+  --profile-side: #f3e8dc;
+  --profile-ink: #392e32;
+  --profile-muted: #76616a;
+  --profile-line: #e3cfc4;
+  --profile-garnet: #922547;
+  --profile-rose: #f5dfe6;
+  --profile-gold: #ba9457;
+  background: var(--profile-paper);
+  color: var(--profile-ink);
+  border-color: var(--profile-line);
+}
+#transfer-mock .profile-popup.binder-profile .workspace-header {
+  background: #f6eadd;
+  border-top: 4px solid var(--profile-gold);
+  border-bottom-color: var(--profile-line);
+  gap: 12px;
+}
+#transfer-mock .profile-popup.binder-profile .workspace-avatar {
+  background: var(--profile-garnet);
+  color: #fff;
+  box-shadow: 0 3px 10px #92254726;
+}
+#transfer-mock .profile-popup.binder-profile [data-meta],
+#transfer-mock .profile-popup.binder-profile .profile-record-meta {
+  color: var(--profile-muted);
+}
+#transfer-mock .profile-popup.binder-profile .lead-brief {
+  background: var(--profile-rose);
+  border-color: var(--profile-line);
+  border-left: 4px solid var(--profile-gold);
+}
+#transfer-mock .profile-popup.binder-profile .lead-brief h3,
+#transfer-mock .profile-popup.binder-profile .binder-pages h3 {
+  color: var(--profile-garnet);
+}
+#transfer-mock .profile-popup.binder-profile .lead-brief [data-open-team-notes],
+#transfer-mock .profile-popup.binder-profile [data-header-save] {
+  background: var(--profile-garnet);
+  border-color: var(--profile-garnet);
+  color: #fff;
+}
+#transfer-mock .profile-popup.binder-profile .player-workspace-nav {
+  background: var(--profile-side);
+  border-color: var(--profile-line);
+}
+#transfer-mock .profile-popup.binder-profile .player-workspace-nav button {
+  color: var(--profile-ink);
+}
+#transfer-mock .profile-popup.binder-profile .player-workspace-nav button[aria-current=location] {
+  background: var(--profile-garnet);
+  color: #fff;
+  border-color: var(--profile-garnet);
+}
+#transfer-mock .profile-popup.binder-profile .binder-pages,
+#transfer-mock .profile-popup.binder-profile .player-workspace-body > .profile-fold {
+  outline-color: var(--profile-line);
+}
+#transfer-mock .profile-popup.binder-profile .binder-field > span:first-child {
+  color: var(--profile-muted);
+}
+#transfer-mock .profile-popup.binder-profile input:not([type=checkbox]):not([type=radio]):not([type=file]),
+#transfer-mock .profile-popup.binder-profile select,
+#transfer-mock .profile-popup.binder-profile textarea {
+  background: #fffdfb !important;
+  border: 1px solid var(--profile-line) !important;
+  border-radius: 6px !important;
+  padding: 7px 9px !important;
+  color: var(--profile-ink);
+}
+#transfer-mock .profile-popup.binder-profile input:focus,
+#transfer-mock .profile-popup.binder-profile select:focus,
+#transfer-mock .profile-popup.binder-profile textarea:focus {
+  outline: 2px solid var(--profile-garnet);
+  outline-offset: 2px;
+  box-shadow: none !important;
+}
+#transfer-mock .profile-popup.binder-profile [data-header-cancel] {
+  width: auto;
+  min-height: 36px;
+  flex: 0 0 auto;
+  padding: 7px 12px;
+  margin: 0;
+  background: var(--profile-paper);
+  border: 1px solid var(--profile-line);
+  border-radius: 9px;
+  color: var(--profile-ink);
+  font-size: 13px;
+}
+#transfer-mock .profile-popup.binder-profile [data-header-cancel]:disabled {opacity: .45; cursor: default;}
+#transfer-mock .profile-popup.binder-profile [data-header-cancel][hidden],
+#transfer-mock .profile-popup.binder-profile .profile-edit-mode,
+#transfer-mock .profile-popup.binder-profile .binder-save [data-binder-cancel] {display: none !important;}
+#transfer-mock .profile-popup.binder-profile .binder-save {min-height: 24px; color: var(--profile-garnet);}
+#transfer-mock .profile-popup.binder-profile .profile-categories {background: var(--profile-paper); border-color: var(--profile-line);}
+#transfer-mock .profile-popup.binder-profile .profile-record-meta {background: var(--profile-paper); border-color: var(--profile-line);}
+@media (max-width: 650px) {
+  #transfer-mock .profile-popup.binder-profile .workspace-header {flex-wrap: wrap;}
+  #transfer-mock .profile-popup.binder-profile .workspace-identity {min-width: 150px;}
+  #transfer-mock .profile-popup.binder-profile [data-header-cancel],
+  #transfer-mock .profile-popup.binder-profile [data-header-save] {min-height: 40px;}
+}
