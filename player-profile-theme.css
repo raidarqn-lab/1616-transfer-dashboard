@@ -50,9 +50,10 @@
   color: var(--profile-ink);
 }
 #transfer-mock .profile-popup.binder-profile .player-workspace-nav button[aria-current=location] {
-  background: var(--profile-garnet);
-  color: #fff;
+  background: var(--profile-garnet) !important;
+  color: #fff !important;
   border-color: var(--profile-garnet);
+  box-shadow: none;
 }
 #transfer-mock .profile-popup.binder-profile .binder-pages,
 #transfer-mock .profile-popup.binder-profile .player-workspace-body > .profile-fold {
