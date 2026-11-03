@@ -69,6 +69,18 @@ test('compact and overview rosters use distinct accessible IDs for the same play
  assert.doesNotMatch(compact,/id="overview-roster/);
 });
 
+test('colour counts use the configured capacity in both summaries and update when capacity changes',()=>{
+ const limits={Gold:1,Purple:5,Blue:50,White:100};
+ for(const scope of ['overview','applicants'])for(const status of ['Approved','Accepted'])for(const colour of Object.keys(limits)){
+  const records=[{status:'Accepted',confirmedSeat:colour,name:'One'}];
+  const markup=context.overviewSeatRosterMarkup(records,status,colour,scope,limits);
+  assert.match(markup,new RegExp('>1<span class="overview-seat-capacity"> / '+limits[colour]+'</span>'));
+ }
+ assert.match(context.overviewSeatRosterMarkup([],'Approved','Gold','overview',{Gold:0}),/>0<span class="overview-seat-capacity"> \/ 0<\/span>/);
+ assert.match(context.overviewSeatRosterMarkup([],'Approved','Purple','overview',{Purple:8}),/ \/ 8<\/span>/);
+ for(const colour of ['all','unknown'])assert.doesNotMatch(context.overviewSeatRosterMarkup([],'Approved',colour,'overview',limits),/class="overview-seat-capacity"/);
+});
+
  test('seat summary is excluded from interactive roster table controls',()=>{
  const summary={dataset:{},closest:selector=>selector==='[data-applicants-seat-summary]',querySelectorAll:()=>{throw new Error('Seat summary must not receive table controls');}};
  const root={querySelectorAll:selector=>selector==='table'?[summary]:[]};
