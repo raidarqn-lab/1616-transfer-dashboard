@@ -9,6 +9,6 @@ const root=realpathSync(toolkit),pkg=JSON.parse(readFileSync(join(root,'package.
 if(pkg.name!=='@extrageneity/lw-toolkit'||pkg.version!=='0.6.0')throw Error('Review the LWToolkit version before rebuilding.');
 const target=resolve(output),repo=realpathSync(new URL('../../',import.meta.url));
 if(target.startsWith(repo+'/'))throw Error('The private Toolkit bundle must be written outside the public checkout.');
-execFileSync(esbuild,[join(repo,'backend/portal-public.ts'),'--bundle','--format=esm','--platform=node','--target=es2022','--minify','--banner:js=import { createRequire as toolkitCreateRequire } from "node:module"; const require=toolkitCreateRequire(import.meta.url);',
+execFileSync(esbuild,[join(repo,'backend/portal-public.ts'),'--bundle','--format=esm','--platform=node','--target=es2022','--minify','--banner:js=import { createRequire as toolkitCreateRequire } from "node:module"; import process from "node:process"; import { Buffer } from "node:buffer"; const global=globalThis; const require=toolkitCreateRequire(import.meta.url);',
  '--alias:@extrageneity/lw-toolkit/client='+join(root,'dist/src/client.js'),
  '--alias:@extrageneity/lw-toolkit/transport='+join(root,'dist/src/transport.js'),'--outfile='+target],{stdio:'inherit'});
