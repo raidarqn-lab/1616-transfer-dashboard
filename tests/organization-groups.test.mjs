@@ -21,6 +21,18 @@ test('group totals include other statuses but placements only include eligible m
 test('default view has alliance rows and compact seat-coloured chips without highlights',()=>{
  const h=markup(state());assert.match(h,/data-org-home="WaE"/);assert.match(h,/data-org-seat="Blue"/);assert.match(h,/data-org-focus-player="1"/);assert.doesNotMatch(h,/class="chip [^"]*(group-glow|blurred|selected)/);assert.doesNotMatch(h,/data-org-focus-group=/);
 });
+test('capsules use saved HQ and correctly distinguish million-based power from absolute kills',()=>{
+ const data=[p(1,'Luna Friends','Accepted',{name:'JamesRopes',server:1607,alliance:'AxE',hqLevel:35,power:157.301,kills:7500000})];
+ const h=organizationBoardMarkup({...options(state()),groups:organizationGroups(data,data,{1:'WaE'}),assignments:{1:'WaE'}});
+ assert.match(h,/#1607 · AxE/);assert.match(h,/<small>HQ<\/small>35/);assert.match(h,/<small>THP<\/small>157.3M/);assert.match(h,/<small>Kills<\/small>7.5M/);
+ assert.match(h,/aria-label="JamesRopes, Blue seat, Luna Friends, #1607 · AxE, HQ 35, THP 157.3M, kills 7.5M"/);
+});
+test('missing stats stay unknown while real zero values stay zero and metadata is escaped',()=>{
+ const data=[p(1,'Team','Accepted',{server:'<bad>',alliance:'"tag',power:null,kills:0,hqLevel:''}),p(2,'Team','Accepted',{power:0,kills:undefined,hqLevel:NaN})];
+ const h=organizationBoardMarkup({...options(state()),groups:organizationGroups(data,data,{}),assignments:{}});
+ assert.match(h,/<small>THP<\/small>—/);assert.match(h,/<small>THP<\/small>0/);assert.match(h,/<small>Kills<\/small>0/);assert.match(h,/<small>Kills<\/small>—/);assert.match(h,/<small>HQ<\/small>—/);
+ assert.doesNotMatch(h,/<bad>|NaN|undefined/);assert.match(h,/#&lt;bad&gt; · &quot;tag/);
+});
 test('selecting a player glows their whole group across alliances and blurs everyone else',()=>{
  const s={...state(),player:'1'},f=organizationFocus(groups,s),h=markup(s);
  assert.equal(f.player.id,1);assert.deepEqual(f.members.map(p=>p.id),[1,2]);assert.equal(f.total,4);assert.equal(s.group,'team a');

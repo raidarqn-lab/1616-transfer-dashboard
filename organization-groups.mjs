@@ -54,6 +54,23 @@ function focusBar(focus,assignments,alliances,editable){
   return '<div class="focus-info"><span class="focus-mark" aria-hidden="true">'+(player?'✓':'◈')+'</span><div><strong translate="no">'+escape(player?.name||group.name)+'</strong><small>'+subtitle+'</small></div></div><div class="focus-actions"><span class="selection-key"><span><i></i>'+(solo?'Selected player':'Same group')+'</span><span><i class="dim"></i>Other players</span></span>'+(player&&editable?'<label class="focus-move">Move to<select data-org-move="'+escape(player.id)+'" aria-label="Move '+escape(player.name)+' to alliance">'+['',...alliances].map(a=>'<option value="'+escape(a)+'"'+((assignments[player.id]||'')===a?' selected':'')+'>'+escape(a||'Unassigned')+'</option>').join('')+'</select></label>':'')+(player?'<button type="button" class="quiet-button" data-org-profile="'+escape(player.id)+'">View player ↗</button>':'')+'<button type="button" class="quiet-button" data-org-clear>Clear focus ×</button></div>';
 }
 
+function compactStat(value,multiplier=1){
+  if(value==null||String(value).trim()==='')return '—';
+  const number=Number(value)*multiplier;
+  if(!Number.isFinite(number)||number<0)return '—';
+  return new Intl.NumberFormat('en',{notation:'compact',maximumFractionDigits:1}).format(number);
+}
+function playerCapsule(player,selected){
+  const server=String(player.server||'').trim(),alliance=String(player.alliance||'').trim();
+  const origin=(server&&server!=='Unknown'?'#'+server:'—')+' · '+(alliance&&alliance!=='Unknown'?alliance:'—');
+  const hq=Number.isInteger(Number(player.hqLevel))&&Number(player.hqLevel)>0?String(Number(player.hqLevel)):'—';
+  // Portal power is stored in millions; kills are stored as an absolute count.
+  const thp=compactStat(player.power,1000000),kills=compactStat(player.kills);
+  const description=origin+', HQ '+hq+', THP '+thp+', kills '+kills;
+  const markup='<span class="capsule-top"><span class="capsule-name">'+(selected?'<span class="selected-mark" aria-hidden="true">✓</span>':'')+escape(player.name)+'</span><span class="capsule-origin">'+escape(origin)+'</span></span><span class="capsule-stats"><span><small>HQ</small>'+escape(hq)+'</span><span><small>THP</small>'+escape(thp)+'</span><span><small>Kills</small>'+escape(kills)+'</span></span>';
+  return {description,markup};
+}
+
 export function organizationBoardMarkup({groups,state,alliances,assignments,limits,seat,editable,dirty,saving,message,language='en'}) {
   const focus=organizationFocus(groups,state),members=groups.flatMap(g=>g.members),focused=new Set(focus.members.map(p=>String(p.id)));
   const options=groups.map(g=>'<option value="'+escape(g.key)+'"'+(state.group===g.key?' selected':'')+'>'+escape(g.name)+'</option>').join('');
@@ -70,8 +87,9 @@ export function organizationBoardMarkup({groups,state,alliances,assignments,limi
     }else{
       content=visible.map(p=>{
         const selected=String(state.player)===String(p.id),highlight=focused.has(String(p.id)),colour=seat(p),confirmed=['Gold','Purple','Blue','White'].includes(p.confirmedSeat);
-        const detail=p.name+' · '+p.server+' ['+(p.alliance||'Unknown')+'] · '+colour+' · '+(confirmed?'Confirmed':'Anticipated / not confirmed')+' · '+(organizationGroupKey(p)==='@ungrouped'?'No group recorded':p.group);
-        return '<button type="button" class="chip '+escape(colour)+(!confirmed?' anticipated':'')+(highlight?' group-glow':'')+(selected?' selected':'')+(focus.active&&!highlight?' blurred':'')+'" data-org-focus-player="'+escape(p.id)+'" data-org-player="'+escape(p.id)+'" draggable="'+editable+'" data-org-seat="'+escape(colour)+'" aria-pressed="'+selected+'" aria-label="'+escape(p.name+', '+colour+' seat, '+(p.group||'No group recorded'))+'" title="'+escape(detail)+'" translate="no">'+(selected?'<span class="selected-mark" aria-hidden="true">✓</span>':'')+escape(p.name)+'</button>';
+        const capsule=playerCapsule(p,selected),groupName=organizationGroupKey(p)==='@ungrouped'?'No group recorded':p.group;
+        const detail=p.name+' · '+capsule.description+' · '+colour+' · '+(confirmed?'Confirmed':'Anticipated / not confirmed')+' · '+groupName;
+        return '<button type="button" class="chip '+escape(colour)+(!confirmed?' anticipated':'')+(highlight?' group-glow':'')+(selected?' selected':'')+(focus.active&&!highlight?' blurred':'')+'" data-org-focus-player="'+escape(p.id)+'" data-org-player="'+escape(p.id)+'" draggable="'+editable+'" data-org-seat="'+escape(colour)+'" aria-pressed="'+selected+'" aria-label="'+escape(p.name+', '+colour+' seat, '+groupName+', '+capsule.description)+'" title="'+escape(detail)+'" translate="no">'+capsule.markup+'</button>';
       }).join('');
     }
     const count=focus.active?'<strong>'+matches+' of '+focus.total+'</strong>'+(focus.solo?'selected player':focus.group?.key==='@ungrouped'?'ungrouped players':'group members'):named+' group'+(named===1?'':'s')+(without?'<br>'+without+' ungrouped':'');
@@ -140,7 +158,14 @@ export const organizationGroupStyles = `
 #transfer-mock .organization-focus .alliance-name strong{font-size:14px;letter-spacing:-.2px;font-weight:650;display:block}
 #transfer-mock .organization-focus .alliance-name small{font-size:10px;color:var(--muted);display:block;margin-top:1px}
 #transfer-mock .organization-focus .names{display:flex;align-items:center;flex-wrap:wrap;gap:7px 8px;min-width:0;padding:4px 0}
-#transfer-mock .organization-focus .chip{border:1px solid transparent;height:var(--chip-height);border-radius:6px;padding:0 9px;font-size:11px;font-weight:600;line-height:1;max-width:100%;white-space:nowrap;display:inline-flex;align-items:center;gap:5px;transition:box-shadow .2s,filter .2s,opacity .2s,transform .2s;position:relative}
+#transfer-mock .organization-focus .chip{border:1px solid transparent;width:254px;height:auto;border-radius:9px;padding:0;font-size:11px;font-weight:400;line-height:14px;max-width:100%;white-space:nowrap;display:inline-flex;flex-direction:column;align-items:stretch;gap:0;transition:box-shadow .2s,filter .2s,opacity .2s,transform .2s;position:relative}
+#transfer-mock .organization-focus .capsule-top{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 9px;min-width:0}
+#transfer-mock .organization-focus .capsule-name{font-size:12px;font-weight:600;line-height:16px;min-width:0;overflow:hidden;text-overflow:ellipsis}
+#transfer-mock .organization-focus .capsule-name .selected-mark{margin-right:4px;vertical-align:1px}
+#transfer-mock .organization-focus .capsule-origin{font-size:10px;line-height:14px;opacity:.85;max-width:48%;flex-shrink:0;overflow:hidden;text-overflow:ellipsis}
+#transfer-mock .organization-focus .capsule-stats{display:grid;grid-template-columns:.7fr 1.4fr 1.2fr;gap:5px;padding:4px 8px;border-top:1px solid color-mix(in srgb,currentColor 12%,transparent);background:#ffffff26;border-radius:0 0 8px 8px;font-size:11px;font-variant-numeric:tabular-nums;line-height:14px}
+#transfer-mock .organization-focus .capsule-stats>span{min-width:0}
+#transfer-mock .organization-focus .capsule-stats small{font-size:9px;margin-right:4px;opacity:.78}
 #transfer-mock .organization-focus .chip.Blue{background:light-dark(#d5e6ff,#aecff9);color:#294e79;border-color:light-dark(#bdd4f2,#83ace0)}
 #transfer-mock .organization-focus .chip.Purple{background:light-dark(#e9d8fb,#d7b9f4);color:#68438c;border-color:light-dark(#d6bfee,#b48bdc)}
 #transfer-mock .organization-focus .chip.Gold{background:light-dark(#f8e2aa,#f2cf85);color:#725316;border-color:light-dark(#e9cd8a,#d9b367)}
