@@ -4,7 +4,7 @@ import {readFileSync} from 'node:fs';
 import vm from 'node:vm';
 import * as crypto from 'node:crypto';
 import {toolkitInputs,toolkitDue,toolkitCheckEvents,toolkitReport} from '../backend/applicant-toolkit.mjs';
-import {applicantToolkitMarkup,createAutomaticToolkitChecks} from '../applicant-toolkit-view.mjs';
+import {applicantToolkitMarkup,renderApplicantToolkit,createAutomaticToolkitChecks} from '../applicant-toolkit-view.mjs';
 const at='2026-11-03T05:00:00.000Z';
 const player={id:1,name:'Example Player',server:'1608',status:'Pending',confirmedSeat:'White',power:110,history:[],_rev:4};
 const row={uid:'00123',name:'Example Player',warzone:1608,alliance:'TEST',heroPower:140000000,kills:2000,profession:{level:100},baseLevel:30,thpSeenAt:'2026-11-01',qualityFlags:[]};
@@ -89,4 +89,23 @@ test('backend retries concurrent saves against fresh state without repeating the
  };
  const r=await server.portalRequest({action:'applicants.toolkit.check',transactionId:'test-toolkit-123'},{email:'admin@example.test'},rpc,{toolkitReader:async()=>{reads++;return source;}});
  assert.equal(r.checked,1);assert.equal(commits,2);assert.equal(reads,1);
+});
+
+// A small DOM fixture exercises placement and reuse, including switching from
+// an applicant with long lookup evidence to a contact with no lookup.
+test('lookup evidence stays inside Player details and never occupies the fixed profile shell',()=>{
+ class Element {
+  constructor(tag){this.tagName=tag;this.dataset={};this.children=[];this.open=false;this.hidden=false;}
+  append(...nodes){for(const node of nodes){if(node.parentElement)node.parentElement.children=node.parentElement.children.filter(n=>n!==node);node.parentElement=this;this.children.push(node);}}
+  querySelector(selector){const key={'[data-binder-page="0"]':'binderPage','[data-toolkit-check]':'toolkitCheck','[data-toolkit-content]':'toolkitContent'}[selector];for(const child of this.children){if(key in child.dataset)return child;const found=child.querySelector(selector);if(found)return found;}return null;}
+ }
+ const profile=new Element('section'),body=new Element('div'),page=new Element('section');page.dataset.binderPage='0';profile.append(body);body.append(page);profile.ownerDocument={createElement:tag=>new Element(tag)};
+ const report={status:'needs-review',candidates:Array.from({length:5},()=>row)};
+ renderApplicantToolkit(profile,report,1);const box=profile.querySelector('[data-toolkit-check]');
+ assert.equal(box.parentElement,page);assert.equal(box.tagName,'details');assert.equal(box.open,false);assert.equal(box.hidden,false);
+ box.open=true;renderApplicantToolkit(profile,report,1);assert.equal(box.open,true);assert.equal(page.children.length,1);
+ renderApplicantToolkit(profile,null,2);assert.equal(box.open,false);assert.equal(box.hidden,true);assert.equal(box.querySelector('[data-toolkit-content]').innerHTML,'');
+ renderApplicantToolkit(profile,report,3);assert.equal(box.hidden,false);assert.equal(box.parentElement,page);assert.equal(profile.children.length,1);
+ const html=readFileSync(new URL('../live.html',import.meta.url),'utf8');
+ assert.ok(html.includes('renderApplicantToolkit(profile,p.lwToolkitCheck,p.id)'));assert.ok(!html.includes("q('[data-facts]').after(toolkitBox)"));
 });

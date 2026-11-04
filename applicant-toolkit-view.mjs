@@ -11,6 +11,25 @@ export function applicantToolkitMarkup(report){
  ].map(([label,v])=>'<div><dt>'+label+'</dt><dd>'+v+'</dd></div>').join('')+'</dl><p class="muted">Hero power measured: '+escape(p.thpSeenAt||'Unknown')+'. Alliance and kills observation dates are unknown.</p>'+(p.qualityFlags?.includes('LEGACY_THP')?'<p class="muted">Hero power is flagged as a legacy observation.</p>':'')+'</article>').join('');
  return '<h3>Latest LWToolkit check</h3><strong>'+title+'</strong>'+checked+'<p>'+note+'</p>'+rows+(report.candidateCount>5?'<p>Showing 5 of '+Number(report.candidateCount)+' possible matches. Identity review is required.</p>':'')+'<p class="muted">Latest published snapshot; may lag the game.</p>';
 }
+// Source evidence belongs inside a scrolling page, never in the fixed-height
+// profile shell where a long result can squeeze the editing workspace to zero.
+export function renderApplicantToolkit(profile,report,playerKey){
+ const page=profile.querySelector('[data-binder-page="0"]');
+ if(!page)return;
+ let box=profile.querySelector('[data-toolkit-check]');
+ if(!box){
+  box=profile.ownerDocument.createElement('details');
+  box.className='toolkit-check';box.dataset.toolkitCheck='';
+  const summary=profile.ownerDocument.createElement('summary');
+  summary.textContent='LWToolkit source details';
+  const content=profile.ownerDocument.createElement('div');
+  content.dataset.toolkitContent='';box.append(summary,content);
+ }
+ if(box.dataset.playerKey!==String(playerKey))box.open=false;
+ box.dataset.playerKey=String(playerKey);box.hidden=!report;
+ box.querySelector('[data-toolkit-content]').innerHTML=applicantToolkitMarkup(report);
+ page.append(box);
+}
 export function createAutomaticToolkitChecks({canRun,request,onSaved,onStatus}){
  let busy=false;
  return async()=>{
