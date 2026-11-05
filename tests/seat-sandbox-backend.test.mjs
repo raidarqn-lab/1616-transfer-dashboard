@@ -49,3 +49,19 @@ test('individual sandbox commands save just one player choice and preserve live 
  assert.throws(()=>save(state,{op:'member',id:'scenario-123',playerId:'1',include:true},'support'),/Administrator access/);
  assert.deepEqual(state.players,original);
 });
+test('scenario alliance plans are isolated, allow overflow, and preserve the live arrangement',()=>{
+ const state=fixture();state.players[1].status='Accepted';state.players[1].confirmedSeat='Blue';
+ state.shared.transferOrganization.data={assignments:{1:'WaE'},limits:{WaE:25},groupLeads:{crew:1}};
+ const original=structuredClone(state);
+ apply(state,{op:'create',id:'scenario-123',name:'Trial'});
+ const first=state.shared.seatSandbox.data.scenarios[0];assert.deepEqual(first.arrangement,{assignments:{1:'WaE'},limits:{WaE:25}});
+ const command={op:'plan',id:'scenario-123',selectedIds:['2','2'],assignments:{1:'NvSP',2:'NvSP'},limits:{NvSP:1}};
+ apply(state,command);
+ const saved=state.shared.seatSandbox.data.scenarios[0];assert.deepEqual(saved.selectedIds,['2']);assert.equal(saved.selectionMode,'individual');assert.equal(saved.arrangement.assignments[1],'NvSP');assert.equal(saved.arrangement.limits.NvSP,1);
+ assert.deepEqual(state.players,original.players);assert.deepEqual(state.shared.transferOrganization,original.shared.transferOrganization);assert.deepEqual(state.shared.capacities,original.shared.capacities);
+ apply(state,{op:'create',id:'scenario-456',name:'Alternative'});
+ assert.equal(state.shared.seatSandbox.data.scenarios[1].arrangement.assignments[1],'WaE');
+ for(const bad of [{...command,assignments:{1:'Fake'}},{...command,assignments:{999:'WaE'}},{...command,limits:{WaE:-1}},{...command,limits:{WaE:1.5}},{...command,limits:{unknown:1}},{...command,selectedIds:['999']},{...command,status:'Accepted'}])assert.throws(()=>save(state,bad));
+ assert.throws(()=>save(state,command,'support'),/Administrator access/);
+ assert.throws(()=>save(state,command,'lead','lead@example.test',[{kind:'players',key:'1',baseRev:0,value:{status:'Approved'}}]),/separately/);
+});
