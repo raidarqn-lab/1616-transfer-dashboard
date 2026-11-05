@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import vm from 'node:vm';
-import {allianceApprovalRoster,allianceApprovalHtml,approvalCsvCell} from '../alliance-approval-export.mjs';
+import {allianceApprovalRoster,allianceApprovalHtml,approvalInstructionsText} from '../alliance-approval-export.mjs';
 import {organizationBoardMarkup,organizationGroups} from '../organization-groups.mjs';
 
 const player=(id,extra={})=>({id,name:'Player '+id,status:'Approved',server:1607,alliance:'Origin',group:'Friends',confirmedSeat:'White',...extra});
@@ -28,14 +28,18 @@ test('download is self-contained, escapes hostile names, and includes only revie
  const script=html.match(/<script>([\s\S]*)<\/script>/)[1];assert.doesNotThrow(()=>new vm.Script(script));
  assert.match(html,/<option value="" selected>Awaiting review/);
 });
-test('CSV neutralizes formulas, quotes commas and newlines, and preserves multilingual values',()=>{
- for(const value of ['=HYPERLINK("bad")',' +1','-10','@cmd','\tformula'])assert.ok(approvalCsvCell(value).startsWith('"\''));
- assert.equal(approvalCsvCell('한글, name\n"note"'),'"한글, name\n""note"""');
- assert.equal(approvalCsvCell(0),'"0"');assert.equal(approvalCsvCell(null),'""');
+test('instructions require completed HTML returned privately to RaidARQN and no alternate export controls remain',()=>{
+ assert.match(approvalInstructionsText,/1\. Download the attached \.html/);
+ assert.match(approvalInstructionsText,/6\. Send the newly downloaded, completed \.html file to RaidARQN in a PRIVATE Discord direct message/);
+ const html=allianceApprovalHtml([player(1)],{}, {alliance:'WaE'});
+ assert.doesNotMatch(html,/id="save-csv"|id="print-form"|function csv\(/);
+ assert.match(html,/Private Discord DM to RaidARQN/);
+ assert.match(html,/HTML saved\. Send this newly downloaded file privately to RaidARQN on Discord/);
 });
 test('organization offers approval export, requires saving placements, and does not expose it in Sandbox',()=>{
  const players=[player(1)],options={groups:organizationGroups(players,players,{}),state:{},alliances:['WaE'],assignments:{},limits:{},seat:()=> 'White',editable:true};
  assert.match(organizationBoardMarkup(options),/data-org-export >Alliance approval form/);
+ assert.match(organizationBoardMarkup(options),/data-copy-approval-instructions>Copy instructions/);
  assert.match(organizationBoardMarkup({...options,dirty:true}),/data-org-export disabled/);
  assert.doesNotMatch(organizationBoardMarkup({...options,sandbox:true}),/data-org-export/);
 });
