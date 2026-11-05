@@ -1,3 +1,4 @@
+import {allianceTag} from './alliance-names.mjs?v=1';
 const seatColours=['Gold','Purple','Blue','White'];
 const clean=value=>String(value??'').replace(/[\r\n]+/g,' ').trim();
 const escape=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -18,7 +19,7 @@ export function awaitingAcceptanceGroups(records){
 
 export function outstandingGroupText(members){
  return members.filter(eligible).map(p=>{
-  const server=clean(p.server).replace(/^#+/,'')||'?',alliance=clean(p.alliance).replace(/^\[|\]$/g,'')||'Unknown';
+  const server=clean(p.server).replace(/^#+/,'')||'?',alliance=clean(allianceTag(p.alliance)).replace(/^\[|\]$/g,'')||'Unknown';
   return '#'+server+' ['+alliance+'] '+(clean(p.name)||'Unknown player')+' - '+confirmedSeat(p);
  }).join('\n');
 }
