@@ -48,10 +48,10 @@ export function sandboxForecast(players,capacities,scenario={}) {
     unconfirmed:counts.Unknown.accepted+counts.Unknown.tentative,
     nonApplicants:members.filter(p=>!sandboxCandidate(p)).length};
 }
-export function applySandboxCommand({previous,command,players,identity,role,now,assert=(ok,message)=>{if(!ok)throw Error(message);}}) {
+export function applySandboxCommand({previous,command,players,identity,role,now,organization={},assert=(ok,message)=>{if(!ok)throw Error(message);}}) {
   assert(['admin','lead'].includes(role),'Admin or lead access required.');
   assert(command&&typeof command==='object'&&!Array.isArray(command),'Invalid sandbox command.');
-  const allowed={member:['op','id','playerId','include'],create:['op','id','name'],rename:['op','id','name'],select:['op','id','groupKey','memberIds','include'],request:['op','id','groupKey','memberIds','playerId','requestId','reason'],review:['op','id','requestId','decision','reviewNote'],restore:['op','id','requestId']};
+  const allowed={plan:['op','id','selectedIds','assignments','limits'],member:['op','id','playerId','include'],create:['op','id','name'],rename:['op','id','name'],select:['op','id','groupKey','memberIds','include'],request:['op','id','groupKey','memberIds','playerId','requestId','reason'],review:['op','id','requestId','decision','reviewNote'],restore:['op','id','requestId']};
   assert(allowed[command.op]&&Object.keys(command).every(k=>allowed[command.op].includes(k)),'Sandbox commands cannot change live records.');
   assert(typeof command.id==='string'&&/^[a-zA-Z0-9-]{8,100}$/.test(command.id),'Invalid scenario identifier.');
   const data=JSON.parse(JSON.stringify(previous||{version:1,scenarios:[]}));
@@ -62,11 +62,25 @@ export function applySandboxCommand({previous,command,players,identity,role,now,
   if(command.op==='create'){
     assert(!scenario,'Scenario already exists. Refresh the sandbox.');
     assert(data.scenarios.length<30,'A maximum of 30 sandbox scenarios is supported.');
-    scenario={id:command.id,name:name(),selectedIds:[],exceptions:[],createdBy:actor,createdAt:now};data.scenarios.push(scenario);
+    scenario={id:command.id,name:name(),selectedIds:[],exceptions:[],createdBy:actor,createdAt:now,arrangement:JSON.parse(JSON.stringify({assignments:organization.assignments||{},limits:organization.limits||{}}))};data.scenarios.push(scenario);
   }else{
     assert(scenario,'Scenario no longer exists. Refresh the sandbox.');
     const groups=sandboxGroups(players,scenario);
-    if(command.op==='member'){
+    if(command.op==='plan'){
+      const homes=['NvSP','NvEM','WaE','DRoN','ECKO'];
+      assert(Array.isArray(command.selectedIds)&&command.selectedIds.length<=10000&&command.selectedIds.every(id=>typeof id==='string'),'Invalid sandbox players.');
+      const available=new Map(groups.flatMap(g=>g.members).filter(p=>!p.deleted&&!p.mergedInto&&p.transferDirection!=='outbound').map(p=>[String(p.id),p]));
+      assert(command.selectedIds.every(id=>available.has(id)),'Player is no longer available. Refresh the sandbox.');
+      const object=v=>v&&typeof v==='object'&&!Array.isArray(v);
+      assert(object(command.assignments)&&object(command.limits),'Invalid sandbox arrangement.');
+      scenario.selectedIds=[...new Set(command.selectedIds)].filter(id=>!sandboxAccepted(available.get(id)));scenario.selectionMode='individual';
+      const included=new Set(sandboxForecast(players,{},scenario).members.map(p=>String(p.id)));
+      assert(Object.entries(command.assignments).every(([id,home])=>included.has(id)&&typeof home==='string'&&(home===''||homes.includes(home))),'Choose an included player and a valid destination alliance.');
+      assert(Object.entries(command.limits).every(([home,n])=>homes.includes(home)&&(n===null||Number.isSafeInteger(n)&&n>=0&&n<=10000)),'Incoming limits must be whole numbers from 0 to 10000.');
+      // Hypothetical overflow is intentional. This never writes transferOrganization.
+      scenario.arrangement={assignments:{...command.assignments},limits:{...command.limits}};
+    }
+    else if(command.op==='member'){
       assert(typeof command.playerId==='string'&&typeof command.include==='boolean','Choose a player and whether to include them.');
       const p=groups.flatMap(g=>g.members).find(p=>String(p.id)===command.playerId);
       assert(p&&!p.deleted&&p.transferDirection!=='outbound','Player is no longer available. Refresh the sandbox.');
