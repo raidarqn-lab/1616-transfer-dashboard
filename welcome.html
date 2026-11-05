@@ -1,0 +1,8 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="referrer" content="no-referrer"><title>1616 · Alliance Welcome</title><link rel="stylesheet" href="./alliance-welcome.css?v=1"><style>body{margin:0;background:#f5f7f6}</style></head><body><main id="welcome" class="welcome-app"></main><script type="module">
+import {mountWelcome} from './alliance-welcome-app.mjs?v=1';
+import {bountyConnection} from './nova-bounty-config.js';
+const raw=new URLSearchParams(location.search).get('alliance'),alliance=raw==='BaDa'?'NvEM':raw;
+const root=document.getElementById('welcome');
+if(!['NvSP','NvEM','WaE','WaE2','B14K','DRoN','ECKO'].includes(alliance)){root.innerHTML='<div class="welcome-login"><h1>Alliance Welcome</h1><p>Open the alliance-specific link shared by RaidARQN.</p></div>';}
+else mountWelcome(root,{alliance,endpoint:bountyConnection.endpoint.replace('/nova-bounty','/alliance-welcome'),key:bountyConnection.anonKey,styleURL:new URL('./alliance-welcome.css',location.href).href});
+</script></body></html>
