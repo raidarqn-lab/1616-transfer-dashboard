@@ -260,7 +260,7 @@ function applySandboxCommand({previous,command,players,identity,role,now,organiz
     assert(scenario,'Scenario no longer exists. Refresh the sandbox.');
     const groups=sandboxGroups(players,scenario);
     if(command.op==='plan'){
-      const homes=['NvSP','NvEM','WaE','DRoN','ECKO'];
+      const homes=['NvSP','NvEM','WaE','WaE2','B14K','DRoN','ECKO'];
       assert(Array.isArray(command.selectedIds)&&command.selectedIds.length<=10000&&command.selectedIds.every(id=>typeof id==='string'),'Invalid sandbox players.');
       const available=new Map(groups.flatMap(g=>g.members).filter(p=>!p.deleted&&!p.mergedInto&&p.transferDirection!=='outbound').map(p=>[String(p.id),p]));
       assert(command.selectedIds.every(id=>available.has(id)),'Player is no longer available. Refresh the sandbox.');
@@ -416,7 +416,7 @@ function snapshotFor(state,identity,role,sinceRevision){
 }
 const photo=url=>!url||/^https:\/\/(lh3\.googleusercontent\.com|lastwar-cdn\.akamaized\.net)\//.test(url)||/^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/.test(url);
 function validateOrganization(value,state){
- const homes=['NvSP','NvEM','WaE','DRoN','ECKO'],d=value.data,previous=state.shared.transferOrganization?.data||{};
+ const homes=['NvSP','NvEM','WaE','WaE2','B14K','DRoN','ECKO'],d=value.data,previous=state.shared.transferOrganization?.data||{};
  const record=x=>x&&typeof x==='object'&&!Array.isArray(x);
  assert(record(d),'Invalid transfer organization.');
  // Group membership is independent of approved-applicant alliance placement.

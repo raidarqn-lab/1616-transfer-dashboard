@@ -1,5 +1,5 @@
 const statuses=['Pending','Under Review','Approved','Accepted','Waitlisted','Declined','Withdrawn','Transferred'];
-const alliances=['NvSP','NvEM','WaE','DRoN','ECKO'];
+const alliances=['NvSP','NvEM','WaE','WaE2','B14K','DRoN','ECKO'];
 const seats=['Gold','Purple','Blue','White'];
 const reasons=['no_seat','low_kills','low_profession','low_hq','low_participation','low_power','group_full','conflict','not_specified','other','requirements','placement','information'];
 export const rejectionFallback={no_seat:'No suitable seat available',requirements:'Transfer requirements not met',placement:'Alliance/group placement unavailable',information:'Application information incomplete or unverified'};

@@ -2,13 +2,13 @@ import {allianceTag} from './alliance-names.mjs?v=1';
 import {organizationGroups,organizationBoardMarkup,bindOrganizationBoard,organizationGroupStyles} from './organization-groups.mjs?v=5';
 import {sandboxDraft,sandboxPlanCommand} from './seat-sandbox-plan.mjs?v=1';
 import {leadershipRosterHtml} from './seat-sandbox-export.mjs?v=8';
-import {SANDBOX_COLOURS,sandboxAccepted,sandboxSeat,sandboxForecast} from './seat-sandbox-core.mjs?v=8';
+import {SANDBOX_COLOURS,sandboxAccepted,sandboxSeat,sandboxForecast} from './seat-sandbox-core.mjs?v=9';
 
 export function installSeatSandbox(api){
  const {root,host,esc}=api,t=s=>api.t(s),tr=s=>esc(t(s));
  let activeId='',search='',busy=false,message='',error=false,dragId='',returnFocus=null,rosterOpen=false;
  const drafts=new Map(),focus={player:null,group:'',view:'players',only:false,settingsOpen:false};
- const alliances=['NvSP','NvEM','WaE','DRoN','ECKO'];
+ const alliances=['NvSP','NvEM','WaE','WaE2','B14K','DRoN','ECKO'];
  const style=document.createElement('style');style.textContent=organizationGroupStyles;root.append(style);
  const draft=()=>{const scenario=current(),key=scenario?.id||'';if(!drafts.has(key))drafts.set(key,sandboxDraft(scenario,api.players(),api.organization?.()||{},api.record()._rev||0));return drafts.get(key);};
  const changed=()=>{draft().dirty=true;message=t('Unsaved sandbox changes');error=false;render();};

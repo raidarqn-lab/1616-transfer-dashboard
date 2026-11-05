@@ -4,7 +4,7 @@ import {sandboxGroupKey,sandboxSeat} from './seat-sandbox-core.mjs?v=8';
 const esc=value=>String(value??'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;');
 const numeric=value=>value==null||value===''||typeof value==='boolean'||!Number.isFinite(Number(value))?null:Number(value);
 const text=value=>String(value??'');
-export const APPROVAL_ALLIANCES=['NvSP','NvEM','WaE','DRoN','ECKO'];
+export const APPROVAL_ALLIANCES=['NvSP','NvEM','WaE','WaE2','B14K','DRoN','ECKO'];
 export const APPROVAL_INSTRUCTION_STEPS=[
  'Download the attached .html form and open it in Chrome or Edge, preferably on a computer. No portal login is needed.',
  'Enter your name and review date.',
