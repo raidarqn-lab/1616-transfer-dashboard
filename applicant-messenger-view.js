@@ -2,7 +2,7 @@ import {allianceTag} from './alliance-names.mjs?v=1';
 import {supportCopy,canWithdraw} from './support-applicant-actions.js?v=1';
 import {messengerFilterCopy,applicantMatchesFilters} from './applicant-messenger-filters.js?v=2';
 import {seatCopy} from './seat-confirmations-i18n.js?v=1';
-import {directoryRow} from './applicant-messenger-details.js?v=3';
+import {directoryRow} from './applicant-messenger-details.js?v=4';
 import {languageNames,messengerCopy,formatCopy,preferredLanguage,localizedApplicantMessage,applicantMessageLanguage,applicantLanguageLabel} from './applicant-messenger-i18n.js?v=3';
 export const searchName=value=>String(value||'').normalize('NFKD').replace(/\p{M}/gu,'').toLocaleLowerCase().trim();
 export function matchingApplicants(applicants,query,filters={}){const needle=searchName(query);return applicants.filter(p=>searchName(p.name).includes(needle)&&applicantMatchesFilters(p,filters));}
