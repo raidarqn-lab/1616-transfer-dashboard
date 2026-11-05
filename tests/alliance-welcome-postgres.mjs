@@ -1,0 +1,53 @@
+import fs from 'node:fs/promises';import assert from 'node:assert/strict';
+const {PGlite}=await import(process.env.PGLITE_MODULE||'@electric-sql/pglite');const db=new PGlite();
+try{
+ await db.exec(`create role anon;create role authenticated;create role service_role;create schema transfer_private;create schema extensions;
+ create table transfer_private.portal_control(singleton boolean primary key,admin_email text,revision bigint);
+ create table transfer_private.portal_records(kind text,key text,payload jsonb,revision bigint,primary key(kind,key));
+ insert into transfer_private.portal_control values(true,'owner@test.invalid',1);
+ create function extensions.digest(t text,a text) returns bytea language sql as $$select sha256(convert_to(t,'UTF8'))$$;
+ create function extensions.gen_random_bytes(n int) returns bytea language sql as $$select decode(replace(gen_random_uuid()::text,'-','')||replace(gen_random_uuid()::text,'-',''),'hex')$$;
+ create function public.transfer_portal_commit(actor_email text,expected_revision bigint,transaction_id text,changes jsonb) returns jsonb language plpgsql as $$declare c jsonb;begin
+ if transaction_id !~ '^[a-zA-Z0-9-]{8,100}$' then raise exception 'Invalid transaction';end if;
+ if expected_revision<>(select revision from transfer_private.portal_control) then return '{"retry":true}';end if;
+ for c in select value from jsonb_array_elements(changes) loop update transfer_private.portal_records set payload=c->'value',revision=expected_revision+1 where kind=c->>'kind' and key=c->>'key';end loop;
+ update transfer_private.portal_control set revision=revision+1;return '{"ok":true}';end$$;`);
+ const sql=await fs.readFile(new URL('../backend/alliance-welcome.sql',import.meta.url),'utf8');await db.exec(sql);await db.exec(sql);
+ const call=async(action,args)=>(await db.query('select public.transfer_welcome($1,$2) data',[action,JSON.stringify(args)])).rows[0].data;
+ const owner={actor:'owner@test.invalid'},one='11111111-1111-4111-8111-111111111111',two='22222222-2222-4222-8222-222222222222';
+ assert.equal((await call('admin.list',{actor:'bad@test.invalid'})).error,'access_denied');
+ assert.equal((await call('admin.list',owner)).pages.length,7);
+ for(const alliance of ['WaE','WaE2'])assert.equal((await call('admin.password',{...owner,alliance,hash:'a'.repeat(64),salt:'b'.repeat(64)})).ok,true);
+ const token=(await call('login.finish',{alliance:'WaE',version:1})).token,scope={alliance:'WaE',token};
+ assert.equal((await call('read',{...scope,alliance:'WaE2'})).error,'invalid_session');
+ const base={name:'One',server:'1607',alliance:'AsTr',group:'Group',status:'Accepted',hqLevel:35,profession:100,kills:9000000,power:132,confirmedSeat:'Blue',contact:'SECRET',rawApplication:{confirmationCode:'SECRET'},history:[{text:'SECRET'}]};
+ for(const [key,patch] of [['one',{}],['other',{}],['pending',{status:'Pending'}],['withdrawn',{status:'Withdrawn'}],['deleted',{deleted:true}],['general',{general:true}],['prospect',{prospect:true}],['merged',{mergedInto:'one'}],['outbound',{transferDirection:'outbound'}]])await db.query('insert into transfer_private.portal_records values($1,$2,$3,1)',['players',key,JSON.stringify({...base,...patch})]);
+ await db.query('insert into transfer_private.portal_records values($1,$2,$3,1)',['shared','transferOrganization',JSON.stringify({data:{assignments:{one:'WaE',other:'WaE2',pending:'WaE',withdrawn:'WaE',deleted:'WaE',general:'WaE',prospect:'WaE',merged:'WaE',outbound:'WaE'}}})]);
+ let page=await call('read',scope);assert.equal(page.players.length,1);assert.equal(page.players[0].id,'one');assert(!JSON.stringify(page).includes('SECRET'));assert(!JSON.stringify(page).includes('password'));
+ const leaders=[{id:one,name:'Yaba'},{id:two,name:'Luna'}];
+ assert.equal((await call('save',{...scope,revision:0,message:'Hi {player}',leaders})).ok,true);
+ assert.equal((await call('save',{...scope,revision:0,message:'Different',leaders})).error,'message_changed');
+ assert.equal((await call('save',{...scope,revision:0,message:'Hi {player}',leaders})).ok,true);
+ assert.equal((await call('save',{...scope,revision:1,message:'Hi',leaders:[leaders[0],leaders[0]]})).error,'invalid_leaders');
+ assert.equal((await call('contact',{...scope,playerId:'one',leaderId:'bad',status:'claimed',revision:0})).error,'invalid_contact');
+ assert.equal((await call('contact',{...scope,playerId:'other',leaderId:one,status:'claimed',revision:0})).error,'player_unavailable');
+ assert.equal((await call('contact',{...scope,playerId:'one',leaderId:one,status:'claimed',revision:0})).outreach.name,'Yaba');
+ assert.equal((await call('contact',{...scope,playerId:'one',leaderId:two,status:'claimed',revision:0})).error,'contact_changed');
+ assert.equal((await call('contact',{...scope,playerId:'one',leaderId:one,status:'completed',revision:1})).outreach.status,'completed');
+ const note={...scope,playerId:'one',leaderId:two,note:'Please coordinate arrival with Luna.',noteId:one};
+ assert.equal((await call('note',note)).ok,true);assert.equal((await call('note',note)).ok,true);
+ const saved=(await db.query("select payload from transfer_private.portal_records where key='one'")).rows[0].payload;
+ assert.equal(saved.history.length,2);assert.equal(saved.history[0].by,'Luna · WaE R4');assert.match(saved.history[0].text,/^Conversation \/ note: \[WaE · R4 Luna\]/);assert.equal(saved.history[1].text,'SECRET');assert.equal(saved.status,'Accepted');
+ page=await call('read',scope);assert.equal(page.players[0].notes.length,1);assert.equal(page.players[0].notes[0].by,'Luna');assert(!JSON.stringify(page).includes('SECRET'));
+ assert.equal((await call('note',{...note,playerId:'other'})).error,'player_unavailable');
+ // Assignment changes invalidate all later contacts and notes; history remains.
+ await db.exec(`update transfer_private.portal_records set payload=jsonb_set(payload,'{data,assignments,one}','"WaE2"') where key='transferOrganization'`);
+ assert.equal((await call('read',scope)).players.length,0);assert.equal((await call('note',note)).error,'player_unavailable');
+ await call('admin.password',{...owner,alliance:'WaE',hash:'c'.repeat(64),salt:'d'.repeat(64)});assert.equal((await call('read',scope)).error,'invalid_session');
+ assert.equal((await call('login.finish',{alliance:'WaE',version:1})).error,'invalid_session');
+ const next=(await call('login.finish',{alliance:'WaE',version:2})).token;await call('admin.disable',{...owner,alliance:'WaE'});assert.equal((await call('read',{alliance:'WaE',token:next})).error,'invalid_session');
+ for(let i=0;i<31;i++)page=await call('login.begin',{alliance:'WaE',ip:'test'});assert.equal(page.error,'try_later');
+ for(const role of ['anon','authenticated'])assert.equal((await db.query("select has_function_privilege($1,'public.transfer_welcome(text,jsonb)','EXECUTE') allowed",[role])).rows[0].allowed,false);
+ assert.equal((await db.query("select has_function_privilege('service_role','public.transfer_welcome(text,jsonb)','EXECUTE') allowed")).rows[0].allowed,true);
+ console.log('Welcome database: scoped access, projection privacy, stale saves and claims, R4 attribution, note idempotency, password rotation, revocation and grants passed.');
+}finally{await db.close();}
