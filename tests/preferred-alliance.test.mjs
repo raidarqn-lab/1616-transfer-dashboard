@@ -1,9 +1,10 @@
+import {allianceTag,allianceLabel} from '../alliance-names.mjs';
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import vm from 'node:vm';
 const html=readFileSync(new URL('../live.html',import.meta.url),'utf8');
-const c=vm.createContext({});
+const c=vm.createContext({allianceTag,allianceLabel,});
 for(const [a,b] of [['function preferredAllianceValue(', 'function groupTotals('],['function parseRuleNumber(', 'const filterTrees='],['function orderedColumns(', 'function installColumnOrder(']])vm.runInContext(html.slice(html.indexOf(a),html.indexOf(b)),c);
 test('alliance tags are consistent across submitted formats; a cleared preference stays empty',()=>{
  for(const value of ['[NvSP] Nova Sapphire','nvsp','NvSP'])assert.equal(c.preferredAllianceValue({preference:value}),'NvSP');
@@ -23,4 +24,12 @@ test('old layouts gain preferred alliance beside team and retain pinned edit; cu
  const fresh=Array.from(c.orderedColumns(old,19));assert.equal(fresh[fresh.indexOf(3)+1],17);assert.equal(fresh.at(-1),18);assert.equal(new Set(fresh).size,19);
  assert.deepEqual(fresh.filter(x=>x!==17&&x!==18),old.filter(x=>x!==17));
  const custom=[17,...fresh.filter(x=>x!==17)];assert.deepEqual(Array.from(c.orderedColumns(custom,19)),custom);
+});
+
+test('old and new alliance names share filters and grouping',()=>{
+ for(const preference of ['[NvEM] Nova Emerald','[BaDa] BadaBingBadaBoom','NvEM','BaDa']){
+  const player={preference};assert.equal(c.preferredAllianceValue(player),'BaDa');
+  assert.equal(c.testPlayerRule(player,{field:'preference',op:'eq',value:'NvEM'}),true);
+  assert.equal(c.testPlayerRule(player,{field:'preference',op:'eq',value:'BaDa'}),true);
+ }
 });

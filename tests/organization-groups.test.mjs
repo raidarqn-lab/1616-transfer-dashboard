@@ -1,3 +1,4 @@
+import {allianceTag,allianceLabel} from '../alliance-names.mjs';
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
@@ -78,7 +79,7 @@ test('view controls only change local presentation, and player focus restores ke
 });
 const html=readFileSync(new URL('../live.html',import.meta.url),'utf8');
 test('saving a filtered board still preserves assignments and capacity checks for every eligible player',async()=>{
- let saved;const c=vm.createContext({organizationEditable:()=>true,organizationSaving:false,organizationPlayers:()=>eligible,organizationDraft:{assignments:{...assignments},limits:{WaE:1}},organizationAlliances:['NvSP','NvEM','WaE'],organizationMessage:'',renderOrganization(){},liveFlush:async()=>{},liveFailed:false,liveSaving:false,organizationSaved:{_rev:1,data:{groupLeads:{'team a':1}}},organizationDirty:true,organizationGroupState:{...state(),mode:'filter'},crypto:{randomUUID:()=> 'test'},LIVE:{api:async(_,body)=>{saved=body;return {events:[{key:'transferOrganization',value:{_rev:2,...body.changes[0].value}}]};}}});
+ let saved;const c=vm.createContext({allianceTag,allianceLabel,organizationEditable:()=>true,organizationSaving:false,organizationPlayers:()=>eligible,organizationDraft:{assignments:{...assignments},limits:{WaE:1}},organizationAlliances:['NvSP','NvEM','WaE'],organizationMessage:'',renderOrganization(){},liveFlush:async()=>{},liveFailed:false,liveSaving:false,organizationSaved:{_rev:1,data:{groupLeads:{'team a':1}}},organizationDirty:true,organizationGroupState:{...state(),mode:'filter'},crypto:{randomUUID:()=> 'test'},LIVE:{api:async(_,body)=>{saved=body;return {events:[{key:'transferOrganization',value:{_rev:2,...body.changes[0].value}}]};}}});
  vm.runInContext(html.slice(html.indexOf('async function saveOrganization()'),html.indexOf('const organizationOriginalRender=')),c);
  await c.saveOrganization();assert.equal(saved,undefined);assert.match(c.organizationMessage,/incoming limit for WaE/);
  c.organizationDraft.limits.WaE=5;await c.saveOrganization();assert.equal(Object.keys(saved.changes[0].value.data.assignments).length,eligible.length);assert.equal(saved.changes[0].value.data.assignments[5],'WaE');assert.equal(saved.changes[0].value.data.groupLeads['team a'],1);

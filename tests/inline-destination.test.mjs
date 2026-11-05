@@ -1,3 +1,4 @@
+import {allianceTag,allianceLabel} from '../alliance-names.mjs';
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
@@ -6,7 +7,7 @@ const html=readFileSync(new URL('../live.html',import.meta.url),'utf8');
 const source=html.slice(html.indexOf('function inlineDestinationCell('),html.indexOf("root.addEventListener('change',e=>{const el=e.target.closest('[data-inline-destination]')"));
 function setup(overrides={}){
  const players=[{id:1,name:'First',status:'Approved',alliance:'Old',preference:'WaE'},{id:2,name:'Second',status:'Approved'},{id:3,name:'Pending',status:'Pending'}],calls=[];
- const c=vm.createContext({players,organizationSaved:{_rev:7,data:{assignments:{1:'NvSP',2:'WaE'},limits:{},groupLeads:{team:1}}},organizationSaving:false,organizationDirty:false,organizationDraft:null,destinationNotices:new Map(),organizationEditable:()=>true,organizationAlliances:['NvSP','NvEM','WaE','DRoN','ECKO'],organizationPlayers:()=>players.filter(p=>['Approved','Accepted'].includes(p.status)&&!p.deleted&&!p.general&&!p.prospect),translateInterfaceText:s=>s,esc:s=>String(s).replaceAll('"','&quot;').replaceAll('<','&lt;'),render(){},liveFlush:async()=>{},liveFailed:false,liveSaving:false,crypto:{randomUUID:()=> 'transaction-test'},LIVE:{api:async(name,payload)=>{calls.push(payload);return {events:[{kind:'shared',key:'transferOrganization',value:{_rev:8,...payload.changes[0].value}}]};}},...overrides});
+ const c=vm.createContext({allianceTag,allianceLabel,players,organizationSaved:{_rev:7,data:{assignments:{1:'NvSP',2:'WaE'},limits:{},groupLeads:{team:1}}},organizationSaving:false,organizationDirty:false,organizationDraft:null,destinationNotices:new Map(),organizationEditable:()=>true,organizationAlliances:['NvSP','NvEM','WaE','DRoN','ECKO'],organizationPlayers:()=>players.filter(p=>['Approved','Accepted'].includes(p.status)&&!p.deleted&&!p.general&&!p.prospect),translateInterfaceText:s=>s,esc:s=>String(s).replaceAll('"','&quot;').replaceAll('<','&lt;'),render(){},liveFlush:async()=>{},liveFailed:false,liveSaving:false,crypto:{randomUUID:()=> 'transaction-test'},LIVE:{api:async(name,payload)=>{calls.push(payload);return {events:[{kind:'shared',key:'transferOrganization',value:{_rev:8,...payload.changes[0].value}}]};}},...overrides});
  vm.runInContext(source,c);
  return {c,players,calls,change:(target,id='1')=>c.changeInlineDestination({dataset:{inlineDestination:id},value:target})};
 }
@@ -28,7 +29,7 @@ test('pending is disabled and support sees a label instead of a control',()=>{
  const {c,players}=setup();assert.match(c.inlineDestinationCell(players[2]),/disabled/);assert.match(c.inlineDestinationCell(players[2]),/Approve first/);c.organizationEditable=()=>false;assert.doesNotMatch(c.inlineDestinationCell(players[0]),/<select/);
 });
 test('destination appears beside transfer group; existing column identities and custom new layout survive',()=>{
- const c=vm.createContext({});vm.runInContext(html.slice(html.indexOf('function orderedColumns('),html.indexOf('function installColumnOrder(')),c);
+ const c=vm.createContext({allianceTag,allianceLabel,});vm.runInContext(html.slice(html.indexOf('function orderedColumns('),html.indexOf('function installColumnOrder(')),c);
  const old=[0,14,1,2,15,3,4,5,6,7,8,9,10,11,12,13,16];const order=Array.from(c.orderedColumns(old,18));assert.equal(order[order.indexOf(3)+1],16);assert.equal(order.at(-1),17);assert.equal(new Set(order).size,18);const custom=[16,...order.filter(i=>i!==16)];assert.deepEqual(Array.from(c.orderedColumns(custom,18)),custom);
 });
 test('all inline scripts compile',()=>{for(const match of html.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/gi)){if(match[1].trim())new vm.Script(match[1]);}});

@@ -1,9 +1,10 @@
+import {allianceTag} from '../alliance-names.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import vm from 'node:vm';
 const html=readFileSync(new URL('../live.html',import.meta.url),'utf8');
-const context=vm.createContext({esc:value=>String(value).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;')});
+const context=vm.createContext({allianceTag,esc:value=>String(value).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;')});
 vm.runInContext(html.slice(html.indexOf('function matchesApplicantStatus('),html.indexOf('function closeOverviewSeatRosters(')),context);
 const count=(records,status)=>JSON.parse(JSON.stringify(context.overviewSeatStatusCounts(records,status)));
 test('approved overview includes accepted applicants with confirmed colours only',()=>{
@@ -51,7 +52,7 @@ test('hover opens an accessible list; leave closes it, while clicks pin it and E
  button.closest=s=>s==='.overview-seat-roster'?wrapper:s==='.overview-seat-count'?button:null;
  const root={querySelectorAll:()=>[wrapper],addEventListener:(type,fn)=>handlers[type]=fn};
  const document={activeElement:null,addEventListener:(type,fn)=>handlers['document:'+type]=fn};
- const c=vm.createContext({root,document,window:{innerWidth:360,innerHeight:800,addEventListener(){}},setTimeout:fn=>{timers.set(++timerId,fn);return timerId;},clearTimeout:id=>timers.delete(id)});
+ const c=vm.createContext({allianceTag,root,document,window:{innerWidth:360,innerHeight:800,addEventListener(){}},setTimeout:fn=>{timers.set(++timerId,fn);return timerId;},clearTimeout:id=>timers.delete(id)});
  vm.runInContext(html.slice(html.indexOf('function closeOverviewSeatRosters('),html.indexOf('function renderOverviewStatusSeats(')),c);
  handlers.pointerover({target:button,relatedTarget:null});assert.equal(panel.hidden,false);assert.equal(button.attributes['aria-expanded'],'true');assert.equal(panel.style.left,'12px');
  handlers.pointerout({target:button,relatedTarget:null});for(const fn of timers.values())fn();assert.equal(panel.hidden,true);
@@ -84,7 +85,7 @@ test('colour counts use the configured capacity in both summaries and update whe
  test('seat summary is excluded from interactive roster table controls',()=>{
  const summary={dataset:{},closest:selector=>selector==='[data-applicants-seat-summary]',querySelectorAll:()=>{throw new Error('Seat summary must not receive table controls');}};
  const root={querySelectorAll:selector=>selector==='table'?[summary]:[]};
- const c=vm.createContext({root});
+ const c=vm.createContext({allianceTag,root});
  vm.runInContext(html.slice(html.indexOf('function enableTableControls('),html.indexOf('const followupPanel='))+';enableTableControls();',c);
  assert.equal(summary.dataset.controlsReady,undefined);
 });

@@ -1,3 +1,4 @@
+import {allianceTag} from './alliance-names.mjs?v=1';
 import {supportCopy,canWithdraw} from './support-applicant-actions.js?v=1';
 import {messengerFilterCopy,applicantMatchesFilters} from './applicant-messenger-filters.js?v=2';
 import {seatCopy} from './seat-confirmations-i18n.js?v=1';
@@ -28,7 +29,7 @@ export function mountApplicantMessenger({root,load,signOut,withdraw,clipboard=na
    else{const hint=document.createElement('span');hint.className='unavailable';hint.textContent=t.unavailable;heading.append(hint);}
    if(withdraw&&canWithdraw(p)){const button=document.createElement('button');button.type='button';button.textContent=t.withdraw;button.setAttribute('aria-label',t.withdraw+' · '+p.name);button.disabled=copying;button.onclick=()=>withdrawPlayer(p);heading.append(button);}
    const facts=document.createElement('dl');facts.className='applicant-facts';
-   for(const [label,value] of [[t.language,applicantLanguageLabel(p.applicationLanguage)],[t.server,p.server||t.noServer],[t.currentAlliance,p.currentAlliance||t.noServer],[t.group,p.transferGroup||t.noGroup],[t.anticipatedSeat,a.statuses[p.anticipatedSeat]||a.statuses.Unconfirmed],[a.alliance,p.destinationAlliance||a.unselected],[a.seat,a.statuses[p.confirmedSeat]||a.unconfirmed]]){
+   for(const [label,value] of [[t.language,applicantLanguageLabel(p.applicationLanguage)],[t.server,p.server||t.noServer],[t.currentAlliance,allianceTag(p.currentAlliance)||t.noServer],[t.group,p.transferGroup||t.noGroup],[t.anticipatedSeat,a.statuses[p.anticipatedSeat]||a.statuses.Unconfirmed],[a.alliance,allianceTag(p.destinationAlliance)||a.unselected],[a.seat,a.statuses[p.confirmedSeat]||a.unconfirmed]]){
     const box=document.createElement('div'),term=document.createElement('dt'),detail=document.createElement('dd');term.textContent=label;detail.textContent=value;detail.dir='auto';if(label===t.anticipatedSeat&&p.anticipatedSeat){detail.className='seat-colour';detail.dataset.colour=p.anticipatedSeat;}if(label===a.seat&&p.confirmedSeat){detail.className='seat-colour';detail.dataset.colour=p.confirmedSeat;}box.append(term,detail);facts.append(box);
    }row.append(facts);
    if(p.status==='Declined'){const reason=document.createElement('section'),label=document.createElement('strong'),text=document.createElement('p');reason.className='applicant-rejection';label.textContent=a.reason;text.textContent=p.rejectionReasonText?.trim()||a.reasons[p.rejectionReasonCode]||a.noReason;text.dir='auto';reason.append(label,text);row.append(reason);}
