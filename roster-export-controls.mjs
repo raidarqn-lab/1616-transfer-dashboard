@@ -1,17 +1,18 @@
 // Serialized into the standalone HTML; no imports, network calls, or portal state.
-export function installRosterControls(){
+export function installRosterControls(initialState=null){
  const form=document.querySelector('#roster-controls'),table=document.querySelector('table'),count=document.querySelector('#roster-count'),summary=document.querySelector('#view-summary');
  const rows=[...table.querySelectorAll('tr[data-player]')],columnCount=table.querySelectorAll('thead th').length;
+ let visibleRows=rows;
  const norm=v=>String(v||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLocaleLowerCase();
- const fields={group:'Transfer group',status:'Status',seat:'Seat colour',server:'Server',alliance:'Alliance'};
+ const fields={group:'Transfer group',status:'Status',seat:'Seat colour',server:'Server',alliance:'Current alliance',destination:'Destination alliance'};
  const numeric={power:'THP (millions)',kills:'Kills',hq:'HQ level',profession:'Profession level'};
  const make=(tag,text)=>{const e=document.createElement(tag);if(text!==undefined)e.textContent=text;return e;};
  function label(text,control){const l=make('label',text);l.append(control);form.append(l);return control;}
  function select(name,title,options){const el=make('select');el.name=name;for(const [value,text] of options){const o=make('option',text);o.value=value;el.append(o);}return label(title,el);}
  const search=make('input');search.name='search';search.type='search';search.placeholder='Name, group, server, alliance…';label('Search',search);
  for(const [key,title] of Object.entries(fields))select(key,title,[['','All'],...[...new Set(rows.map(r=>r.dataset[key]))].sort((a,b)=>a.localeCompare(b,undefined,{numeric:true,sensitivity:'base'})).map(v=>[v,v])]);
- select('groupBy','Group by',[['group','Transfer group'],['server','Server'],['alliance','Alliance'],['seat','Seat colour'],['status','Status'],['','No grouping']]);
- select('sort','Sort by',[['name','Player'],['power','THP'],['kills','Kills'],['hq','HQ'],['profession','Profession level'],['server','Server'],['alliance','Alliance'],['seat','Seat'],['status','Status']]);
+ select('groupBy','Group by',[['group','Transfer group'],['server','Server'],['alliance','Current alliance'],['destination','Destination alliance'],['seat','Seat colour'],['status','Status'],['','No grouping']]);
+ select('sort','Sort by',[['name','Player'],['power','THP'],['kills','Kills'],['hq','HQ'],['profession','Profession level'],['server','Server'],['alliance','Current alliance'],['destination','Destination alliance'],['seat','Seat'],['status','Status']]);
  select('direction','Order',[['asc','Ascending'],['desc','Descending']]);
  const ranges=make('details'),rangeTitle=make('summary','Numeric filters');ranges.append(rangeTitle);const grid=make('div');grid.className='range-grid';ranges.append(grid);form.append(ranges);
  for(const [key,title] of Object.entries(numeric))for(const bound of ['min','max']){const l=make('label',title+' '+bound),input=make('input');input.type='number';input.min='0';input.step='any';input.name=key+'_'+bound;input.placeholder='Any';l.append(input);grid.append(l);}
@@ -26,6 +27,7 @@ export function installRosterControls(){
    for(const key of Object.keys(numeric)){const lo=value(key+'_min'),hi=value(key+'_max');if(lo!==''||hi!==''){if(d[key]===''||!Number.isFinite(Number(d[key])))return false;const n=Number(d[key]);if(lo!==''&&n<Number(lo)||hi!==''&&n>Number(hi))return false;}}
    return true;
   });
+  visibleRows=filtered;
   filtered.sort((a,b)=>{const av=a.dataset[sort],bv=b.dataset[sort];if(sort in numeric){if(av===''||bv==='')return av===''?(bv===''?0:1):-1;return (Number(av)-Number(bv))*dir||a.dataset.name.localeCompare(b.dataset.name);}return av.localeCompare(bv,undefined,{numeric:true,sensitivity:'base'})*dir||a.dataset.name.localeCompare(b.dataset.name);});
   table.querySelectorAll('tbody').forEach(e=>e.remove());const groups=new Map();
   for(const r of filtered){const name=groupBy?r.dataset[groupBy]:'';if(!groups.has(name))groups.set(name,[]);groups.get(name).push(r);}
@@ -36,5 +38,6 @@ export function installRosterControls(){
   summary.textContent=(filters.length?filters.join(' | '):'All applicants')+' · Grouped by '+(fields[groupBy]||'none')+' · Sorted by '+form.elements.namedItem('sort').selectedOptions[0].textContent+' ('+value('direction')+')';
  }
  form.oninput=render;form.onchange=render;form.onsubmit=e=>e.preventDefault();form.onreset=()=>setTimeout(render,0);render();
- return {getState:()=>({values:Object.fromEntries(new FormData(form)),expanded:ranges.open}),setState:state=>{for(const [name,value] of Object.entries(state?.values||{})){const control=form.elements.namedItem(name);if(!control)continue;if(control.tagName==='SELECT'&&value&&!Array.from(control.options).some(o=>o.value===value)){const option=make('option',value);option.value=value;control.append(option);}control.value=value;}ranges.open=!!state?.expanded;render();}};
+ const controller={getVisibleIndices:()=>visibleRows.map(row=>Number(row.dataset.index)),getState:()=>({values:Object.fromEntries(new FormData(form)),expanded:ranges.open}),setState:state=>{for(const [name,value] of Object.entries(state?.values||{})){const control=form.elements.namedItem(name);if(!control)continue;if(control.tagName==='SELECT'&&value&&!Array.from(control.options).some(o=>o.value===value)){const option=make('option',value);option.value=value;control.append(option);}control.value=value;}ranges.open=!!state?.expanded;render();}};
+ controller.setState(initialState);return controller;
 }

@@ -2,7 +2,7 @@ import {playerAltBadge} from './player-alt.mjs?v=1';
 import {allianceTag} from './alliance-names.mjs?v=1';
 import {organizationGroups,organizationBoardMarkup,bindOrganizationBoard,organizationGroupStyles} from './organization-groups.mjs?v=alt-20261105';
 import {sandboxDraft,sandboxPlanCommand} from './seat-sandbox-plan.mjs?v=1';
-import {leadershipRosterHtml} from './seat-sandbox-export.mjs?v=alt-20261105';
+import {leadershipRosterHtml} from './seat-sandbox-export.mjs?v=accepted-20261106';
 import {SANDBOX_COLOURS,sandboxAccepted,sandboxSeat,sandboxForecast} from './seat-sandbox-core.mjs?v=9';
 
 export function installSeatSandbox(api){
@@ -39,13 +39,13 @@ export function installSeatSandbox(api){
  function exportRoster({allApplicantsOnly=false}={}){
   returnFocus=document.activeElement;
   dialog.classList.add('sandbox-export-dialog');
-  dialog.innerHTML=`<header><h2>Leadership export</h2><button type="button" data-close aria-label="${tr('Close')}">×</button></header><label>Include<select data-export-scope><option value="all">All applicants</option>${!allApplicantsOnly&&current()?'<option value="selected">Selected players in this scenario</option>':''}</select></label><p>Search, filter, sort, and group the navy-and-white roster. Download HTML to share an interactive offline copy. Print / Save PDF prints the current filtered view.</p><footer><button type="button" data-download-roster>Download HTML</button><button type="button" class="primary" data-print-roster>Print / Save PDF</button></footer><iframe title="Leadership roster preview"></iframe>`;
-  let html='';
-  const update=()=>{const selected=dialog.querySelector('[data-export-scope]').value==='selected',scenario=current();const players=selected?sandboxForecast(api.players(),api.capacities(),draft().scenario).members:api.players().filter(p=>!p.deleted&&!p.general&&!p.prospect);html=leadershipRosterHtml(players,{locale:api.locale(),subtitle:selected?'Sandbox scenario: '+scenario.name+' · Selected players · Not final approvals':'All applicants · All statuses · Alphabetical by transfer group'});dialog.querySelector('iframe').srcdoc=html;};
+  dialog.innerHTML=`<header><h2>Leadership export</h2><button type="button" data-close aria-label="${tr('Close')}">×</button></header><label>Include<select data-export-scope><option value="all">All applicants</option>${!allApplicantsOnly&&current()?'<option value="selected">Selected players in this scenario</option>':''}</select></label><p>Choose status, destination alliance, THP range, and other filters below. Download HTML or Print / Save PDF includes only the matching applicants. Choose All for any filter to include every value.</p><footer><button type="button" data-download-roster>Download HTML</button><button type="button" class="primary" data-print-roster>Print / Save PDF</button></footer><iframe title="Leadership roster preview"></iframe>`;
+  let exportPlayers=[],exportOptions={};
+  const update=()=>{const selected=dialog.querySelector('[data-export-scope]').value==='selected',scenario=current();exportPlayers=selected?sandboxForecast(api.players(),api.capacities(),draft().scenario).members:api.players().filter(p=>!p.deleted&&!p.general&&!p.prospect);exportOptions={locale:api.locale(),subtitle:selected?'Sandbox scenario: '+scenario.name+' · Selected players · Not final approvals':'Applicant roster · Destination alliances and selected filters',initialState:allApplicantsOnly?{values:{status:'Accepted',groupBy:'destination'},expanded:true}:null};const frame=dialog.querySelector('iframe');dialog.querySelectorAll('[data-download-roster],[data-print-roster]').forEach(b=>b.disabled=true);frame.onload=()=>dialog.querySelectorAll('[data-download-roster],[data-print-roster]').forEach(b=>b.disabled=!frame.contentWindow?.rosterController);frame.srcdoc=leadershipRosterHtml(exportPlayers,exportOptions);};
   dialog.querySelector('[data-export-scope]').onchange=update;
   dialog.querySelector('[data-close]').onclick=close;
   dialog.querySelector('[data-print-roster]').onclick=()=>{const frame=dialog.querySelector('iframe');frame.contentWindow.focus();frame.contentWindow.print();};
-  dialog.querySelector('[data-download-roster]').onclick=()=>{const a=document.createElement('a'),url=URL.createObjectURL(new Blob([html],{type:'text/html;charset=utf-8'}));a.href=url;a.download='1616-leadership-roster.html';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);};
+  dialog.querySelector('[data-download-roster]').onclick=()=>{const controller=dialog.querySelector('iframe').contentWindow?.rosterController;if(!controller)return;const players=controller.getVisibleIndices().map(index=>exportPlayers[index]);const html=leadershipRosterHtml(players,{...exportOptions,initialState:controller.getState()});const a=document.createElement('a'),url=URL.createObjectURL(new Blob([html],{type:'text/html;charset=utf-8'}));a.href=url;a.download='1616-leadership-roster.html';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);};
   update();dialog.showModal();
  }
  dialog.addEventListener('close',()=>dialog.classList.remove('sandbox-export-dialog'));
