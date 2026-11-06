@@ -1,6 +1,6 @@
 import {supportRequest,applicantWithdrawal} from './support-applicant-actions.js?v=1';
 import {getManualSession,manualAuth,logoutManual} from './manual-session.js?v=leadership-20261025';
-import {mountApplicantMessenger} from './applicant-messenger-view.js?v=destinations-2';
+import {mountApplicantMessenger} from './applicant-messenger-view.js?v=alt-20261105';
 const session=getManualSession();
 if(session?.user?.role==='applicant_messenger'){
  mountApplicantMessenger({root:document.getElementById('messenger'),withdraw:applicantWithdrawal(supportRequest()),load:async()=>{

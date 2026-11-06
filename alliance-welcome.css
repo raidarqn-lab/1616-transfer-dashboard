@@ -98,3 +98,5 @@
 .welcome-app .welcome-master-ledger button.welcome-primary{background:#23695e;color:#fff;border-color:#23695e;font-weight:650}
 .welcome-app .welcome-master-ledger th:first-child,.welcome-app .welcome-master-ledger .welcome-ledger-row>td:first-child{position:sticky;left:0;z-index:1;background:#fffdf7;box-shadow:2px 0 3px #243e3510}
 .welcome-app .welcome-master-ledger th:first-child{background:#eaf0e9}
+
+.welcome-app .welcome-name-chip{display:flex;align-items:center}.welcome-player-name{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.welcome-name-chip .player-alt-badge{flex:none!important}

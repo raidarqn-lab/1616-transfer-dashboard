@@ -1,5 +1,5 @@
 import {allianceTag} from './alliance-names.mjs?v=1';
-import {APPROVAL_ALLIANCES,allianceApprovalRoster,allianceApprovalHtml,approvalInstructionsText} from './alliance-approval-export.mjs?v=3';
+import {APPROVAL_ALLIANCES,allianceApprovalRoster,allianceApprovalHtml,approvalInstructionsText} from './alliance-approval-export.mjs?v=alt-20261105';
 
 export function installAllianceApprovalExport({root,data}){
  const copyFallback=document.createElement('dialog');copyFallback.className='alliance-approval-dialog';copyFallback.setAttribute('aria-label','Copy alliance instructions');

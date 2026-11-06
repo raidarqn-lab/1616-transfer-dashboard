@@ -1,3 +1,4 @@
+import {altBadge,playerAltInfo} from './player-alt.mjs?v=1';
 import {allianceKey,allianceTag} from './alliance-names.mjs?v=1';
 import {sandboxGroupKey,sandboxSeat} from './seat-sandbox-core.mjs?v=8';
 
@@ -25,7 +26,7 @@ export function allianceApprovalRoster(players,assignments,alliance){
   seen.add(String(p.id));
   const home=allianceKey(assignments?.[p.id]||'');
   if(home&&home!==target)continue;
-  rows.push({id:String(p.id),name:text(p.name),server:text(p.server),alliance:allianceTag(p.alliance),group:sandboxGroupKey(p.group)?text(p.group).trim():'No transfer group',
+  rows.push({isAlt:playerAltInfo(p).isAlt,id:String(p.id),name:text(p.name),server:text(p.server),alliance:allianceTag(p.alliance),group:sandboxGroupKey(p.group)?text(p.group).trim():'No transfer group',
    destination:home?allianceTag(home):'Unassigned',pool:home?'assigned':'available',status:p.status,seat:sandboxSeat(p),
    hq:numeric(p.hqLevel),profession:numeric(p.profession),power:numeric(p.power),kills:numeric(p.kills)});
  }
@@ -85,7 +86,7 @@ export function allianceApprovalHtml(players,assignments,{alliance,date=new Date
   const groups=new Map();for(const p of members){const key=sandboxGroupKey(p.group)||'@ungrouped';if(!groups.has(key))groups.set(key,{name:p.group,members:[]});groups.get(key).members.push(p);}
   return [...groups.values()].map(g=>`<tbody><tr class="group"><th colspan="9">${esc(g.name)} <span>· ${g.members.length}</span></th></tr>${g.members.map(p=>{
    const choices=p.pool==='assigned'?[['Approve','Approve'],['Decline','Decline'],['Discuss','Discuss']]:[['Request','Request for '+tag],['Pass','Pass'],['Discuss','Discuss']];
-   return `<tr data-review-row data-pool="${p.pool}" data-player="${esc(JSON.stringify(p))}"><td class="player"><strong>${esc(p.name)}</strong><small>#${esc(p.server||'—')} · ${esc(p.alliance||'—')}</small></td><td><span class="seat ${p.seat.toLowerCase()}">${p.seat==='Unknown'?'Unconfirmed':p.seat}</span></td><td>${p.hq??'—'}</td><td>${p.profession??'—'}</td><td>${compact(p.power==null?null:p.power*1e6)}</td><td>${compact(p.kills)}</td><td><span class="portal-status">${esc(p.status)}</span></td><td class="decision"><select data-decision aria-label="Decision for ${esc(p.name)}"><option value="" selected>Awaiting review</option>${choices.map(([value,label])=>`<option value="${value}">${esc(label)}</option>`).join('')}</select><span class="print-only" data-print-decision></span></td><td class="comments"><textarea data-comment rows="2" maxlength="2000" aria-label="Comments for ${esc(p.name)}" placeholder="Optional comments"></textarea><span class="print-only" data-print-comment></span></td></tr>`;
+   return `<tr data-review-row data-pool="${p.pool}" data-player="${esc(JSON.stringify(p))}"><td class="player"><strong>${esc(p.name)}${altBadge({isAlt:p.isAlt})}</strong><small>#${esc(p.server||'—')} · ${esc(p.alliance||'—')}</small></td><td><span class="seat ${p.seat.toLowerCase()}">${p.seat==='Unknown'?'Unconfirmed':p.seat}</span></td><td>${p.hq??'—'}</td><td>${p.profession??'—'}</td><td>${compact(p.power==null?null:p.power*1e6)}</td><td>${compact(p.kills)}</td><td><span class="portal-status">${esc(p.status)}</span></td><td class="decision"><select data-decision aria-label="Decision for ${esc(p.name)}"><option value="" selected>Awaiting review</option>${choices.map(([value,label])=>`<option value="${value}">${esc(label)}</option>`).join('')}</select><span class="print-only" data-print-decision></span></td><td class="comments"><textarea data-comment rows="2" maxlength="2000" aria-label="Comments for ${esc(p.name)}" placeholder="Optional comments"></textarea><span class="print-only" data-print-comment></span></td></tr>`;
   }).join('')}</tbody>`).join('');
  };
  const section=(members,pool,title,description)=>`<section class="review-section" aria-label="${title}"><div class="section-heading"><span class="section-number">${pool==='assigned'?'01':'02'}</span><div><h2>${title} <span>${members.length}</span></h2><p>${description}</p></div></div>${members.length?`<div class="table-wrap"><table><thead><tr>${['Player / origin','Seat','HQ','Prof','THP','Kills','Portal status','Your decision','Comments'].map(h=>`<th scope="col">${h}</th>`).join('')}</tr></thead>${groupsFor(members)}</table></div>`:'<p class="empty">No players in this section.</p>'}</section>`;

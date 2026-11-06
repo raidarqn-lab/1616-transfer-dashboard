@@ -1,7 +1,8 @@
+import {playerAltBadge} from './player-alt.mjs?v=1';
 import {allianceTag} from './alliance-names.mjs?v=1';
-import {organizationGroups,organizationBoardMarkup,bindOrganizationBoard,organizationGroupStyles} from './organization-groups.mjs?v=5';
+import {organizationGroups,organizationBoardMarkup,bindOrganizationBoard,organizationGroupStyles} from './organization-groups.mjs?v=alt-20261105';
 import {sandboxDraft,sandboxPlanCommand} from './seat-sandbox-plan.mjs?v=1';
-import {leadershipRosterHtml} from './seat-sandbox-export.mjs?v=8';
+import {leadershipRosterHtml} from './seat-sandbox-export.mjs?v=alt-20261105';
 import {SANDBOX_COLOURS,sandboxAccepted,sandboxSeat,sandboxForecast} from './seat-sandbox-core.mjs?v=9';
 
 export function installSeatSandbox(api){
@@ -59,7 +60,7 @@ export function installSeatSandbox(api){
  }
  function row(p,included){
   const locked=sandboxAccepted(p),noEdit=disabled()||!current(),id=esc(String(p.id)),movable=!noEdit&&!locked;
-  return `<article class="sandbox-member ${locked?'is-accepted':''}" data-player="${id}" draggable="${movable}" title="${tr(locked?'Formally accepted':included?'Drag back to Applicants to remove':'Drag into Selected players to add')}"><span class="sandbox-drag" aria-hidden="true">${locked?'✓':'⠿'}</span><div class="sandbox-player"><div class="sandbox-identity"><strong translate="no" title="${esc(p.name)} · ${tr(p.status||'Unknown')}">${esc(p.name)}</strong><small>${esc(p.server||'')} · <span translate="no">${esc(allianceTag(p.alliance)||'')}</span></small>${seatLabel(p)}</div>${stats(p)}</div>${locked?`<span class="sandbox-locked" title="${tr('Formally accepted players always stay included.')}">${tr('Locked')}</span>`:`<button type="button" data-place="${id}" data-include="${!included}" ${noEdit?'disabled':''} aria-label="${tr(included?'Remove':'Add')} · ${esc(p.name)}">${tr(included?'Remove':'Add')}</button>`}</article>`;
+  return `<article class="sandbox-member ${locked?'is-accepted':''}" data-player="${id}" draggable="${movable}" title="${tr(locked?'Formally accepted':included?'Drag back to Applicants to remove':'Drag into Selected players to add')}"><span class="sandbox-drag" aria-hidden="true">${locked?'✓':'⠿'}</span><div class="sandbox-player"><div class="sandbox-identity"><strong translate="no" title="${esc(p.name)} · ${tr(p.status||'Unknown')}">${esc(p.name)}${playerAltBadge(p)}</strong><small>${esc(p.server||'')} · <span translate="no">${esc(allianceTag(p.alliance)||'')}</span></small>${seatLabel(p)}</div>${stats(p)}</div>${locked?`<span class="sandbox-locked" title="${tr('Formally accepted players always stay included.')}">${tr('Locked')}</span>`:`<button type="button" data-place="${id}" data-include="${!included}" ${noEdit?'disabled':''} aria-label="${tr(included?'Remove':'Add')} · ${esc(p.name)}">${tr(included?'Remove':'Add')}</button>`}</article>`;
  }
  function lists(result){
   const ids=new Set(result.members.map(p=>String(p.id))),ungrouped=result.groups.filter(g=>!g.groupKey).flatMap(g=>g.members),groups=[...result.groups.filter(g=>g.groupKey),...(ungrouped.length?[{name:t('No transfer group'),groupKey:'',members:ungrouped}]:[])].sort(sort),term=search.trim().toLocaleLowerCase();
@@ -96,7 +97,7 @@ export function installSeatSandbox(api){
   panel.querySelectorAll('[data-org-limit]').forEach(el=>el.onchange=()=>{if(disabled()||!scenario||!el.reportValidity())return;plan.arrangement.limits[el.dataset.orgLimit]=el.value===''?null:Number(el.value);plan.dirty=true;changed();});
   panel.querySelector('[data-org-discard]').onclick=()=>{drafts.delete(activeId);message=t('Sandbox draft discarded.');error=false;render();};
   panel.querySelector('[data-org-save]').onclick=async()=>{if(disabled()||!plan.dirty)return;try{await save(sandboxPlanCommand(plan,api.players()),plan.baseRev);}catch{/* Keep the draft and its original revision for safe retry. */}};
-  panel.querySelectorAll('[data-org-profile]').forEach(el=>{el.textContent=t('View details');el.onclick=()=>{const p=result.members.find(p=>String(p.id)===el.dataset.orgProfile);if(!p)return;returnFocus=el;dialog.innerHTML=`<header><h2 translate="no">${esc(p.name)}</h2><button type="button" data-close aria-label="${tr('Close')}">×</button></header><p>${esc(p.server||'—')} · ${esc(allianceTag(p.alliance)||'—')} · ${esc(p.group||'No group recorded')}</p>${seatLabel(p)}<p>${stats(p)}</p><p>${tr('Live status')}: ${esc(p.status)} · ${tr('Scenario destination')}: ${esc(allianceTag(plan.arrangement.assignments[p.id])||'Unassigned')}</p><p>${tr('Read-only player details. Sandbox placements do not change this player’s live record.')}</p>`;dialog.querySelector('[data-close]').onclick=close;dialog.showModal();};});
+  panel.querySelectorAll('[data-org-profile]').forEach(el=>{el.textContent=t('View details');el.onclick=()=>{const p=result.members.find(p=>String(p.id)===el.dataset.orgProfile);if(!p)return;returnFocus=el;dialog.innerHTML=`<header><h2 translate="no">${esc(p.name)}${playerAltBadge(p)}</h2><button type="button" data-close aria-label="${tr('Close')}">×</button></header><p>${esc(p.server||'—')} · ${esc(allianceTag(p.alliance)||'—')} · ${esc(p.group||'No group recorded')}</p>${seatLabel(p)}<p>${stats(p)}</p><p>${tr('Live status')}: ${esc(p.status)} · ${tr('Scenario destination')}: ${esc(allianceTag(plan.arrangement.assignments[p.id])||'Unassigned')}</p><p>${tr('Read-only player details. Sandbox placements do not change this player’s live record.')}</p>`;dialog.querySelector('[data-close]').onclick=close;dialog.showModal();};});
  }
  async function place(playerId,include){
   if(disabled()||!current())return;

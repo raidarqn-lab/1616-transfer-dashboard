@@ -22,5 +22,5 @@ export function applicantDetails(player,destination){
 // Keep the browser's stored directory restricted to the same explicit contract.
 export function directoryRow(p){
  const detail=applicantDetails({applicationLanguage:p.applicationLanguage,server:p.server,group:p.transferGroup,status:p.status,confirmedSeat:p.confirmedSeat,rejectionReasonCode:p.rejectionReasonCode,rejectionReasonText:p.rejectionReasonText},p.destinationAlliance);
- return {id:String(p.id),name:String(p.name||''),message:typeof p.message==='string'?p.message:null,...detail,currentAlliance:String(p.currentAlliance||'').trim().slice(0,100),anticipatedSeat:seats.includes(p.anticipatedSeat)?p.anticipatedSeat:null};
+ return {id:String(p.id),isAlt:p.isAlt===true,name:String(p.name||''),message:typeof p.message==='string'?p.message:null,...detail,currentAlliance:String(p.currentAlliance||'').trim().slice(0,100),anticipatedSeat:seats.includes(p.anticipatedSeat)?p.anticipatedSeat:null};
 }

@@ -1,3 +1,4 @@
+import {playerAltBadge} from './player-alt.mjs?v=1';
 import {allianceTag} from './alliance-names.mjs?v=1';
 const seatColours=['Gold','Purple','Blue','White'];
 const clean=value=>String(value??'').replace(/[\r\n]+/g,' ').trim();
@@ -26,7 +27,7 @@ export function outstandingGroupText(members){
 
 export function awaitingAcceptanceMarkup(groups){
  const summary=groups.length?groups.map(g=>'<span class="awaiting-group-total"><span'+(g.name==='No group recorded'?'':' translate="no"')+'>'+escape(g.name)+'</span> <b>'+g.members.length+'</b></span>').join(''):'<p class="muted">No approved applicants awaiting acceptance.</p>';
- const names=groups.map((g,index)=>'<section class="awaiting-group"><div class="awaiting-group-heading"><h3'+(g.name==='No group recorded'?'':' translate="no"')+'>'+escape(g.name)+'</h3><small>'+g.members.length+' '+(g.members.length===1?'player':'players')+'</small><button type="button" class="awaiting-copy" aria-label="Copy outstanding · '+escape(g.name)+'" data-copy-outstanding="'+index+'"><span aria-hidden="true">⧉</span> <span>Copy outstanding</span></button></div><div class="awaiting-names">'+g.members.map(p=>'<button type="button" class="awaiting-player" data-awaiting-player="'+escape(p.id)+'"><span translate="no">'+escape(p.name||'Unknown player')+'</span><span class="awaiting-seat awaiting-seat-'+confirmedSeat(p).toLowerCase()+'">'+confirmedSeat(p)+'</span></button>').join('')+'</div></section>').join('');
+ const names=groups.map((g,index)=>'<section class="awaiting-group"><div class="awaiting-group-heading"><h3'+(g.name==='No group recorded'?'':' translate="no"')+'>'+escape(g.name)+'</h3><small>'+g.members.length+' '+(g.members.length===1?'player':'players')+'</small><button type="button" class="awaiting-copy" aria-label="Copy outstanding · '+escape(g.name)+'" data-copy-outstanding="'+index+'"><span aria-hidden="true">⧉</span> <span>Copy outstanding</span></button></div><div class="awaiting-names">'+g.members.map(p=>'<button type="button" class="awaiting-player" data-awaiting-player="'+escape(p.id)+'"><span translate="no">'+escape(p.name||'Unknown player')+playerAltBadge(p)+'</span><span class="awaiting-seat awaiting-seat-'+confirmedSeat(p).toLowerCase()+'">'+confirmedSeat(p)+'</span></button>').join('')+'</div></section>').join('');
  return {summary,names};
 }
 
