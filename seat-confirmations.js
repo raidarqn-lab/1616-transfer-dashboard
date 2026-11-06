@@ -1,6 +1,6 @@
 import {getManualSession,logoutManual} from './manual-session.js?v=leadership-20261025';
 import {supportRequest} from './support-applicant-actions.js?v=1';
-import {mountSeatConfirmations} from './seat-confirmations-view.js?v=bada-1';
+import {mountSeatConfirmations} from './seat-confirmations-view.js?v=alt-20261105';
 let staff=null;const manual=getManualSession();
 if(manual?.user?.role!=='applicant_messenger'){
  try{

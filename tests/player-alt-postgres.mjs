@@ -1,0 +1,48 @@
+const {PGlite}=await import(process.env.PGLITE_MODULE||'@electric-sql/pglite');
+import fs from 'node:fs/promises';import assert from 'node:assert/strict';
+const db=new PGlite(),read=path=>fs.readFile(new URL('../'+path,import.meta.url),'utf8');
+try{
+ await db.exec(`create role anon;create role authenticated;create role service_role;
+ create schema nova_evidence_private;create schema transfer_private;create schema extensions;
+ create table transfer_private.portal_records(kind text,key text,revision bigint,payload jsonb,primary key(kind,key));
+ create table transfer_private.portal_control(singleton boolean primary key,admin_email text,revision bigint);
+ create table transfer_private.portal_transactions(id text primary key,actor text,events jsonb,revision bigint);
+ create table nova_evidence_private.hub_staff(email text primary key,role text,alliances jsonb,status text,accounts_manage boolean,updated_by text);
+ create table nova_evidence_private.admin_identities(email text primary key,id uuid,display_name text,player_key text,revision bigint,updated_at timestamptz,updated_by text);
+ create table nova_evidence_private.member_links(account_id uuid primary key,player_key text,active boolean,historical_until timestamptz);
+ create table nova_evidence_private.hub_audit(actor_email text,action text,subject text,detail jsonb);
+ insert into nova_evidence_private.hub_staff values('owner@test.invalid','master','[]','active',true,'test');
+ insert into transfer_private.portal_control values(true,'owner@test.invalid',10);
+ create function extensions.digest(t text,algorithm text) returns bytea language sql as $$select sha256(convert_to(t,'UTF8'))$$;
+ create function extensions.gen_random_bytes(n int) returns bytea language sql as $$select decode(replace(gen_random_uuid()::text,'-','')||replace(gen_random_uuid()::text,'-',''),'hex')$$;`);
+ await db.exec(await read('deployment/manual-accounts/accounts.sql'));await db.exec(await read('backend/applicant-messenger.sql'));
+ await db.exec(await read('backend/seat-confirmations.sql'));await db.exec(await read('backend/seat-confirmations.sql'));
+ await db.exec(await read('backend/seat-confirmations-transfer-lead.sql'));await db.exec(await read('backend/seat-confirmations-transfer-lead.sql'));
+ await db.exec(await read('backend/seat-confirmations-message.sql'));await db.exec(await read('backend/seat-confirmations-message.sql'));
+ await db.exec(await read('backend/seat-confirmations-images.sql'));await db.exec(await read('backend/seat-confirmations-images.sql'));
+ await db.exec(await read('backend/seat-confirmations-outreach.sql'));await db.exec(await read('backend/seat-confirmations-outreach.sql'));
+ await db.exec(await read('backend/messenger-admin-list.sql'));await db.exec(await read('backend/messenger-admin-list.sql'));
+ const call=async(action,args)=>(await db.query('select public.nova_manual_accounts($1,$2::jsonb) as data',[action,JSON.stringify(args)])).rows[0].data;
+
+ await db.exec(await read('backend/leadership-report.sql'));await db.exec(await read('backend/leadership-report.sql'));
+ await db.exec(await read('backend/leadership-report-destination.sql'));await db.exec(await read('backend/leadership-report-destination.sql'));
+ await db.exec(await read('backend/alliance-welcome.sql'));
+ await db.exec(await read('backend/player-alt-flags.sql'));await db.exec(await read('backend/player-alt-flags.sql'));
+ const sample={name:'Example',status:'Accepted',confirmedSeat:'White',server:1607,alliance:'AsTr',history:[],altOwnerName:'PRIVATE_OWNER',altOwnerAlliance:'PRIVATE_ALLIANCE'};
+ for(const [id,extra] of [['1',{isAlt:true}],['2',{}],['3',{}],['4',{isAlt:true}],['5',{}]])await db.query('insert into transfer_private.portal_records values($1,$2,1,$3)',['players',id,JSON.stringify({...sample,...extra})]);
+ await db.query('insert into transfer_private.portal_records values($1,$2,1,$3)',['shared','accountLinks',JSON.stringify({data:[{a:1,b:2,mainId:1,type:'alt'},{a:'2',b:'3',mainId:'1',type:'alt'}]})]);
+ await db.query('insert into transfer_private.portal_records values($1,$2,1,$3)',['shared','transferOrganization',JSON.stringify({data:{assignments:{1:'WaE',2:'WaE',3:'WaE',4:'WaE',5:'WaE'}}})]);
+ const flags=await db.query("select key,transfer_private.player_is_alt(key,payload) alt from transfer_private.portal_records where kind='players' order by key");
+ assert.deepEqual(flags.rows.map(r=>r.alt),[false,true,true,true,false]);
+ const welcome=(await db.query("select transfer_private.welcome_roster('WaE') data")).rows[0].data;
+ assert.equal(welcome.filter(p=>p.isAlt).length,3);assert(!JSON.stringify(welcome).includes('PRIVATE'));
+ const report=await call('leadership-report-list',{staffEmail:'owner@test.invalid'});assert.equal(report.players.filter(p=>p.isAlt).length,3);assert(!JSON.stringify(report).includes('PRIVATE'));
+ const seat=(await db.query("select transfer_private.seat_confirmation_row(key,payload,revision) data from transfer_private.portal_records where key='2'")).rows[0].data;
+ assert.equal(seat.isAlt,true);assert(!JSON.stringify(seat).includes('PRIVATE'));
+ const messenger=(await db.query("select transfer_private.applicant_messenger_details(key,payload) data from transfer_private.portal_records where key='3'")).rows[0].data;
+ assert.equal(messenger.isAlt,true);assert(!JSON.stringify(messenger).includes('PRIVATE'));
+ await db.exec("update transfer_private.portal_records set payload='{\"data\":[]}' where key='accountLinks'");
+ const unlinked=(await db.query("select transfer_private.player_is_alt(key,payload) alt from transfer_private.portal_records where key='2'")).rows[0].alt;assert.equal(unlinked,false);
+ for(const role of ['anon','authenticated'])assert.equal((await db.query("select has_function_privilege($1,'transfer_private.player_is_alt(text,jsonb)','EXECUTE') allowed",[role])).rows[0].allowed,false);
+ console.log('ALT database: linked and manual flags, main exclusion, four scoped projections, privacy, idempotency and private grants passed.');
+}finally{await db.close();}

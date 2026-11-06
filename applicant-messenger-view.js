@@ -1,8 +1,9 @@
+import {altBadge} from './player-alt.mjs?v=1';
 import {allianceTag} from './alliance-names.mjs?v=1';
 import {supportCopy,canWithdraw} from './support-applicant-actions.js?v=1';
 import {messengerFilterCopy,applicantMatchesFilters} from './applicant-messenger-filters.js?v=2';
 import {seatCopy} from './seat-confirmations-i18n.js?v=1';
-import {directoryRow} from './applicant-messenger-details.js?v=4';
+import {directoryRow} from './applicant-messenger-details.js?v=alt-20261105';
 import {languageNames,messengerCopy,formatCopy,preferredLanguage,localizedApplicantMessage,applicantMessageLanguage,applicantLanguageLabel} from './applicant-messenger-i18n.js?v=3';
 export const searchName=value=>String(value||'').normalize('NFKD').replace(/\p{M}/gu,'').toLocaleLowerCase().trim();
 export function matchingApplicants(applicants,query,filters={}){const needle=searchName(query);return applicants.filter(p=>searchName(p.name).includes(needle)&&applicantMatchesFilters(p,filters));}
@@ -24,7 +25,7 @@ export function mountApplicantMessenger({root,load,signOut,withdraw,clipboard=na
   list.replaceChildren();const rows=matchingApplicants(applicants,search.value,filters()),a=t.application,f=messengerFilterCopy(language),filtered=search.value.trim()||Object.keys(filters()).length;
   status.textContent=state!=='ready'?t[state]:rows.length?formatCopy(f.count,{count:rows.length,total:applicants.length}):filtered?f.noMatch:t.empty;
   if(state!=='ready')return;
-  for(const p of rows){const row=document.createElement('li'),name=document.createElement('strong'),heading=document.createElement('div');heading.className='applicant-heading';heading.style.flexWrap='wrap';name.textContent=p.name;name.dir='auto';const identity=document.createElement('div'),review=document.createElement('div'),badge=document.createElement('span'),approval=document.createElement('span');identity.className='applicant-identity';review.className='applicant-review';badge.className='applicant-status';badge.dataset.status=p.status;badge.textContent=a.statuses[p.status]||a.statuses.Unconfirmed;badge.setAttribute('aria-label',a.title+': '+badge.textContent);approval.className='applicant-approval';approval.textContent=a.approval+': '+(a[p.approval]||a.pending);review.append(badge,approval);identity.append(name,review);heading.append(identity);row.append(heading);
+  for(const p of rows){const row=document.createElement('li'),name=document.createElement('strong'),heading=document.createElement('div');heading.className='applicant-heading';heading.style.flexWrap='wrap';name.textContent=p.name;name.insertAdjacentHTML('beforeend',altBadge(p));name.dir='auto';const identity=document.createElement('div'),review=document.createElement('div'),badge=document.createElement('span'),approval=document.createElement('span');identity.className='applicant-identity';review.className='applicant-review';badge.className='applicant-status';badge.dataset.status=p.status;badge.textContent=a.statuses[p.status]||a.statuses.Unconfirmed;badge.setAttribute('aria-label',a.title+': '+badge.textContent);approval.className='applicant-approval';approval.textContent=a.approval+': '+(a[p.approval]||a.pending);review.append(badge,approval);identity.append(name,review);heading.append(identity);row.append(heading);
    if(p.message){const button=document.createElement('button');button.type='button';button.textContent=t.copy;button.setAttribute('aria-label',formatCopy(t.copyFor,{name:p.name}));button.disabled=copying;button.onclick=()=>copy(p.id,button);heading.append(button);}
    else{const hint=document.createElement('span');hint.className='unavailable';hint.textContent=t.unavailable;heading.append(hint);}
    if(withdraw&&canWithdraw(p)){const button=document.createElement('button');button.type='button';button.textContent=t.withdraw;button.setAttribute('aria-label',t.withdraw+' · '+p.name);button.disabled=copying;button.onclick=()=>withdrawPlayer(p);heading.append(button);}

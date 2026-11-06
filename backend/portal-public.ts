@@ -389,7 +389,7 @@ const {enrichName,nameImport}=module_8;
 const {createHash}=external_crypto;
 const hash=text=>createHash('sha256').update(text).digest('hex');
 const KINDS=['players','pings','members','access','shared','purged','resetRequests','questionStates','derivedNames'];
-const PLAYER_FIELDS=['name','server','alliance','power','kills','profession','hqLevel','seat','confirmedSeat','status','general','prospect','transferDirection','outboundDate','group','preference','language','contact','translatedName','aliases','avatarUrl','photoSource','priority','assignedTo','reminders','ownership','ownershipEvents','knownDate','previousName','ownershipNote','currentOwner','salePrice','saleCurrency','deleted','deleteReason','mergedInto','sourceUid','previousGameNames','applicationIds','applicationId','receivedAt','rejectionReasonCode','rejectionReasonText'];
+const PLAYER_FIELDS=['isAlt','altOwnerName','altOwnerAlliance','name','server','alliance','power','kills','profession','hqLevel','seat','confirmedSeat','status','general','prospect','transferDirection','outboundDate','group','preference','language','contact','translatedName','aliases','avatarUrl','photoSource','priority','assignedTo','reminders','ownership','ownershipEvents','knownDate','previousName','ownershipNote','currentOwner','salePrice','saleCurrency','deleted','deleteReason','mergedInto','sourceUid','previousGameNames','applicationIds','applicationId','receivedAt','rejectionReasonCode','rejectionReasonText'];
 class PortalError extends Error{}
 const assert=(ok,msg)=>{if(!ok)throw new PortalError(msg);};
 const clone=value=>JSON.parse(JSON.stringify(value));
@@ -482,6 +482,8 @@ function saveEvents(state,request,identity,role,at=new Date().toISOString()){
    if(old?.deleted)assert(role==='admin','Only the administrator can manage records in Trash.');
    next=old?clone(old):{id:Number(key),createdAt:at,history:[],source:'Transfer team',general:true,prospect:false};
    if(value.avatarUrl)assert(/^https:\/\/lastwar-cdn\.akamaized\.net\//.test(value.avatarUrl)||/^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/.test(value.avatarUrl),'Invalid photo.');
+   if(Object.hasOwn(value,'isAlt'))assert(typeof value.isAlt==='boolean','ALT must be true or false.');
+   for(const field of ['altOwnerName','altOwnerAlliance'])if(Object.hasOwn(value,field))assert(typeof value[field]==='string'&&value[field].length<=100,'Use up to 100 characters for ALT owner details.');
    const changed=[];for(const field of PLAYER_FIELDS)if(Object.hasOwn(value,field)&&!equal(value[field],next[field])){next[field]=value[field];changed.push(field);}
    if(changed.includes('ownershipEvents'))next.ownershipEvents=validateOwnershipEvents(next.ownershipEvents,old?.ownershipEvents,state,key,name,at);
    assert(typeof next.name==='string'&&next.name.trim()&&next.name.length<=200,'A player name is required.');

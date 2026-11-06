@@ -1,3 +1,4 @@
+import {playerAltBadge,playerAltInfo} from './player-alt.mjs?v=1';
 import {allianceTag} from './alliance-names.mjs?v=1';
 const escape = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const unnamed = /^(unknown|solo|no group recorded|not applicable)$/i;
@@ -52,7 +53,7 @@ function focusBar(focus,assignments,alliances,editable){
   if(!active)return '<div class="focus-info"><span class="focus-mark" aria-hidden="true">◈</span><div><strong>Click a player to follow their group</strong><small>Their group glows across alliances. Other players blur.</small></div></div>';
   const count=members.length===total?total+' members highlighted across alliances':members.length+' of '+total+' members on this board';
   const subtitle=solo?'No group recorded · only this player is highlighted':(player?'<b translate="no">'+escape(group.name)+'</b> · ':'')+(group.key==='@ungrouped'?total+' players without a group':count);
-  return '<div class="focus-info"><span class="focus-mark" aria-hidden="true">'+(player?'✓':'◈')+'</span><div><strong translate="no">'+escape(player?.name||group.name)+'</strong><small>'+subtitle+'</small></div></div><div class="focus-actions"><span class="selection-key"><span><i></i>'+(solo?'Selected player':'Same group')+'</span><span><i class="dim"></i>Other players</span></span>'+(player&&editable?'<label class="focus-move">Move to<select data-org-move="'+escape(player.id)+'" aria-label="Move '+escape(player.name)+' to alliance">'+['',...alliances].map(a=>'<option value="'+escape(a)+'"'+((assignments[player.id]||'')===a?' selected':'')+'>'+escape(allianceTag(a)||'Unassigned')+'</option>').join('')+'</select></label>':'')+(player?'<button type="button" class="quiet-button" data-org-profile="'+escape(player.id)+'">View player ↗</button>':'')+'<button type="button" class="quiet-button" data-org-clear>Clear focus ×</button></div>';
+  return '<div class="focus-info"><span class="focus-mark" aria-hidden="true">'+(player?'✓':'◈')+'</span><div><strong translate="no">'+escape(player?.name||group.name)+(player?playerAltBadge(player):'')+'</strong><small>'+subtitle+'</small></div></div><div class="focus-actions"><span class="selection-key"><span><i></i>'+(solo?'Selected player':'Same group')+'</span><span><i class="dim"></i>Other players</span></span>'+(player&&editable?'<label class="focus-move">Move to<select data-org-move="'+escape(player.id)+'" aria-label="Move '+escape(player.name)+' to alliance">'+['',...alliances].map(a=>'<option value="'+escape(a)+'"'+((assignments[player.id]||'')===a?' selected':'')+'>'+escape(allianceTag(a)||'Unassigned')+'</option>').join('')+'</select></label>':'')+(player?'<button type="button" class="quiet-button" data-org-profile="'+escape(player.id)+'">View player ↗</button>':'')+'<button type="button" class="quiet-button" data-org-clear>Clear focus ×</button></div>';
 }
 
 function compactStat(value,multiplier=1){
@@ -67,8 +68,8 @@ function playerCapsule(player,selected){
   const hq=Number.isInteger(Number(player.hqLevel))&&Number(player.hqLevel)>0?String(Number(player.hqLevel)):'—';
   // Portal power is stored in millions; kills are stored as an absolute count.
   const thp=compactStat(player.power,1000000),kills=compactStat(player.kills);
-  const description=origin+', HQ '+hq+', THP '+thp+', kills '+kills;
-  const markup='<span class="capsule-top"><span class="capsule-name">'+(selected?'<span class="selected-mark" aria-hidden="true">✓</span>':'')+escape(player.name)+'</span><span class="capsule-origin">'+escape(origin)+'</span></span><span class="capsule-stats"><span><small>HQ</small>'+escape(hq)+'</span><span><small>THP</small>'+escape(thp)+'</span><span><small>Kills</small>'+escape(kills)+'</span></span>';
+  const description=(playerAltInfo(player).isAlt?'Alternate account · ':'')+origin+', HQ '+hq+', THP '+thp+', kills '+kills;
+  const markup='<span class="capsule-top"><span class="capsule-name">'+(selected?'<span class="selected-mark" aria-hidden="true">✓</span>':'')+'<span class="capsule-player-name">'+escape(player.name)+'</span>'+playerAltBadge(player)+'</span><span class="capsule-origin">'+escape(origin)+'</span></span><span class="capsule-stats"><span><small>HQ</small>'+escape(hq)+'</span><span><small>THP</small>'+escape(thp)+'</span><span><small>Kills</small>'+escape(kills)+'</span></span>';
   return {description,markup};
 }
 
@@ -117,7 +118,7 @@ export function bindOrganizationBoard(panel,state,groups,render){
   panel.onkeydown=e=>{if(e.key==='Escape'&&!e.defaultPrevented&&e.target.tagName!=='SELECT'){clear();redraw('[data-org-group]');}};
 }
 
-export const organizationGroupStyles = `
+export const organizationGroupStyles = `.capsule-name{display:flex!important;align-items:center}.capsule-player-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}.capsule-name .player-alt-badge{flex:none!important}
 #transfer-mock .organization-focus{--page:light-dark(#f1f3f7,#1a2331);--paper:light-dark(#fffdfa,#263244);--text:light-dark(#28354a,#ecf1fb);--muted:light-dark(#8190a5,#a8b6cd);--line:light-dark(#e0e6ef,#3a495f);--soft:light-dark(#e9eef8,#354965);--glow:light-dark(#6483dc,#98b6ff);--blur:2.2px;--glow-spread:15px;--chip-height:26px;--ink:light-dark(#25334a,#132033);font:13px/1.5 -apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:var(--text);background:var(--page);border:1px solid var(--line);border-radius:15px;overflow:hidden;position:relative}
 #transfer-mock .organization-focus *{box-sizing:border-box}
 #transfer-mock .organization-focus button,#transfer-mock .organization-focus select{font:inherit;color:inherit}
