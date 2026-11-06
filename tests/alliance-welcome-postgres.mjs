@@ -13,6 +13,7 @@ try{
  for c in select value from jsonb_array_elements(changes) loop update transfer_private.portal_records set payload=c->'value',revision=expected_revision+1 where kind=c->>'kind' and key=c->>'key';end loop;
  update transfer_private.portal_control set revision=revision+1;return '{"ok":true}';end$$;`);
  const sql=await fs.readFile(new URL('../backend/alliance-welcome.sql',import.meta.url),'utf8');await db.exec(sql);await db.exec(sql);
+ const migration=await fs.readFile(new URL('../backend/welcome-master-notes.sql',import.meta.url),'utf8');await db.exec(migration);await db.exec(migration);
  const call=async(action,args)=>(await db.query('select public.transfer_welcome($1,$2) data',[action,JSON.stringify(args)])).rows[0].data;
  const owner={actor:'owner@test.invalid'},one='11111111-1111-4111-8111-111111111111',two='22222222-2222-4222-8222-222222222222';
  assert.equal((await call('admin.list',{actor:'bad@test.invalid'})).error,'access_denied');
@@ -40,8 +41,19 @@ try{
  assert.equal(saved.history.length,2);assert.equal(saved.history[0].by,'Luna · WaE R4');assert.match(saved.history[0].text,/^Conversation \/ note: \[WaE · R4 Luna\]/);assert.equal(saved.history[1].text,'SECRET');assert.equal(saved.status,'Accepted');
  page=await call('read',scope);assert.equal(page.players[0].notes.length,1);assert.equal(page.players[0].notes[0].by,'Luna');assert(!JSON.stringify(page).includes('SECRET'));
  assert.equal((await call('note',{...note,playerId:'other'})).error,'player_unavailable');
+ // The administrator can post without an R4 list; authorship and alliance scope survive in history.
+ const teamNote={...owner,alliance:'WaE2',actorName:'RaidARQN',playerId:'other',note:'Please welcome this player.',noteId:two};
+ assert.equal((await call('admin.teamNote',{...teamNote,actor:'bad@test.invalid'})).error,'access_denied');
+ assert.equal((await call('admin.teamNote',{...teamNote,alliance:'WaE'})).error,'player_unavailable');
+ assert.equal((await call('admin.teamNote',teamNote)).ok,true);assert.equal((await call('admin.teamNote',teamNote)).ok,true);
+ const adminSaved=(await db.query("select payload from transfer_private.portal_records where key='other'")).rows[0].payload;
+ assert.equal(adminSaved.history.length,2);assert.equal(adminSaved.history[0].by,'RaidARQN · Transfer team');assert.equal(adminSaved.history[0].actorId,owner.actor);
+ assert.equal(adminSaved.status,'Accepted');
+ const wa2=await call('admin.read',{...owner,alliance:'WaE2'});assert.equal(wa2.players[0].notes[0].by,'RaidARQN · Transfer team');
+ assert.equal(wa2.players[0].notes[0].text,teamNote.note);assert(!JSON.stringify(await call('read',scope)).includes(teamNote.note));
  // Assignment changes invalidate all later contacts and notes; history remains.
  await db.exec(`update transfer_private.portal_records set payload=jsonb_set(payload,'{data,assignments,one}','"WaE2"') where key='transferOrganization'`);
+ assert.equal((await call('admin.teamNote',{...teamNote,alliance:'WaE',playerId:'one'})).error,'player_unavailable');
  assert.equal((await call('read',scope)).players.length,0);assert.equal((await call('note',note)).error,'player_unavailable');
  await call('admin.password',{...owner,alliance:'WaE',hash:'c'.repeat(64),salt:'d'.repeat(64)});assert.equal((await call('read',scope)).error,'invalid_session');
  assert.equal((await call('login.finish',{alliance:'WaE',version:1})).error,'invalid_session');

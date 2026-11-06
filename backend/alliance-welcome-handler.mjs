@@ -29,10 +29,11 @@ export function createWelcomeHandler({rpc,verifyIdentity,derive=passwordKey}){
     return resultReply(await rpc('login.finish',{alliance,version:challenge.version}));
    }
    const args={alliance};
-   if(['admin.list','admin.read','admin.save','admin.password','admin.disable','admin.contact','admin.note'].includes(action)){
+   if(['admin.list','admin.read','admin.save','admin.password','admin.disable','admin.contact','admin.note','admin.teamNote'].includes(action)){
     if(origin!=='https://portal.join1616.com')return reply({error:'Use the portal to manage alliance pages.'},403);
     let identity;try{identity=await verifyIdentity(request.headers.get('x-portal-token'));}catch{return reply({error:'Please sign in to the portal again.'},401);}
     args.actor=identity.email;
+    if(action==='admin.teamNote')args.actorName=String(identity.name||'Transfer team').trim().slice(0,100)||'Transfer team';
     if(action==='admin.password'){
      const access=await rpc('admin.list',{actor:args.actor});if(access.error)return resultReply(access);
      if(typeof input.password!=='string'||input.password.length<12||input.password.length>128)return reply({error:'Use a password of 12–128 characters.'},400);
@@ -44,6 +45,7 @@ export function createWelcomeHandler({rpc,verifyIdentity,derive=passwordKey}){
    }else return reply({error:'Unknown action.'},400);
    if(['save','admin.save'].includes(action))Object.assign(args,{message:input.message,leaders:input.leaders,revision:input.revision});
    if(['contact','admin.contact'].includes(action))Object.assign(args,{playerId:input.playerId,status:input.status,leaderId:input.leaderId,revision:input.revision});
+   if(action==='admin.teamNote')Object.assign(args,{playerId:input.playerId,note:input.note,noteId:input.noteId});
    if(['note','admin.note'].includes(action))Object.assign(args,{playerId:input.playerId,leaderId:input.leaderId,note:input.note,noteId:input.noteId});
    if(['save','admin.save','contact','admin.contact'].includes(action)&&(!Number.isSafeInteger(args.revision)||args.revision<0))return reply({error:'Refresh the page before saving.'},400);
    return resultReply(await rpc(action,args));
