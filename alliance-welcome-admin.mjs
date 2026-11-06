@@ -1,4 +1,4 @@
-import {mountWelcome} from './alliance-welcome-app.mjs?v=3';
+import {mountWelcome} from './alliance-welcome-app.mjs?v=4';
 import {bountyConnection} from './nova-bounty-config.js';
 export function installAllianceWelcome({host,user,visible,authorized}){
  const panel=document.createElement('section');panel.className='welcome-app';panel.hidden=true;host.append(panel);

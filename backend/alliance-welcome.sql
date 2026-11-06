@@ -1,7 +1,7 @@
 begin;
 create table if not exists transfer_private.welcome_pages (
  alliance text primary key check(alliance in ('NvSP','NvEM','WaE','WaE2','B14K','DRoN','ECKO')),
- message text not null default 'Hi {player}, welcome to {alliance}! We are happy to have you with us.',
+ message text not null default 'Hi {player}! My name is {r4}, and I''d love to welcome you to 1616! We''d be happy to have you join {alliance} for the season. Once you arrive on 1616, please apply to {alliance}. We''re looking forward to welcoming you to the family!',
  leaders jsonb not null default '[]', revision bigint not null default 0, password_hash text, password_salt text,
  credential_version bigint not null default 0, active boolean not null default false,
  updated_at timestamptz not null default now(), updated_by text
