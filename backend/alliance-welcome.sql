@@ -121,10 +121,14 @@ begin
   on conflict(alliance,player_key) do update set leader_id=excluded.leader_id,status=excluded.status,contact_name=excluded.contact_name,revision=target.revision+1,updated_at=now() returning * into contact;
   insert into transfer_private.welcome_audit(alliance,actor,action,detail) values(home,actor,action,jsonb_build_object('playerId',contact.player_key,'name',contact.contact_name,'status',contact.status,'previous',entry->'outreach'));
   return jsonb_build_object('ok',true, 'outreach',jsonb_build_object('leaderId',contact.leader_id,'name',contact.contact_name,'status',contact.status,'revision',contact.revision,'updatedAt',contact.updated_at));
- elsif action in ('note','admin.note') then
+ elsif action in ('note','admin.note','admin.teamNote') then
   if length(btrim(coalesce(args->>'note',''))) not between 1 and 2000 or coalesce(args->>'noteId','') !~ '^[a-f0-9-]{36}$' then return '{"error":"invalid_note"}';end if;
+  if action='admin.teamNote' then
+   contact_name:=coalesce(nullif(left(btrim(args->>'actorName'),100),''),'Transfer team');
+  else
   select l->>'name' into contact_name from jsonb_array_elements(page.leaders) l where l->>'id'=leader;
   if contact_name is null then return '{"error":"invalid_contact"}';end if;
+  end if;
   -- Commit through the portal's transaction path so revisions, events, and
   -- existing open portal sessions receive these notes immediately on refresh.
   select * into control from transfer_private.portal_control where singleton for update;
@@ -133,7 +137,7 @@ begin
   select payload into player from transfer_private.portal_records where kind='players' and key=args->>'playerId';
   note_id:=args->>'noteId';
   if exists(select 1 from jsonb_array_elements(coalesce(player->'history','[]')) h where h->>'welcomeNoteId'=note_id and h->>'welcomeAlliance'=home) then return '{"ok":true}';end if;
-  player:=player||jsonb_build_object('updatedAt',now(),'history',jsonb_build_array(jsonb_build_object('by',contact_name||' · '||case when home='NvEM' then 'BaDa' else home end||' R4','actorId','welcome:'||home||':'||leader,'when',now(),'text','Conversation / note: ['||case when home='NvEM' then 'BaDa' else home end||' · R4 '||contact_name||'] '||btrim(args->>'note'),'welcomeAlliance',home,'welcomeNoteId',note_id,'welcomeNote',btrim(args->>'note'),'welcomeAuthor',contact_name))||coalesce(player->'history','[]'::jsonb));
+  player:=player||jsonb_build_object('updatedAt',now(),'history',jsonb_build_array(jsonb_build_object('by',contact_name||case when action='admin.teamNote' then ' · Transfer team' else ' · '||case when home='NvEM' then 'BaDa' else home end||' R4' end,'actorId',case when action='admin.teamNote' then actor else 'welcome:'||home||':'||leader end,'when',now(),'text','Conversation / note: ['||case when home='NvEM' then 'BaDa' else home end||case when action='admin.teamNote' then ' · Transfer team ' else ' · R4 ' end||contact_name||'] '||btrim(args->>'note'),'welcomeAlliance',home,'welcomeNoteId',note_id,'welcomeNote',btrim(args->>'note'),'welcomeAuthor',contact_name||case when action='admin.teamNote' then ' · Transfer team' else '' end))||coalesce(player->'history','[]'::jsonb));
   receipt:=public.transfer_portal_commit(control.admin_email,control.revision,'welcome-note-'||encode(extensions.digest(home||':'||(args->>'playerId')||':'||note_id,'sha256'),'hex'),jsonb_build_array(jsonb_build_object('kind','players','key',args->>'playerId','value',player)));
   if coalesce((receipt->>'retry')::boolean,false) then raise exception 'Portal revision changed';end if;
   insert into transfer_private.welcome_audit(alliance,actor,action,detail) values(home,actor,action,jsonb_build_object('playerId',args->>'playerId','noteId',note_id,'name',contact_name));
