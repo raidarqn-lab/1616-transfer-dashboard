@@ -30,10 +30,16 @@ test('roster export uses confirmed colours for pending applicants and labels mis
 
 test('live leadership report appends saved destination and uses the CRM rejection label',()=>{
  const html=leadershipRosterHtml([{name:'Placed',alliance:'Old',preference:'NvSP',destinationAlliance:'WaE',status:'Declined'},{name:'Unplaced',alliance:'NvEM',preference:'WaE'},{name:'Escaped',destinationAlliance:'<bad>"'}],{live:true});
- assert.match(html,/<th>Status<\/th><th>Assigned alliance<\/th>/);
+ assert.match(html,/<th>Status<\/th><th>Destination alliance<\/th>/);
  assert.match(html,/<td>Rejected<\/td><td>WaE<\/td>/);
  assert.match(html,/<td>Unknown<\/td><td>Unassigned<\/td>/);
  assert.match(html,/colspan="10"/);assert.match(html,/data-destination="&lt;bad&gt;&quot;"/);
  assert.ok(!html.includes('>NvSP<'));assert.ok(!html.includes('<bad>'));
- const snapshot=leadershipRosterHtml([{name:'Player'}]);assert.ok(!snapshot.includes('<th>Assigned alliance</th>'));assert.match(snapshot,/colspan="9"/);
+ const snapshot=leadershipRosterHtml([{name:'Player'}]);assert.ok(snapshot.includes('<th>Destination alliance</th>'));assert.match(snapshot,/colspan="10"/);
+});
+
+test('snapshot includes saved destinations and safely initializes accepted filters',()=>{
+ const html=leadershipRosterHtml([{name:'Zed',destinationAlliance:'WaE',status:'Accepted'},{name:'Amy',preference:'NvSP',status:'Approved'}],{initialState:{values:{status:'Accepted',destination:'</script><script>bad()</script>'}}});
+ assert.match(html,/data-destination="WaE"/);assert.match(html,/data-destination="Unassigned"/);assert.match(html,/data-index="0" data-name="Zed"/);
+ assert.ok(!html.includes('</script><script>bad()'));assert.match(html,/"status":"Accepted"/);
 });
